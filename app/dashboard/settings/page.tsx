@@ -22,6 +22,7 @@ export default async function SettingsPage() {
       <SettingsContent
         accountEmail={accountEmail}
         initialAvatarSeed={profile.avatarSeed}
+        initialFullName={profile.fullName}
         userId={claims.sub}
       />
     </AppShell>

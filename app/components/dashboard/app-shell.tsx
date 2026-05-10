@@ -24,6 +24,32 @@ const navIcon: Record<DashboardNavItem, string> = {
   Settings: "grid",
 };
 
+function getDisplayName({
+  email,
+  fullName,
+}: {
+  email: string;
+  fullName?: string | null;
+}) {
+  const normalizedName = fullName?.trim();
+
+  if (normalizedName) {
+    return normalizedName;
+  }
+
+  const username = email.split("@")[0]?.trim();
+
+  if (!username) {
+    return "Account";
+  }
+
+  return username
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export async function AppShell({
   active,
   children,
@@ -45,6 +71,10 @@ export async function AppShell({
   const accountEmail =
     claims && typeof claims.email === "string" ? claims.email : "account@company.com";
   const avatarSeed = profile?.avatarSeed ?? claims?.sub ?? accountEmail;
+  const displayName = getDisplayName({
+    email: accountEmail,
+    fullName: profile?.fullName,
+  });
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] lg:h-screen lg:overflow-hidden">
@@ -73,7 +103,9 @@ export async function AppShell({
             <div className="flex items-center gap-3 px-3 py-2">
               <DiceBearAvatar alt="Account avatar" className="size-8" seed={avatarSeed} size={32} />
               <div className="min-w-0">
-                <p className="truncate text-sm text-[var(--foreground)]">Account</p>
+                <p className="truncate text-sm font-medium text-[var(--foreground)]">
+                  {displayName}
+                </p>
                 <p className="truncate text-xs text-[var(--muted)]">{accountEmail}</p>
               </div>
             </div>

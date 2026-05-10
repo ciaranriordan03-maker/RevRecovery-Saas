@@ -31,6 +31,7 @@ type ErrorState = {
 type ProfilePayload = {
   profile?: {
     avatarSeed: string | null;
+    fullName: string | null;
   };
   error?: string;
 };
@@ -152,10 +153,12 @@ function getNextAccent(index: number): TeamMember["accent"] {
 export function SettingsContent({
   accountEmail,
   initialAvatarSeed,
+  initialFullName,
   userId,
 }: {
   accountEmail: string;
   initialAvatarSeed: string | null;
+  initialFullName: string | null;
   userId: string;
 }) {
   const router = useRouter();
@@ -168,6 +171,8 @@ export function SettingsContent({
   const initialSeed = initialAvatarSeed ?? avatarOptions[0];
   const [avatarSeed, setAvatarSeed] = useState(initialSeed);
   const [savedAvatarSeed, setSavedAvatarSeed] = useState(initialSeed);
+  const [fullName, setFullName] = useState(initialFullName ?? "");
+  const [savedFullName, setSavedFullName] = useState(initialFullName ?? "");
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -243,7 +248,7 @@ export function SettingsContent({
     () => JSON.stringify(settings) !== JSON.stringify(savedSnapshot),
     [savedSnapshot, settings],
   );
-  const hasAvatarChanges = avatarSeed !== savedAvatarSeed;
+  const hasAvatarChanges = avatarSeed !== savedAvatarSeed || fullName.trim() !== savedFullName;
 
   function updateSettings(updater: (current: UserSettings) => UserSettings) {
     setSettings((current) => updater(current));
@@ -300,7 +305,10 @@ export function SettingsContent({
 
     try {
       const response = await fetch("/api/profile", {
-        body: JSON.stringify({ avatarSeed }),
+        body: JSON.stringify({
+          avatarSeed,
+          fullName: fullName.trim(),
+        }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -313,10 +321,13 @@ export function SettingsContent({
       }
 
       const nextAvatarSeed = payload.profile.avatarSeed ?? avatarOptions[0];
+      const nextFullName = payload.profile.fullName ?? "";
       setAvatarSeed(nextAvatarSeed);
       setSavedAvatarSeed(nextAvatarSeed);
+      setFullName(nextFullName);
+      setSavedFullName(nextFullName);
       setStatusTone("success");
-      setStatusMessage("Avatar saved");
+      setStatusMessage("Profile saved");
       router.refresh();
     } catch (error) {
       setStatusTone("error");
@@ -427,10 +438,21 @@ export function SettingsContent({
                 size={56}
               />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--foreground)]">Account avatar</p>
+                <p className="text-sm font-medium text-[var(--foreground)]">Account profile</p>
                 <p className="mt-1 truncate text-xs text-[var(--muted)]">{accountEmail}</p>
               </div>
             </div>
+
+            <label className="block">
+              <span className="mb-2 block text-sm text-[var(--foreground)]">Full name</span>
+              <input
+                className="h-11 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm outline-none transition focus:border-[var(--primary)]"
+                onChange={(event) => setFullName(event.target.value)}
+                placeholder="Your name"
+                type="text"
+                value={fullName}
+              />
+            </label>
 
             <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
               {avatarOptions.map((option) => {

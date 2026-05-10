@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrCreateUserOnboardingProfile, updateUserAvatarSeed } from "../../lib/server/onboarding-store";
+import { getOrCreateUserOnboardingProfile, updateUserProfile } from "../../lib/server/onboarding-store";
 import { createClient } from "../../lib/supabase/server";
 
 async function getAuthenticatedUserId() {
@@ -42,12 +42,22 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await request.json()) as { avatarSeed?: unknown };
+    const body = (await request.json()) as {
+      avatarSeed?: unknown;
+      fullName?: unknown;
+    };
     const avatarSeed =
       typeof body.avatarSeed === "string" && body.avatarSeed.trim().length > 0
         ? body.avatarSeed.trim()
         : null;
-    const profile = await updateUserAvatarSeed(userId, avatarSeed);
+    const fullName =
+      typeof body.fullName === "string" && body.fullName.trim().length > 0
+        ? body.fullName.trim()
+        : null;
+    const profile = await updateUserProfile(userId, {
+      avatarSeed,
+      fullName,
+    });
 
     return NextResponse.json({ profile });
   } catch (error) {
