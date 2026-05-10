@@ -4,11 +4,22 @@ type SupabaseEnvKey =
   | "SUPABASE_SECRET_KEY";
 
 function extractSingleEnvValue(value: string) {
-  return value
+  const trimmedValue = value.trim();
+  const withoutKeyName = trimmedValue.replace(/^[A-Z0-9_]+\s*=\s*/, "");
+  const singleValue = withoutKeyName
     .split(/\s+[A-Z0-9_]+=/)[0]
     .trim()
     .split(/\s+/)[0]
     ?.trim() ?? "";
+
+  if (
+    (singleValue.startsWith('"') && singleValue.endsWith('"')) ||
+    (singleValue.startsWith("'") && singleValue.endsWith("'"))
+  ) {
+    return singleValue.slice(1, -1).trim();
+  }
+
+  return singleValue;
 }
 
 function normalizeEnvValue(key: SupabaseEnvKey, value: string | undefined) {

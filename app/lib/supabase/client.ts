@@ -3,11 +3,22 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 function extractSingleEnvValue(value: string) {
-  return value
+  const trimmedValue = value.trim();
+  const withoutKeyName = trimmedValue.replace(/^[A-Z0-9_]+\s*=\s*/, "");
+  const singleValue = withoutKeyName
     .split(/\s+[A-Z0-9_]+=/)[0]
     .trim()
     .split(/\s+/)[0]
     ?.trim() ?? "";
+
+  if (
+    (singleValue.startsWith('"') && singleValue.endsWith('"')) ||
+    (singleValue.startsWith("'") && singleValue.endsWith("'"))
+  ) {
+    return singleValue.slice(1, -1).trim();
+  }
+
+  return singleValue;
 }
 
 function getBrowserEnvValue(key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" | "NEXT_PUBLIC_SUPABASE_URL") {
