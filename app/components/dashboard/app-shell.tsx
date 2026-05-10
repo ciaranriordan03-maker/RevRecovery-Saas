@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DiceBearAvatar } from "../avatar";
 import { BrandMark } from "../brand";
 import { Icon } from "../ui-icon";
 import { dashboardNavItems, type DashboardNavItem } from "../../lib/data";
@@ -41,6 +42,9 @@ export async function AppShell({
   const navItems = profile?.onboardingCompleted
     ? dashboardNavItems.filter((item) => item !== "Setup")
     : dashboardNavItems;
+  const accountEmail =
+    claims && typeof claims.email === "string" ? claims.email : "account@company.com";
+  const avatarSeed = profile?.avatarSeed ?? claims?.sub ?? accountEmail;
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] lg:h-screen lg:overflow-hidden">
@@ -67,12 +71,10 @@ export async function AppShell({
           </nav>
           <div className="border-t border-[var(--border)] p-4">
             <div className="flex items-center gap-3 px-3 py-2">
-              <div className="flex size-8 items-center justify-center rounded-full bg-[var(--border)] text-xs text-[var(--muted-strong)]">
-                AC
-              </div>
+              <DiceBearAvatar alt="Account avatar" className="size-8" seed={avatarSeed} size={32} />
               <div className="min-w-0">
                 <p className="truncate text-sm text-[var(--foreground)]">Account</p>
-                <p className="truncate text-xs text-[var(--muted)]">account@company.com</p>
+                <p className="truncate text-xs text-[var(--muted)]">{accountEmail}</p>
               </div>
             </div>
           </div>

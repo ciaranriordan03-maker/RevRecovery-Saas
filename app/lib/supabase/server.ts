@@ -2,13 +2,29 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
+
+function requireSupabaseServerAuthEnv() {
+  const url = getSupabaseUrl();
+  const publishableKey = getSupabasePublishableKey();
+
+  if (!url || !publishableKey) {
+    throw new Error("Supabase URL and publishable key are required.");
+  }
+
+  return {
+    publishableKey,
+    url,
+  };
+}
 
 export async function createClient() {
   const cookieStore = await cookies();
+  const { publishableKey, url } = requireSupabaseServerAuthEnv();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    url,
+    publishableKey,
     {
       cookies: {
         getAll() {

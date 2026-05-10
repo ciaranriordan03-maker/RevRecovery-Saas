@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from "../supabase/admin";
 import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
 import { resolveRecoverySequenceForFailedPayment } from "./recovery-sequences";
+import { getStripeCustomerState } from "./stripe-customer-states";
 
 type FailedPaymentRecord = {
   amount_due: number;
@@ -76,7 +77,20 @@ function getResendApiKey() {
 }
 
 function getRecoveryEmailFrom() {
-  return process.env.RECOVERY_EMAIL_FROM ?? null;
+  const from = process.env.RECOVERY_EMAIL_FROM?.trim();
+
+  if (!from) {
+    return null;
+  }
+
+  if (
+    (from.startsWith('"') && from.endsWith('"')) ||
+    (from.startsWith("'") && from.endsWith("'"))
+  ) {
+    return from.slice(1, -1).trim();
+  }
+
+  return from;
 }
 
 function buildPortalUrl() {
@@ -258,9 +272,49 @@ function isSubscriptionHealthy(subscription: Stripe.Subscription) {
   return subscription.status === "active" || subscription.status === "trialing";
 }
 
+async function getPaymentMethodUpdatePauseReason(failedPayment: FailedPaymentRecord) {
+  if (!failedPayment.stripe_customer_id) {
+    return null;
+  }
+
+  const customerState = await getStripeCustomerState({
+    stripeAccountId: failedPayment.stripe_account_id,
+    stripeCustomerId: failedPayment.stripe_customer_id,
+    userId: failedPayment.user_id,
+  });
+  const paymentMethodUpdatedAt = customerState?.payment_method_updated_at;
+
+  if (!paymentMethodUpdatedAt) {
+    return null;
+  }
+
+  const paymentMethodUpdatedAtMs = new Date(paymentMethodUpdatedAt).getTime();
+  const failedPaymentUpdatedAtMs = new Date(failedPayment.updated_at).getTime();
+
+  if (!Number.isFinite(paymentMethodUpdatedAtMs) || !Number.isFinite(failedPaymentUpdatedAtMs)) {
+    return null;
+  }
+
+  if (paymentMethodUpdatedAtMs >= failedPaymentUpdatedAtMs) {
+    return "Customer updated their payment method. Recovery email paused until Stripe retry status updates.";
+  }
+
+  return null;
+}
+
 async function checkLiveStripeStopConditions(
   failedPayment: FailedPaymentRecord,
 ): Promise<StripeStopCheckResult> {
+  const paymentMethodPauseReason = await getPaymentMethodUpdatePauseReason(failedPayment);
+
+  if (paymentMethodPauseReason) {
+    return {
+      canSend: false,
+      reason: paymentMethodPauseReason,
+      recovered: false,
+    };
+  }
+
   const stripe = createStripePlatformClient();
 
   if (!stripe) {

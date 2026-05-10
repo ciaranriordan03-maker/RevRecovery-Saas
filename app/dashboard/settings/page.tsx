@@ -9,14 +9,21 @@ export const metadata: Metadata = {
 };
 
 export default async function SettingsPage() {
-  await requireCompletedOnboarding();
+  const { claims, profile } = await requireCompletedOnboarding();
+  const accountEmail =
+    typeof claims.email === "string" ? claims.email : "account@company.com";
+
   return (
     <AppShell
       active="Settings"
       subtitle="Manage your account and preferences"
       title="Settings"
     >
-      <SettingsContent />
+      <SettingsContent
+        accountEmail={accountEmail}
+        initialAvatarSeed={profile.avatarSeed}
+        userId={claims.sub}
+      />
     </AppShell>
   );
 }

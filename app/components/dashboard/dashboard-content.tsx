@@ -2,9 +2,17 @@ import Link from "next/link";
 import { Icon } from "../ui-icon";
 import { RecommendationCard } from "./recommendation-card";
 import { RecommendationImpactSummary } from "./recommendation-impact-summary";
-import { breakdown, metrics, recommendationImpactSummary, recommendations } from "../../lib/data";
+import { breakdown } from "../../lib/data";
+import type { DashboardMetricCard } from "../../lib/server/dashboard-metrics";
+import type { OptimizeRecommendations } from "../../lib/server/optimize-recommendations";
 
-export function DashboardContent() {
+export function DashboardContent({
+  metrics,
+  optimizeRecommendations,
+}: {
+  metrics: DashboardMetricCard[];
+  optimizeRecommendations: OptimizeRecommendations;
+}) {
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-20">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
@@ -16,31 +24,31 @@ export function DashboardContent() {
         </section>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {metrics.map(([label, value, caption, tone]) => (
+          {metrics.map((metric) => (
             <article
               className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
-              key={label}
+              key={metric.label}
             >
               <div className="mb-4 flex items-center gap-3">
                 <div
                   className={`flex size-10 items-center justify-center rounded-[10px] ${
-                    tone === "success"
+                    metric.tone === "success"
                       ? "bg-[var(--success-soft)] text-[var(--success)]"
                       : "bg-[var(--danger-soft)] text-[var(--danger)]"
                   }`}
                 >
-                  <Icon name={tone === "success" ? "check" : "alert"} />
+                  <Icon name={metric.tone === "success" ? "check" : "alert"} />
                 </div>
-                <p className="text-sm text-[var(--muted)]">{label}</p>
+                <p className="text-sm text-[var(--muted)]">{metric.label}</p>
               </div>
               <p
                 className={`text-[30px] leading-9 ${
-                  tone === "success" ? "text-[var(--success)]" : "text-[var(--foreground)]"
+                  metric.tone === "success" ? "text-[var(--success)]" : "text-[var(--foreground)]"
                 }`}
               >
-                {value}
+                {metric.value}
               </p>
-              <p className="mt-1 text-xs text-[var(--muted)]">{caption}</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">{metric.caption}</p>
             </article>
           ))}
         </div>
@@ -83,15 +91,19 @@ export function DashboardContent() {
           <div className="mb-4 rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-gradient-to-br from-[var(--primary-soft)] to-[var(--purple-soft)] p-6">
             <h2 className="text-base font-medium">AI Recommendations Ready</h2>
             <p className="mt-2 text-sm text-[var(--muted-strong)]">
-              Based on your performance data, we&apos;ve identified 3 opportunities
-              to increase recovery rates.
+              Based on your performance data, we&apos;ve identified{" "}
+              {optimizeRecommendations.intro.count} opportunities to increase
+              recovery rates.
             </p>
           </div>
           <div className="mb-4">
-            <RecommendationImpactSummary value={recommendationImpactSummary.value} />
+            <RecommendationImpactSummary
+              caption={optimizeRecommendations.impactSummary.caption}
+              value={optimizeRecommendations.impactSummary.value}
+            />
           </div>
           <div className="grid gap-4">
-            {recommendations.map((item) => (
+            {optimizeRecommendations.recommendations.map((item) => (
               <RecommendationCard
                 action={item.action}
                 body={item.body}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "../../components/dashboard/app-shell";
 import { InsightsContent } from "../../components/dashboard/insights-content";
 import { requireCompletedOnboarding } from "../../lib/auth";
+import { getInsightsMetrics } from "../../lib/server/insights-metrics";
 
 export const metadata: Metadata = {
   title: "Insights | RecoverFlow",
@@ -9,14 +10,16 @@ export const metadata: Metadata = {
 };
 
 export default async function InsightsPage() {
-  await requireCompletedOnboarding();
+  const { claims } = await requireCompletedOnboarding();
+  const insightsMetrics = await getInsightsMetrics(claims.sub);
+
   return (
     <AppShell
       active="Insights"
       subtitle="Performance breakdown and key learnings"
       title="Insights"
     >
-      <InsightsContent />
+      <InsightsContent insights={insightsMetrics} />
     </AppShell>
   );
 }

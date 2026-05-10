@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { DiceBearAvatar } from "../avatar";
 import { Button } from "../button";
 import { Icon } from "../ui-icon";
 import {
@@ -25,6 +27,19 @@ type LoadState = {
 type ErrorState = {
   error?: string;
 };
+
+type ProfilePayload = {
+  profile?: {
+    avatarSeed: string | null;
+  };
+  error?: string;
+};
+
+function buildAvatarOptions(identifier: string) {
+  const baseSeed = identifier.trim().toLowerCase() || "recoverflow-user";
+
+  return Array.from({ length: 8 }, (_, index) => `${baseSeed}:avatar-${index + 1}`);
+}
 
 function SettingsSection({
   children,
@@ -130,28 +145,30 @@ function Toggle({
   );
 }
 
-function TeamAccent({ accent, initials }: { accent: TeamMember["accent"]; initials: string }) {
-  const accentClass =
-    accent === "primary"
-      ? "bg-[var(--primary-border)] text-[var(--primary-hover)]"
-      : accent === "purple"
-        ? "bg-[var(--purple-badge)] text-[var(--purple-badge-text)]"
-        : "bg-[var(--success-badge)] text-[var(--success-badge-text)]";
-
-  return (
-    <div className={`flex size-9 items-center justify-center rounded-full text-sm ${accentClass}`}>
-      {initials}
-    </div>
-  );
-}
-
 function getNextAccent(index: number): TeamMember["accent"] {
   return (["primary", "purple", "success"] as const)[index % 3];
 }
 
-export function SettingsContent() {
+export function SettingsContent({
+  accountEmail,
+  initialAvatarSeed,
+  userId,
+}: {
+  accountEmail: string;
+  initialAvatarSeed: string | null;
+  userId: string;
+}) {
+  const router = useRouter();
   const [settings, setSettings] = useState<UserSettings>(defaultUserSettings);
   const [savedSnapshot, setSavedSnapshot] = useState<UserSettings>(defaultUserSettings);
+  const avatarOptions = useMemo(
+    () => buildAvatarOptions(accountEmail || userId),
+    [accountEmail, userId],
+  );
+  const initialSeed = initialAvatarSeed ?? avatarOptions[0];
+  const [avatarSeed, setAvatarSeed] = useState(initialSeed);
+  const [savedAvatarSeed, setSavedAvatarSeed] = useState(initialSeed);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
@@ -226,6 +243,7 @@ export function SettingsContent() {
     () => JSON.stringify(settings) !== JSON.stringify(savedSnapshot),
     [savedSnapshot, settings],
   );
+  const hasAvatarChanges = avatarSeed !== savedAvatarSeed;
 
   function updateSettings(updater: (current: UserSettings) => UserSettings) {
     setSettings((current) => updater(current));
@@ -273,6 +291,38 @@ export function SettingsContent() {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function saveAvatar() {
+    setIsSavingAvatar(true);
+    setStatusMessage("");
+
+    try {
+      const response = await fetch("/api/profile", {
+        body: JSON.stringify({ avatarSeed }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+      });
+      const payload = (await response.json()) as ProfilePayload;
+
+      if (!response.ok || !payload.profile) {
+        throw new Error(payload.error ?? "Unable to save avatar.");
+      }
+
+      const nextAvatarSeed = payload.profile.avatarSeed ?? avatarOptions[0];
+      setAvatarSeed(nextAvatarSeed);
+      setSavedAvatarSeed(nextAvatarSeed);
+      setStatusTone("success");
+      setStatusMessage("Avatar saved");
+      router.refresh();
+    } catch (error) {
+      setStatusTone("error");
+      setStatusMessage(error instanceof Error ? error.message : "Unable to save avatar.");
+    } finally {
+      setIsSavingAvatar(false);
     }
   }
 
@@ -366,6 +416,57 @@ export function SettingsContent() {
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
+
+        <SettingsSection icon="users" title="Profile">
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+              <DiceBearAvatar
+                alt="Selected account avatar"
+                className="size-14"
+                seed={avatarSeed}
+                size={56}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--foreground)]">Account avatar</p>
+                <p className="mt-1 truncate text-xs text-[var(--muted)]">{accountEmail}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+              {avatarOptions.map((option) => {
+                const selected = option === avatarSeed;
+
+                return (
+                  <button
+                    aria-label="Choose account avatar"
+                    aria-pressed={selected}
+                    className={`flex aspect-square items-center justify-center rounded-[12px] border bg-[var(--background)] transition ${
+                      selected
+                        ? "border-[var(--primary)] ring-2 ring-[var(--primary-border)]"
+                        : "border-[var(--border)] hover:border-[var(--border-strong)]"
+                    }`}
+                    key={option}
+                    onClick={() => setAvatarSeed(option)}
+                    type="button"
+                  >
+                    <DiceBearAvatar alt="" className="size-10" seed={option} size={40} />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                className="h-9 px-4 text-sm"
+                disabled={isSavingAvatar || !hasAvatarChanges}
+                onClick={() => void saveAvatar()}
+                variant="secondary"
+              >
+                {isSavingAvatar ? "Saving..." : "Save Avatar"}
+              </Button>
+            </div>
+          </div>
+        </SettingsSection>
 
         <SettingsSection icon="card" title="Integrations">
           <div className="flex flex-col gap-5">
@@ -568,7 +669,12 @@ export function SettingsContent() {
                 key={member.id}
               >
                 <div className="flex items-center gap-3">
-                  <TeamAccent accent={member.accent} initials={member.initials} />
+                  <DiceBearAvatar
+                    alt={`${member.name || "Team member"} avatar`}
+                    className="size-9"
+                    seed={member.email || member.id}
+                    size={36}
+                  />
                   <div>
                     <p className="text-sm text-[var(--foreground)]">{member.name}</p>
                     <p className="mt-1 text-xs text-[var(--muted)]">{member.email}</p>

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
 
 const protectedPaths = ["/dashboard", "/onboarding"];
 const publicAuthPaths = ["/login"];
@@ -16,10 +17,16 @@ export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
     request,
   });
+  const supabaseUrl = getSupabaseUrl();
+  const supabasePublishableKey = getSupabasePublishableKey();
+
+  if (!supabaseUrl || !supabasePublishableKey) {
+    throw new Error("Supabase URL and publishable key are required.");
+  }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    supabaseUrl,
+    supabasePublishableKey,
     {
       cookies: {
         getAll() {

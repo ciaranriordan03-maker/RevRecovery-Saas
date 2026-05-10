@@ -45,6 +45,7 @@ For webhook-backed recovery tracking, also run `supabase/sql/003_init_recovery_w
 To persist recovery flow records and queued recovery emails, also run `supabase/sql/004_init_recovery_sequences.sql`.
 For delivery status and retry tracking, also run `supabase/sql/005_add_recovery_message_delivery_fields.sql`.
 For onboarding completion state and route gating, also run `supabase/sql/006_init_user_profiles.sql`.
+For connected Stripe customer/subscription state tracking, also run `supabase/sql/007_init_stripe_customer_states.sql`.
 
 The Connect webhook endpoint in this app is:
 

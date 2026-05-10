@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   redirectTo.searchParams.delete("code");
   redirectTo.searchParams.delete("token_hash");
   redirectTo.searchParams.delete("type");
+  redirectTo.searchParams.set("auth", "verified");
 
   const supabase = await createClient();
 
@@ -37,9 +38,10 @@ export async function GET(request: NextRequest) {
   }
 
   redirectTo.pathname = "/login";
+  redirectTo.searchParams.set("status", "error");
   redirectTo.searchParams.set(
     "message",
-    "We could not verify that email link. If this keeps happening, update the Confirm signup email template to use token_hash.",
+    "We could not verify that email link. Request a new confirmation email or sign in if your account is already verified.",
   );
   return NextResponse.redirect(redirectTo);
 }

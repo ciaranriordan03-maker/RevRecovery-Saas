@@ -20,42 +20,11 @@ export const dashboardNavItems = [
 
 export type DashboardNavItem = (typeof dashboardNavItems)[number];
 
-export const metrics = [
-  ["Revenue at Risk", "$47,850", "Last 30 days", "risk"],
-  ["Failed Payments", "127", "Across 89 customers", "risk"],
-  ["Recoverable Revenue", "$31,200", "~65% recovery rate", "success"],
-] as const;
-
 export const breakdown = [
   ["Card declined", "$28,400", "bg-[var(--danger-dot)]"],
   ["Insufficient funds", "$12,650", "bg-[var(--orange-dot)]"],
   ["Expired card", "$6,800", "bg-[var(--yellow-dot)]"],
 ] as const;
-
-export const recommendations = [
-  {
-    title: "Add urgency to Email 3",
-    titleBadgeClass: "bg-[var(--primary-soft)] text-[var(--primary-text)]",
-    body: "Data shows that adding a clear deadline in Day 7 emails increases recovery by 8%.",
-    action: "Apply Change",
-  },
-  {
-    title: 'Add a "Why this happened" section',
-    titleBadgeClass: "bg-[var(--warning-soft)] text-[var(--warning-text)]",
-    body: "Customers respond better when they understand common reasons for payment failures.",
-    action: "Apply Change",
-  },
-  {
-    title: "Create VIP segment for faster outreach",
-    titleBadgeClass: "bg-[var(--success-soft)] text-[var(--success-badge-text)]",
-    body: "High-value customers recover faster with priority Day 0 outreach.",
-    action: "Create Segment",
-  },
-] as const;
-
-export const recommendationImpactSummary = {
-  value: "+$3,850/mo",
-} as const;
 
 export const recoveryEmails = [
   {
@@ -142,74 +111,6 @@ export const recoveryAudienceOptions = [
 ] as const;
 
 export const recoveryEmailTabs = ["Email 1", "Email 2", "Email 3"] as const;
-
-export const insightFunnel = [
-  {
-    label: "Emails Sent",
-    value: "100%",
-    barClass: "w-full bg-[var(--primary)]",
-    trackClass: "bg-[var(--primary-soft)]",
-  },
-  {
-    label: "Opened",
-    value: "100%",
-    barClass: "w-full bg-[var(--chart-blue)]",
-    trackClass: "bg-[var(--blue-soft)]",
-  },
-  {
-    label: "Clicked Link",
-    value: "72%",
-    barClass: "w-[72%] bg-[var(--chart-green)]",
-    trackClass: "bg-[var(--chart-green-track)]",
-  },
-  {
-    label: "Payment Recovered",
-    value: "48%",
-    barClass: "w-[48%] bg-[var(--chart-green-dark)]",
-    trackClass: "bg-[var(--chart-green-track)]",
-  },
-] as const;
-
-export const insightCards = [
-  {
-    icon: "mail",
-    iconClass: "bg-[var(--primary-soft)] text-[var(--primary)]",
-    title: "Best Performing Email",
-    rows: [
-      {
-        label: "Day 3 - Gentle Reminder",
-        value: "42% recovery",
-        valueClass: "text-[var(--success)]",
-        rowClass: "bg-[var(--success-soft)] border-[var(--success-badge)]",
-      },
-      {
-        label: "Best subject line",
-        value: "Don't lose access",
-        valueClass: "text-[var(--muted-strong)]",
-        rowClass: "bg-[var(--background)] border-[var(--border)]",
-      },
-    ],
-  },
-  {
-    icon: "target",
-    iconClass: "bg-[var(--success-soft)] text-[var(--success)]",
-    title: "Customer Segment Insight",
-    rows: [
-      {
-        label: "High-Value Customers",
-        value: "78% recovered",
-        valueClass: "text-[var(--success)]",
-        rowClass: "bg-[var(--blue-soft)] border-[var(--blue-border)]",
-      },
-      {
-        label: "Most common issue",
-        value: "Card declined",
-        valueClass: "text-[var(--muted-strong)]",
-        rowClass: "bg-[var(--background)] border-[var(--border)]",
-      },
-    ],
-  },
-] as const;
 
 export const optimizeSuggestions = [
   {

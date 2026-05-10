@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "../button";
 import { Icon } from "../ui-icon";
+import { AtRiskCustomersTable } from "./at-risk-customers-table";
 import {
   activationBenefits,
   recoveryAudienceOptions,
@@ -8,8 +9,10 @@ import {
   recoveryEmailTabs,
   recoveryToneOptions,
 } from "../../lib/data";
+import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
 
 type RecoveryContentProps = {
+  atRiskCustomers?: AtRiskCustomer[];
   mode?: "sequence" | "customize" | "activate";
 };
 
@@ -179,7 +182,11 @@ function EmailPreviewCard() {
   );
 }
 
-function RecoverySequence() {
+function RecoverySequence({
+  atRiskCustomers,
+}: {
+  atRiskCustomers: AtRiskCustomer[];
+}) {
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-[143px]">
       <div className="mx-auto flex max-w-[896px] flex-col gap-8">
@@ -239,6 +246,8 @@ function RecoverySequence() {
             Activate Flow
           </Link>
         </div>
+
+        <AtRiskCustomersTable customers={atRiskCustomers} />
       </div>
     </div>
   );
@@ -365,7 +374,10 @@ function ActivationStep() {
   );
 }
 
-export function RecoveryContent({ mode = "sequence" }: RecoveryContentProps) {
+export function RecoveryContent({
+  atRiskCustomers = [],
+  mode = "sequence",
+}: RecoveryContentProps) {
   if (mode === "activate") {
     return <ActivationStep />;
   }
@@ -374,5 +386,5 @@ export function RecoveryContent({ mode = "sequence" }: RecoveryContentProps) {
     return <CustomizeRecoveryStep />;
   }
 
-  return <RecoverySequence />;
+  return <RecoverySequence atRiskCustomers={atRiskCustomers} />;
 }

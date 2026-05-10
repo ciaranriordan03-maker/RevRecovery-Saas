@@ -4,11 +4,27 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
 
-function redirectWithMessage(message: string, next?: string | null) {
+type AuthRedirectState = "check-email" | "error" | "info" | "verified";
+
+function redirectWithMessage({
+  email,
+  message,
+  next,
+  status = "info",
+}: {
+  email?: string | null;
+  message: string;
+  next?: string | null;
+  status?: AuthRedirectState;
+}) {
   const searchParams = new URLSearchParams();
   searchParams.set("message", message);
+  searchParams.set("status", status);
   if (next) {
     searchParams.set("next", next);
+  }
+  if (email) {
+    searchParams.set("email", email);
   }
 
   redirect(`/login?${searchParams.toString()}`);
@@ -26,7 +42,12 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    redirectWithMessage(error.message, next);
+    redirectWithMessage({
+      email,
+      message: error.message,
+      next,
+      status: "error",
+    });
   }
 
   redirect(next || "/onboarding");
@@ -49,13 +70,20 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
-    redirectWithMessage(error.message, next);
+    redirectWithMessage({
+      email,
+      message: error.message,
+      next,
+      status: "error",
+    });
   }
 
-  redirectWithMessage(
-    "Check your email to confirm your account, then log in.",
+  redirectWithMessage({
+    email,
+    message: "We sent a confirmation link to your inbox.",
     next,
-  );
+    status: "check-email",
+  });
 }
 
 export async function logout() {

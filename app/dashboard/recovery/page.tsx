@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "../../components/dashboard/app-shell";
 import { RecoveryContent } from "../../components/dashboard/recovery-content";
 import { requireCompletedOnboarding } from "../../lib/auth";
+import { getAtRiskCustomers } from "../../lib/server/at-risk-customers";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RecoverFlow",
@@ -30,7 +31,7 @@ const pageCopy = {
 } as const;
 
 export default async function RecoveryPage({ searchParams }: RecoveryPageProps) {
-  await requireCompletedOnboarding();
+  const { claims } = await requireCompletedOnboarding();
   const params = await searchParams;
   const mode =
     params?.step === "activate"
@@ -38,6 +39,9 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       : params?.step === "customize"
         ? "customize"
         : "sequence";
+  const atRiskCustomers = mode === "sequence"
+    ? await getAtRiskCustomers(claims.sub)
+    : [];
 
   return (
     <AppShell
@@ -45,7 +49,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       subtitle={pageCopy[mode].subtitle}
       title={pageCopy[mode].title}
     >
-      <RecoveryContent mode={mode} />
+      <RecoveryContent atRiskCustomers={atRiskCustomers} mode={mode} />
     </AppShell>
   );
 }

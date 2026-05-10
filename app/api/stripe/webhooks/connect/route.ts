@@ -9,6 +9,10 @@ import {
   resolveRecoverySequenceForFailedPayment,
 } from "../../../../lib/server/recovery-sequences";
 import {
+  recordPaymentMethodUpdated,
+  recordSubscriptionState,
+} from "../../../../lib/server/stripe-customer-states";
+import {
   insertWebhookEventRecord,
   markWebhookEventProcessed,
   upsertFailedPayment,
@@ -47,6 +51,19 @@ function getCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustom
   return typeof customer === "string" ? customer : customer.id;
 }
 
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
+  const invoiceWithSubscription = invoice as Stripe.Invoice & {
+    subscription?: string | Stripe.Subscription | null;
+  };
+  const subscription = invoiceWithSubscription.subscription;
+
+  if (!subscription) {
+    return null;
+  }
+
+  return typeof subscription === "string" ? subscription : subscription.id;
+}
+
 async function handleInvoicePaymentFailed(
   invoice: Stripe.Invoice,
   stripeAccountId: string,
@@ -64,7 +81,7 @@ async function handleInvoicePaymentFailed(
     stripe_account_id: stripeAccountId,
     stripe_customer_id: getCustomerId(invoice.customer),
     stripe_invoice_id: invoice.id,
-    stripe_subscription_id: null,
+    stripe_subscription_id: getInvoiceSubscriptionId(invoice),
     user_id: userId,
   });
 
@@ -91,7 +108,7 @@ async function handleInvoiceRecovered(
     stripe_account_id: stripeAccountId,
     stripe_customer_id: getCustomerId(invoice.customer),
     stripe_invoice_id: invoice.id,
-    stripe_subscription_id: null,
+    stripe_subscription_id: getInvoiceSubscriptionId(invoice),
     user_id: userId,
   });
 
@@ -124,7 +141,7 @@ async function handleInvoiceUpdated(
     stripe_account_id: stripeAccountId,
     stripe_customer_id: getCustomerId(invoice.customer),
     stripe_invoice_id: invoice.id,
-    stripe_subscription_id: null,
+    stripe_subscription_id: getInvoiceSubscriptionId(invoice),
     user_id: userId,
   });
 }
@@ -201,7 +218,19 @@ export async function POST(request: Request) {
           break;
         case "customer.subscription.deleted":
         case "customer.subscription.updated":
+          await recordSubscriptionState({
+            eventType: event.type,
+            stripeAccountId,
+            subscription: event.data.object as Stripe.Subscription,
+            userId,
+          });
+          break;
         case "payment_method.updated":
+          await recordPaymentMethodUpdated({
+            paymentMethod: event.data.object as Stripe.PaymentMethod,
+            stripeAccountId,
+            userId,
+          });
           break;
         default:
           break;

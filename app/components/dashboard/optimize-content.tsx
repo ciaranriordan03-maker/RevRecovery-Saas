@@ -1,9 +1,13 @@
 import { Icon } from "../ui-icon";
 import { RecommendationCard } from "./recommendation-card";
 import { RecommendationImpactSummary } from "./recommendation-impact-summary";
-import { recommendationImpactSummary, recommendations } from "../../lib/data";
+import type { OptimizeRecommendations } from "../../lib/server/optimize-recommendations";
 
-export function OptimizeContent() {
+export function OptimizeContent({
+  optimizeRecommendations,
+}: {
+  optimizeRecommendations: OptimizeRecommendations;
+}) {
   return (
     <div className="px-5 pb-8 sm:px-8 xl:px-20">
       <div className="mx-auto flex max-w-[1024px] flex-col gap-4">
@@ -17,17 +21,21 @@ export function OptimizeContent() {
                 AI Recommendations Ready
               </h2>
               <p className="mt-2 text-sm text-[var(--muted-strong)]">
-                Based on your performance data, we&apos;ve identified 3
-                opportunities to increase recovery rates.
+                Based on your performance data, we&apos;ve identified{" "}
+                {optimizeRecommendations.intro.count} opportunities to increase
+                recovery rates. {optimizeRecommendations.intro.summary}
               </p>
             </div>
           </div>
         </section>
 
-        <RecommendationImpactSummary value={recommendationImpactSummary.value} />
+        <RecommendationImpactSummary
+          caption={optimizeRecommendations.impactSummary.caption}
+          value={optimizeRecommendations.impactSummary.value}
+        />
 
         <section className="flex flex-col gap-4">
-          {recommendations.map((item) => (
+          {optimizeRecommendations.recommendations.map((item) => (
             <RecommendationCard
               action={item.action}
               body={item.body}

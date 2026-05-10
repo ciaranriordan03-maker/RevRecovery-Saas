@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Button } from "../components/button";
 import { AuthMarketingPanel } from "../components/auth/auth-marketing-panel";
-import { login, signup } from "./actions";
+import { AuthProgressLabel, AuthStatusPanel } from "../components/auth/auth-status-panel";
+import { AuthForm } from "./auth-form";
 
 export const metadata: Metadata = {
   title: "Login | RecoverFlow",
@@ -10,14 +10,20 @@ export const metadata: Metadata = {
 
 type LoginPageProps = {
   searchParams?: Promise<{
+    email?: string;
     message?: string;
     next?: string;
+    status?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const next = params?.next ?? "/onboarding";
+  const status = params?.status ?? "default";
+  const email = params?.email ?? "";
+  const isCheckEmail = status === "check-email";
+  const isError = status === "error";
 
   return (
     <main className="min-h-screen bg-[var(--background)] px-5 py-10 text-[var(--foreground)] sm:px-8">
@@ -27,57 +33,32 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[var(--shadow-card)]">
             <div>
-              <h2 className="text-2xl font-medium tracking-[-0.02em]">Sign in or create account</h2>
+              <AuthProgressLabel isCheckEmail={isCheckEmail} />
+              <h2 className="text-2xl font-medium tracking-[-0.02em]">
+                {isCheckEmail ? "Check your inbox" : "Sign in or create account"}
+              </h2>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                Use the same form for login and sign-up while we keep the auth flow nice
-                and lean.
+                {isCheckEmail
+                  ? "Your account is almost ready. Open the confirmation email, then you will continue into setup."
+                  : "Use your work email to access RecoverFlow or start a new workspace."}
               </p>
             </div>
 
-            {params?.message ? (
-              <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--muted-strong)]">
-                {params.message}
-              </div>
+            <AuthStatusPanel
+              email={email}
+              isCheckEmail={isCheckEmail}
+              isError={isError}
+              message={params?.message}
+            />
+
+            <AuthForm email={email} isCheckEmail={isCheckEmail} next={next} />
+
+            {isCheckEmail ? (
+              <p className="mt-5 text-center text-xs leading-5 text-[var(--muted)]">
+                No email yet? Check spam, then use Sign Up again with the same email
+                to request a fresh confirmation link.
+              </p>
             ) : null}
-
-            <form className="mt-6 space-y-4">
-              <input name="next" type="hidden" value={next} />
-              <label className="block">
-                <span className="mb-2 block text-sm text-[var(--foreground)]">Email</span>
-                <input
-                  className="h-12 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm outline-none transition focus:border-[var(--primary)]"
-                  name="email"
-                  placeholder="you@company.com"
-                  required
-                  type="email"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-2 block text-sm text-[var(--foreground)]">Password</span>
-                <input
-                  className="h-12 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm outline-none transition focus:border-[var(--primary)]"
-                  minLength={8}
-                  name="password"
-                  placeholder="Minimum 8 characters"
-                  required
-                  type="password"
-                />
-              </label>
-
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-                <Button className="h-11 flex-1 text-sm" formAction={login} type="submit">
-                  Log In
-                </Button>
-                <Button
-                  className="h-11 flex-1 text-sm"
-                  formAction={signup}
-                  type="submit"
-                  variant="secondary"
-                >
-                  Sign Up
-                </Button>
-              </div>
-            </form>
           </section>
         </div>
       </div>
