@@ -73,6 +73,17 @@ const FAILED_PAYMENTS_TABLE = "failed_payments";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 const RECOVERY_SEQUENCES_TABLE = "recovery_sequences";
 
+export type RecoveryEmailVariables = {
+  amountDue: number;
+  customerEmail: string | null;
+  customerFirstName: string | null;
+  customerFullName: string | null;
+  formattedAmount: string;
+  greeting: string;
+  invoiceId: string;
+  portalUrl: string;
+};
+
 function getResendApiKey() {
   return process.env.RESEND_API_KEY ?? null;
 }
@@ -98,16 +109,99 @@ function buildPortalUrl() {
   return getAppUrl();
 }
 
-function buildMessageCopy(
-  stepNumber: number,
-  tone: string,
-  amountDue: number,
-  currency: string | null,
-) {
-  const formattedAmount = new Intl.NumberFormat("en-US", {
+function formatCurrency(amountDue: number, currency: string | null) {
+  return new Intl.NumberFormat("en-US", {
     currency: (currency ?? "USD").toUpperCase(),
     style: "currency",
   }).format(amountDue / 100);
+}
+
+function sanitizeName(value: string | null | undefined) {
+  const normalized = value?.trim().replace(/\s+/g, " ");
+
+  if (!normalized || normalized.includes("@")) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function getFirstName(fullName: string | null) {
+  return fullName?.split(" ").filter(Boolean)[0] ?? null;
+}
+
+function getCustomerNameFromPayload(payload: FailedPaymentRecord["latest_payload"]) {
+  if ("customer_name" in payload && typeof payload.customer_name === "string") {
+    return sanitizeName(payload.customer_name);
+  }
+
+  if ("customer" in payload && payload.customer && typeof payload.customer === "object") {
+    const customer = payload.customer as Stripe.Customer | Stripe.DeletedCustomer;
+
+    if ("deleted" in customer && customer.deleted) {
+      return null;
+    }
+
+    if ("name" in customer && typeof customer.name === "string") {
+      return sanitizeName(customer.name);
+    }
+  }
+
+  return null;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+export function buildRecoveryEmailVariables({
+  amountDue,
+  currency,
+  latestInvoice,
+  originalPayload,
+}: {
+  amountDue: number;
+  currency: string | null;
+  latestInvoice: Stripe.Invoice | null;
+  originalPayload: FailedPaymentRecord["latest_payload"];
+}): RecoveryEmailVariables {
+  const customerFullName =
+    getCustomerNameFromPayload(latestInvoice ?? originalPayload) ??
+    getCustomerNameFromPayload(originalPayload);
+  const customerFirstName = getFirstName(customerFullName);
+  const customerEmail =
+    getInvoiceCustomerEmail(latestInvoice) ??
+    getInvoiceCustomerEmail(originalPayload);
+
+  return {
+    amountDue,
+    customerEmail,
+    customerFirstName,
+    customerFullName,
+    formattedAmount: formatCurrency(amountDue, currency),
+    greeting: customerFirstName ? `Hi ${customerFirstName},` : "Hi there,",
+    invoiceId:
+      latestInvoice?.id ??
+      ("id" in originalPayload && typeof originalPayload.id === "string"
+        ? originalPayload.id
+        : "unknown"),
+    portalUrl: `${buildPortalUrl()}/dashboard/recovery`,
+  };
+}
+
+export function buildMessageCopy(
+  stepNumber: number,
+  tone: string,
+  variables: RecoveryEmailVariables,
+) {
+  const safeGreeting = escapeHtml(variables.greeting);
+  const safeFormattedAmount = escapeHtml(variables.formattedAmount);
+  const safePortalUrl = escapeHtml(variables.portalUrl);
 
   const tonePrefix =
     tone === "Urgent"
@@ -126,20 +220,39 @@ function buildMessageCopy(
   return {
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: rgb(17 24 39);">
+        <p>${safeGreeting}</p>
         <p>${tonePrefix}</p>
         <p>${stepBody}</p>
-        <p><strong>Outstanding amount:</strong> ${formattedAmount}</p>
-        <p><a href="${buildPortalUrl()}/dashboard/recovery" style="display:inline-block;padding:12px 18px;background:rgb(91 76 240);color:white;text-decoration:none;border-radius:8px;">Update billing details</a></p>
+        <p><strong>Outstanding amount:</strong> ${safeFormattedAmount}</p>
+        <p><a href="${safePortalUrl}" style="display:inline-block;padding:12px 18px;background:rgb(91 76 240);color:white;text-decoration:none;border-radius:8px;">Update billing details</a></p>
         <p>If you’ve already taken care of this, you can ignore this email.</p>
       </div>
     `.trim(),
-    text: `${tonePrefix}\n\n${stepBody}\n\nOutstanding amount: ${formattedAmount}\n\nUpdate billing details: ${buildPortalUrl()}/dashboard/recovery\n\nIf you've already taken care of this, you can ignore this email.`,
+    text: `${variables.greeting}\n\n${tonePrefix}\n\n${stepBody}\n\nOutstanding amount: ${variables.formattedAmount}\n\nUpdate billing details: ${variables.portalUrl}\n\nIf you've already taken care of this, you can ignore this email.`,
   };
 }
 
-function getInvoiceCustomerEmail(latestPayload: FailedPaymentRecord["latest_payload"]) {
+function getInvoiceCustomerEmail(
+  latestPayload: FailedPaymentRecord["latest_payload"] | Stripe.Invoice | null,
+) {
+  if (!latestPayload) {
+    return null;
+  }
+
   if ("customer_email" in latestPayload && typeof latestPayload.customer_email === "string") {
     return latestPayload.customer_email;
+  }
+
+  if ("customer" in latestPayload && latestPayload.customer && typeof latestPayload.customer === "object") {
+    const customer = latestPayload.customer as Stripe.Customer | Stripe.DeletedCustomer;
+
+    if ("deleted" in customer && customer.deleted) {
+      return null;
+    }
+
+    if ("email" in customer && typeof customer.email === "string") {
+      return customer.email;
+    }
   }
 
   return null;
@@ -324,7 +437,9 @@ async function checkLiveStripeStopConditions(
 
   const latestInvoice = await stripe.invoices.retrieve(
     failedPayment.stripe_invoice_id,
-    {},
+    {
+      expand: ["customer"],
+    },
     {
       stripeAccount: failedPayment.stripe_account_id,
     },
@@ -582,11 +697,16 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
 
       const settingsRecord = await getUserSettings(message.user_id);
       const emailSettings = settingsRecord.settings.email;
+      const variables = buildRecoveryEmailVariables({
+        amountDue: failedPayment.amount_due,
+        currency: failedPayment.currency,
+        latestInvoice: stopCheck.latestInvoice,
+        originalPayload: failedPayment.latest_payload,
+      });
       const copy = buildMessageCopy(
         message.step_number,
         settingsRecord.settings.recovery.defaultEmailTone,
-        failedPayment.amount_due,
-        failedPayment.currency,
+        variables,
       );
 
       const from =
