@@ -1,5 +1,28 @@
 import "server-only";
 
+function normalizeAppUrl(value: string | undefined) {
+  const fallbackUrl = "http://localhost:3000";
+  const rawValue = value ?? fallbackUrl;
+  const withoutKeyName = rawValue.trim().replace(/^NEXT_PUBLIC_APP_URL\s*=\s*/, "");
+  const normalized = withoutKeyName.replace(/\s+/g, "").replace(/\/+$/, "");
+
+  if (!normalized) {
+    return fallbackUrl;
+  }
+
+  try {
+    const url = new URL(normalized);
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return fallbackUrl;
+    }
+
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return fallbackUrl;
+  }
+}
+
 export function getStripeSecretKey() {
   return process.env.STRIPE_SECRET_KEY ?? null;
 }
@@ -9,7 +32,7 @@ export function getStripeConnectClientId() {
 }
 
 export function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 }
 
 export function getStripeConnectRedirectUri() {

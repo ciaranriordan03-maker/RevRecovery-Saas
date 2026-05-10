@@ -2,6 +2,7 @@ import "server-only";
 
 import Stripe from "stripe";
 import { createSupabaseAdminClient } from "../supabase/admin";
+import { getAppUrl } from "../stripe/env";
 import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
 import { resolveRecoverySequenceForFailedPayment } from "./recovery-sequences";
@@ -94,7 +95,7 @@ function getRecoveryEmailFrom() {
 }
 
 function buildPortalUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return getAppUrl();
 }
 
 function buildMessageCopy(
