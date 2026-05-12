@@ -24,6 +24,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const email = params?.email ?? "";
   const isCheckEmail = status === "check-email";
   const isError = status === "error";
+  const isVerified = status === "verified";
 
   return (
     <main className="min-h-screen bg-[var(--background)] px-5 py-10 text-[var(--foreground)] sm:px-8">
@@ -33,14 +34,20 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[var(--shadow-card)]">
             <div>
-              <AuthProgressLabel isCheckEmail={isCheckEmail} />
+              <AuthProgressLabel isCheckEmail={isCheckEmail} isVerified={isVerified} />
               <h2 className="text-2xl font-medium tracking-[-0.02em]">
-                {isCheckEmail ? "Check your inbox" : "Sign in or create account"}
+                {isVerified
+                  ? "You're verified"
+                  : isCheckEmail
+                    ? "Check your inbox"
+                    : "Sign in or create account"}
               </h2>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                {isCheckEmail
-                  ? "Your account is almost ready. Open the confirmation email, then you will continue into setup."
-                  : "Use your work email to access RecoverFlow or start a new workspace."}
+                {isVerified
+                  ? "Your email is confirmed. Continue into setup to finish creating your workspace."
+                  : isCheckEmail
+                    ? "Your account is almost ready. Open the confirmation email, then you will continue into setup."
+                    : "Use your work email to access RecoverFlow or start a new workspace."}
               </p>
             </div>
 
@@ -48,10 +55,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               email={email}
               isCheckEmail={isCheckEmail}
               isError={isError}
+              isVerified={isVerified}
               message={params?.message}
+              next={next}
             />
 
-            <AuthForm email={email} isCheckEmail={isCheckEmail} next={next} />
+            {isVerified ? null : (
+              <AuthForm email={email} isCheckEmail={isCheckEmail} next={next} />
+            )}
 
             {isCheckEmail ? (
               <p className="mt-5 text-center text-xs leading-5 text-[var(--muted)]">

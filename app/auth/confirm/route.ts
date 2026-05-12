@@ -10,34 +10,46 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get("next") ?? "/onboarding";
   const redirectTo = request.nextUrl.clone();
 
-  redirectTo.pathname = next;
+  redirectTo.pathname = "/login";
   redirectTo.searchParams.delete("code");
   redirectTo.searchParams.delete("token_hash");
   redirectTo.searchParams.delete("type");
-  redirectTo.searchParams.set("auth", "verified");
+  redirectTo.searchParams.set("next", next);
+  redirectTo.searchParams.set("status", "verified");
+  redirectTo.searchParams.set("message", "Your email has been successfully confirmed.");
 
   const supabase = await createClient();
 
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      if (data.user?.email) {
+        redirectTo.searchParams.set("email", data.user.email);
+      }
+
       return NextResponse.redirect(redirectTo);
     }
   }
 
   if (tokenHash) {
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type,
     });
 
     if (!error) {
+      if (data.user?.email) {
+        redirectTo.searchParams.set("email", data.user.email);
+      }
+
       return NextResponse.redirect(redirectTo);
     }
   }
 
   redirectTo.pathname = "/login";
+  redirectTo.searchParams.delete("email");
+  redirectTo.searchParams.delete("next");
   redirectTo.searchParams.set("status", "error");
   redirectTo.searchParams.set(
     "message",
