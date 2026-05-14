@@ -18,6 +18,10 @@ export function AuthProgressLabel({
 }) {
   const isStepTwo = isCheckEmail || isVerified;
 
+  if (!isStepTwo) {
+    return null;
+  }
+
   return (
     <div className="mb-5 flex items-center gap-2 text-xs font-medium text-[var(--muted)]">
       <span

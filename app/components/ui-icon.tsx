@@ -36,6 +36,57 @@ export function Icon({ name, className = "" }: IconProps) {
           <path d="m3 7 9 6 9-6" />
         </svg>
       );
+    case "lock":
+      return (
+        <svg {...common}>
+          <rect x="5" y="10" width="14" height="10" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+      );
+    case "arrow-right":
+      return (
+        <svg {...common}>
+          <path d="M5 12h14" />
+          <path d="m13 6 6 6-6 6" />
+        </svg>
+      );
+    case "trend-up":
+      return (
+        <svg {...common}>
+          <path d="m4 16 5-5 4 4 7-7" />
+          <path d="M15 8h5v5" />
+        </svg>
+      );
+    case "google":
+      return (
+        <svg className={`size-5 ${className}`} viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="currentColor"
+            d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.2 3-7.3Z"
+          />
+          <path
+            fill="currentColor"
+            d="M12 22c2.7 0 5-0.9 6.6-2.5L15.4 17c-.9.6-2 .9-3.4.9-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22Z"
+          />
+          <path
+            fill="currentColor"
+            d="M6.4 13.8a6 6 0 0 1 0-3.6V7.6H3.1a10 10 0 0 0 0 8.8l3.3-2.6Z"
+          />
+          <path
+            fill="currentColor"
+            d="M12 6.1c1.5 0 2.8.5 3.8 1.5l2.8-2.8A9.6 9.6 0 0 0 12 2 10 10 0 0 0 3.1 7.6l3.3 2.6C7.2 7.9 9.4 6.1 12 6.1Z"
+          />
+        </svg>
+      );
+    case "github":
+      return (
+        <svg className={`size-5 ${className}`} viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="currentColor"
+            d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.9c-2.9.6-3.5-1.2-3.5-1.2-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 0 1.6 1.1 1.6 1.1.9 1.5 2.3 1.1 2.9.8.1-.7.4-1.1.6-1.4-2.3-.3-4.7-1.1-4.7-5A3.9 3.9 0 0 1 6.5 8.7c-.1-.3-.5-1.3.1-2.7 0 0 .9-.3 2.8 1.1a9.7 9.7 0 0 1 5.1 0c1.9-1.4 2.8-1.1 2.8-1.1.6 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.4 4.7-4.7 5 .4.3.7 1 .7 2v2.6c0 .3.2.6.7.5A10 10 0 0 0 12 2Z"
+          />
+        </svg>
+      );
     case "refresh":
       return (
         <svg {...common}>

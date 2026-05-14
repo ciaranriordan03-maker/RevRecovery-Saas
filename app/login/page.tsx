@@ -27,51 +27,59 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const isVerified = status === "verified";
 
   return (
-    <main className="min-h-screen bg-[var(--background)] px-5 py-10 text-[var(--foreground)] sm:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl items-center justify-center">
-        <div className="grid w-full gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-          <AuthMarketingPanel />
+    <main className="min-h-screen bg-[var(--auth-background)] text-[var(--foreground)]">
+      <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.16fr)_minmax(440px,1fr)]">
+        <AuthMarketingPanel />
 
-          <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[var(--shadow-card)]">
-            <div>
-              <AuthProgressLabel isCheckEmail={isCheckEmail} isVerified={isVerified} />
-              <h2 className="text-2xl font-medium tracking-[-0.02em]">
-                {isVerified
-                  ? "You're verified"
-                  : isCheckEmail
-                    ? "Check your inbox"
-                    : "Sign in or create account"}
-              </h2>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                {isVerified
-                  ? "Your email is confirmed. Continue into setup to finish creating your workspace."
-                  : isCheckEmail
-                    ? "Your account is almost ready. Open the confirmation email, then you will continue into setup."
-                    : "Use your work email to access RecoverFlow or start a new workspace."}
-              </p>
+        <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
+          <div className="w-full max-w-[440px]">
+            <div className="rounded-[14px] border border-[var(--border)] bg-white px-8 py-9 shadow-[0_1px_2px_rgb(16_24_40_/_0.04)] sm:px-8">
+              <div>
+                <AuthProgressLabel isCheckEmail={isCheckEmail} isVerified={isVerified} />
+                <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[var(--auth-heading)]">
+                  {isVerified
+                    ? "You're verified"
+                    : isCheckEmail
+                      ? "Check your inbox"
+                      : "Welcome back"}
+                </h2>
+                <p className="mt-2 text-sm font-medium text-[var(--auth-copy)]">
+                  {isVerified
+                    ? "Your email is confirmed. Continue into setup to finish creating your workspace."
+                    : isCheckEmail
+                      ? "Your account is almost ready. Open the confirmation email, then you will continue into setup."
+                      : "Sign in to continue to RevRecover"}
+                </p>
+              </div>
+
+              <AuthStatusPanel
+                email={email}
+                isCheckEmail={isCheckEmail}
+                isError={isError}
+                isVerified={isVerified}
+                message={params?.message}
+                next={next}
+              />
+
+              {isVerified ? null : (
+                <AuthForm email={email} isCheckEmail={isCheckEmail} next={next} />
+              )}
+
+              {isCheckEmail ? (
+                <p className="mt-5 text-center text-xs leading-5 text-[var(--muted)]">
+                  No email yet? Check spam, then use Sign Up again with the same
+                  email to request a fresh confirmation link.
+                </p>
+              ) : null}
             </div>
 
-            <AuthStatusPanel
-              email={email}
-              isCheckEmail={isCheckEmail}
-              isError={isError}
-              isVerified={isVerified}
-              message={params?.message}
-              next={next}
-            />
-
-            {isVerified ? null : (
-              <AuthForm email={email} isCheckEmail={isCheckEmail} next={next} />
-            )}
-
-            {isCheckEmail ? (
-              <p className="mt-5 text-center text-xs leading-5 text-[var(--muted)]">
-                No email yet? Check spam, then use Sign Up again with the same email
-                to request a fresh confirmation link.
-              </p>
-            ) : null}
-          </section>
-        </div>
+            <p className="mt-7 text-center text-xs leading-5 text-[var(--auth-fine-print)]">
+              By continuing, you agree to our{" "}
+              <span className="font-medium underline">Terms of Service</span> and{" "}
+              <span className="font-medium underline">Privacy Policy</span>
+            </p>
+          </div>
+        </section>
       </div>
     </main>
   );
