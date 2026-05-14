@@ -52,7 +52,11 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || !cookieState || cookieState !== state || !parsedState) {
     return NextResponse.redirect(
-      buildRedirect(request, "/dashboard/settings", "Invalid Stripe Connect state."),
+      buildRedirect(
+        request,
+        "/dashboard/settings",
+        "Stripe Connect session expired or returned to a different app domain. Please try connecting Stripe again from this same browser window.",
+      ),
     );
   }
 

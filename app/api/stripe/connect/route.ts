@@ -4,7 +4,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUserClaims } from "../../../lib/auth";
 import {
   getStripeConnectClientId,
-  getStripeConnectRedirectUri,
   hasStripeConnectEnv,
 } from "../../../lib/stripe/env";
 
@@ -16,6 +15,10 @@ function sanitizeNext(value: string | null) {
   }
 
   return value;
+}
+
+function buildConnectRedirectUri(request: NextRequest) {
+  return new URL("/api/stripe/connect/callback", request.nextUrl.origin).toString();
 }
 
 export async function GET(request: NextRequest) {
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
   authorizeUrl.searchParams.set("response_type", "code");
   authorizeUrl.searchParams.set("client_id", getStripeConnectClientId()!);
   authorizeUrl.searchParams.set("scope", "read_write");
-  authorizeUrl.searchParams.set("redirect_uri", getStripeConnectRedirectUri());
+  authorizeUrl.searchParams.set("redirect_uri", buildConnectRedirectUri(request));
   authorizeUrl.searchParams.set("state", state);
 
   const response = NextResponse.redirect(authorizeUrl);
