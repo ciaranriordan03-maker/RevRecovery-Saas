@@ -107,6 +107,8 @@ export function DashboardContent({
               <RecommendationCard
                 action={item.action}
                 body={item.body}
+                impactBadgeClass={item.impactBadgeClass}
+                impactLabel={item.impactLabel}
                 key={item.title}
                 titleBadgeClass={item.titleBadgeClass}
                 title={item.title}

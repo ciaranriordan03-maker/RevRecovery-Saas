@@ -129,9 +129,9 @@ export const optimizeSuggestions = [
       '"This can happen because of an expired card, low balance, or bank decline."',
   },
   {
-    title: "Prioritize high-value customers",
+    title: "Segment High-Value Customers",
     impact: "+2% recovery",
-    body: "Send the first recovery email sooner for larger accounts.",
+    body: "Customers on higher-value plans may respond better to personalized recovery messaging and faster follow-up timing.",
     current: "First reminder sends 4 hours after the failed payment.",
     suggested: "First reminder sends within 1 hour for $200+ monthly accounts.",
   },

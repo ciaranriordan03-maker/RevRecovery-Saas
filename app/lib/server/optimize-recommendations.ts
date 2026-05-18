@@ -5,6 +5,8 @@ import { createSupabaseAdminClient } from "../supabase/admin";
 export type OptimizeRecommendation = {
   action: string;
   body: string;
+  impactBadgeClass?: string;
+  impactLabel?: string;
   title: string;
   titleBadgeClass: string;
 };
@@ -43,6 +45,15 @@ const BADGE_CLASSES = {
   green: "bg-[var(--success-soft)] text-[var(--success-badge-text)]",
   purple: "bg-[var(--primary-soft)] text-[var(--primary-text)]",
 } as const;
+
+const HIGH_VALUE_CUSTOMER_RECOMMENDATION: OptimizeRecommendation = {
+  action: "Create VIP Segment",
+  body: "Customers on higher-value plans may respond better to personalized recovery messaging and faster follow-up timing.",
+  impactBadgeClass: BADGE_CLASSES.green,
+  impactLabel: "Revenue Impact",
+  title: "Segment High-Value Customers",
+  titleBadgeClass: BADGE_CLASSES.green,
+};
 
 function formatCurrency(cents: number, currency = "usd") {
   return new Intl.NumberFormat("en-US", {
@@ -110,20 +121,15 @@ async function getRecoveryMessageRows(userId: string) {
 }
 
 function buildRecommendations({
-  openFailedPayments,
   pendingMessagesCount,
   sentMessagesCount,
 }: {
-  openFailedPayments: FailedPaymentOptimizationRow[];
   pendingMessagesCount: number;
   sentMessagesCount: number;
 }) {
-  const recommendations: OptimizeRecommendation[] = [];
-  const openCustomers = new Set(
-    openFailedPayments
-      .map((payment) => payment.stripe_customer_id)
-      .filter((customerId): customerId is string => Boolean(customerId)),
-  );
+  const recommendations: OptimizeRecommendation[] = [
+    HIGH_VALUE_CUSTOMER_RECOMMENDATION,
+  ];
 
   if (pendingMessagesCount > 0) {
     recommendations.push({
@@ -141,21 +147,12 @@ function buildRecommendations({
     });
   }
 
-  if (openCustomers.size > 1) {
-    recommendations.push({
-      action: "Create VIP Segment",
-      body: "Customers on higher-value plans may respond better to personalized recovery messaging and faster follow-up timing.",
-      title: "Segment High-Value Customers",
-      titleBadgeClass: BADGE_CLASSES.green,
-    });
-  } else {
-    recommendations.push({
-      action: "Apply Change",
-      body: "Add a short explanation of common decline reasons so customers know whether to update a card, check funds, or contact their bank.",
-      title: 'Add a "Why this happened" section',
-      titleBadgeClass: BADGE_CLASSES.amber,
-    });
-  }
+  recommendations.push({
+    action: "Apply Change",
+    body: "Add a short explanation of common decline reasons so customers know whether to update a card, check funds, or contact their bank.",
+    title: 'Add a "Why this happened" section',
+    titleBadgeClass: BADGE_CLASSES.amber,
+  });
 
   if (sentMessagesCount > 0) {
     recommendations.push({
@@ -163,13 +160,6 @@ function buildRecommendations({
       body: `${sentMessagesCount} recovery emails have been sent. Add a clearer deadline to later reminders so unresolved customers know when access may be affected.`,
       title: "Add urgency to Email 3",
       titleBadgeClass: BADGE_CLASSES.amber,
-    });
-  } else {
-    recommendations.push({
-      action: "Create VIP Segment",
-      body: "Customers on higher-value plans may respond better to personalized recovery messaging and faster follow-up timing.",
-      title: "Segment High-Value Customers",
-      titleBadgeClass: BADGE_CLASSES.green,
     });
   }
 
@@ -201,7 +191,6 @@ export async function getOptimizeRecommendations(
     sentMessagesCount,
   );
   const recommendations = buildRecommendations({
-    openFailedPayments,
     pendingMessagesCount,
     sentMessagesCount,
   });
