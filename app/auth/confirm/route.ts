@@ -8,41 +8,28 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = (searchParams.get("type") as EmailOtpType | null) ?? "email";
   const next = searchParams.get("next") ?? "/onboarding";
-  const redirectTo = request.nextUrl.clone();
-
-  redirectTo.pathname = "/login";
+  const redirectTo = new URL(next.startsWith("/") ? next : "/onboarding", request.url);
   redirectTo.searchParams.delete("code");
   redirectTo.searchParams.delete("token_hash");
   redirectTo.searchParams.delete("type");
-  redirectTo.searchParams.set("next", next);
-  redirectTo.searchParams.set("status", "verified");
-  redirectTo.searchParams.set("message", "Your email has been successfully confirmed.");
 
   const supabase = await createClient();
 
   if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      if (data.user?.email) {
-        redirectTo.searchParams.set("email", data.user.email);
-      }
-
       return NextResponse.redirect(redirectTo);
     }
   }
 
   if (tokenHash) {
-    const { data, error } = await supabase.auth.verifyOtp({
+    const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type,
     });
 
     if (!error) {
-      if (data.user?.email) {
-        redirectTo.searchParams.set("email", data.user.email);
-      }
-
       return NextResponse.redirect(redirectTo);
     }
   }
@@ -53,7 +40,7 @@ export async function GET(request: NextRequest) {
   redirectTo.searchParams.set("status", "error");
   redirectTo.searchParams.set(
     "message",
-    "We could not verify that email link. Request a new confirmation email or sign in if your account is already verified.",
+    "That sign-in link is no longer valid. Please sign in with your email and password.",
   );
   return NextResponse.redirect(redirectTo);
 }

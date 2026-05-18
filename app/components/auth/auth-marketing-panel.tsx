@@ -1,19 +1,50 @@
 import { Icon } from "../ui-icon";
 
-const authHighlights = [
-  "AI-powered recovery sequences",
-  "Automatic Stripe integration",
-  "Real-time analytics dashboard",
-];
+type AuthMarketingVariant = "signin" | "signup";
 
-export function AuthMarketingPanel() {
+const variantContent = {
+  signin: {
+    brand: "RevRecover",
+    copy:
+      "Reduce failed-payment churn automatically. Connect Stripe. Recover revenue. Stay focused on growth.",
+    highlights: [
+      "AI-powered recovery sequences",
+      "Automatic Stripe integration",
+      "Real-time analytics dashboard",
+    ],
+    metricLabel: "Avg. Recovery Rate",
+    metricValue: "15-20%",
+    trust: "Trusted by 500+ SaaS companies",
+  },
+  signup: {
+    brand: "RevRecovery",
+    copy:
+      "Stop leaving money on the table. Our AI-powered platform identifies hidden revenue opportunities in your financial data.",
+    highlights: [
+      "AI-powered revenue analysis",
+      "Automated recovery workflows",
+      "Real-time revenue insights",
+    ],
+    metricLabel: "Average revenue recovered",
+    metricValue: "5-10%",
+    trust: "Trusted by 500+ small companies",
+  },
+} as const;
+
+export function AuthMarketingPanel({
+  variant = "signin",
+}: {
+  variant?: AuthMarketingVariant;
+}) {
+  const content = variantContent[variant];
+
   return (
     <section className="relative hidden min-h-screen overflow-hidden bg-[linear-gradient(135deg,var(--auth-gradient-start)_0%,var(--auth-gradient-mid)_56%,var(--auth-gradient-end)_100%)] px-12 py-8 text-white lg:flex lg:flex-col">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_8%,rgb(255_255_255_/_0.15),transparent_24%),radial-gradient(circle_at_78%_72%,rgb(255_255_255_/_0.08),transparent_28%)]" />
 
       <div className="relative z-10 flex items-center gap-3">
-        <span className="size-10 rounded-[12px] bg-white shadow-sm" />
-        <span className="text-lg font-semibold">RevRecover</span>
+        <span className="size-10 rounded-[12px] bg-white/90 shadow-sm" />
+        <span className="text-lg font-semibold">{content.brand}</span>
       </div>
 
       <div className="relative z-10 my-auto max-w-[460px] py-8">
@@ -21,22 +52,21 @@ export function AuthMarketingPanel() {
           Recover Revenue You&apos;re Already Losing
         </h1>
         <p className="mt-4 max-w-[430px] text-base leading-7 text-white/90 xl:text-lg xl:leading-8">
-          Reduce failed-payment churn automatically. Connect Stripe. Recover
-          revenue. Stay focused on growth.
+          {content.copy}
         </p>
 
         <div className="mt-8 grid max-w-[450px] grid-cols-2 gap-4">
           <MetricCard
             icon="trend-up"
-            label="Avg. Recovery Rate"
-            value="15-20%"
+            label={content.metricLabel}
+            value={content.metricValue}
             variant="green"
           />
           <MetricCard icon="clock" label="Setup Time" value="<2 min" variant="blue" />
         </div>
 
         <div className="mt-7 space-y-3.5">
-          {authHighlights.map((item) => (
+          {content.highlights.map((item) => (
             <div className="flex items-center gap-3" key={item}>
               <span className="size-5 shrink-0 rounded-full bg-white" />
               <p className="text-base text-white/95">{item}</p>
@@ -51,7 +81,7 @@ export function AuthMarketingPanel() {
           <span className="size-7 rounded-full border border-[var(--auth-avatar-border)] bg-[var(--auth-avatar-two)]" />
           <span className="size-7 rounded-full border border-[var(--auth-avatar-border)] bg-[var(--auth-avatar-three)]" />
         </div>
-        <p className="text-sm text-white/90">Trusted by 500+ SaaS companies</p>
+        <p className="text-sm text-white/90">{content.trust}</p>
       </div>
     </section>
   );

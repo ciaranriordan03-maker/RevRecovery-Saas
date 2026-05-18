@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
 
 const protectedPaths = ["/dashboard", "/onboarding"];
-const publicAuthPaths = ["/login"];
+const publicAuthPaths = ["/login", "/signup"];
 
 function isProtectedPath(pathname: string) {
   return protectedPaths.some((path) => pathname.startsWith(path));

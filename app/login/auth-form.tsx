@@ -1,14 +1,14 @@
+import Link from "next/link";
 import { Button } from "../components/button";
 import { Icon } from "../components/ui-icon";
-import { login, signup } from "./actions";
+import { login } from "./actions";
 
 type AuthFormProps = {
   email: string;
-  isCheckEmail: boolean;
   next: string;
 };
 
-export function AuthForm({ email, isCheckEmail, next }: AuthFormProps) {
+export function AuthForm({ email, next }: AuthFormProps) {
   return (
     <form className="mt-8">
       <input name="next" type="hidden" value={next} />
@@ -64,7 +64,7 @@ export function AuthForm({ email, isCheckEmail, next }: AuthFormProps) {
         formAction={login}
         type="submit"
       >
-        {isCheckEmail ? "I confirmed, continue" : "Sign in"}
+        Sign in
         <Icon name="arrow-right" className="size-4" />
       </Button>
 
@@ -81,13 +81,12 @@ export function AuthForm({ email, isCheckEmail, next }: AuthFormProps) {
 
       <p className="mt-7 text-center text-sm font-medium text-[var(--muted-strong)]">
         Don&apos;t have an account?{" "}
-        <button
+        <Link
           className="font-semibold text-[var(--primary)]"
-          formAction={signup}
-          type="submit"
+          href={`/signup?next=${encodeURIComponent(next)}`}
         >
           Sign up
-        </button>
+        </Link>
       </p>
     </form>
   );
