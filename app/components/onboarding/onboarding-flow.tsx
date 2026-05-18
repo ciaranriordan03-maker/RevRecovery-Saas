@@ -5,6 +5,7 @@ import { BrandMark } from "../brand";
 import { Button } from "../button";
 import { Icon } from "../ui-icon";
 import { onboardingSteps, type OnboardingStep } from "../../lib/data";
+import { getStripeConnectHref } from "../../lib/stripe/connect-url";
 
 function OnboardingCard({
   icon,
@@ -102,13 +103,15 @@ function StepContent({
         <Button
           className="w-full"
           onClick={() => {
-            window.location.href = "/api/stripe/connect?next=/onboarding?step=email-setup";
+            window.location.href = getStripeConnectHref(
+              "/onboarding?step=email-setup",
+            );
           }}
         >
           Connect Stripe
         </Button>
         <p className="mt-8 text-xs text-[var(--muted)]">
-          Secure read-only connection
+          Secure Stripe connection
         </p>
       </OnboardingCard>
     );

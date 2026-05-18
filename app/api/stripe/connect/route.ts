@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUserClaims } from "../../../lib/auth";
 import {
   getStripeConnectClientId,
+  getStripeConnectRedirectUri,
   hasStripeConnectEnv,
 } from "../../../lib/stripe/env";
 
@@ -18,7 +19,13 @@ function sanitizeNext(value: string | null) {
 }
 
 function buildConnectRedirectUri(request: NextRequest) {
-  return new URL("/api/stripe/connect/callback", request.nextUrl.origin).toString();
+  if (process.env.NODE_ENV === "production") {
+    return getStripeConnectRedirectUri();
+  }
+
+  return new URL("/api/stripe/connect/callback", request.nextUrl.origin)
+    .toString()
+    .trim();
 }
 
 export async function GET(request: NextRequest) {

@@ -17,6 +17,7 @@ import {
   type TeamRole,
   type UserSettings,
 } from "../../lib/settings";
+import { getStripeConnectHref } from "../../lib/stripe/connect-url";
 
 type LoadState = {
   settings: UserSettings;
@@ -107,10 +108,6 @@ function getErrorMessage(payload: ErrorState | LoadState, fallback: string) {
 
 function isLoadState(payload: ErrorState | LoadState): payload is LoadState {
   return "settings" in payload && "storage" in payload;
-}
-
-function getStripeConnectHref(next: string) {
-  return `/api/stripe/connect?next=${encodeURIComponent(next)}`;
 }
 
 function Toggle({

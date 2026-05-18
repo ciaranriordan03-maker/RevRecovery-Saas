@@ -14,6 +14,10 @@ function buildRedirect(request: NextRequest, path: string, message?: string) {
   return url;
 }
 
+function getFailureRedirectPath(parsedState: StripeConnectState | null) {
+  return parsedState?.next ?? "/dashboard/settings";
+}
+
 type StripeConnectState = {
   next: string;
   nonce: string;
@@ -41,20 +45,34 @@ export async function GET(request: NextRequest) {
   const parsedState = parseState(state);
 
   if (error) {
+    console.warn("Stripe Connect OAuth returned an error", {
+      error,
+      hasState: Boolean(state),
+      next: parsedState?.next,
+    });
+
     return NextResponse.redirect(
       buildRedirect(
         request,
-        parsedState?.next ?? "/dashboard/settings",
+        getFailureRedirectPath(parsedState),
         errorDescription ?? "Stripe connection was cancelled.",
       ),
     );
   }
 
   if (!code || !state || !cookieState || cookieState !== state || !parsedState) {
+    console.warn("Stripe Connect state validation failed", {
+      hasCode: Boolean(code),
+      hasCookieState: Boolean(cookieState),
+      hasParsedState: Boolean(parsedState),
+      hasState: Boolean(state),
+      stateMatchesCookie: Boolean(cookieState && state && cookieState === state),
+    });
+
     return NextResponse.redirect(
       buildRedirect(
         request,
-        "/dashboard/settings",
+        getFailureRedirectPath(parsedState),
         "Stripe Connect session expired or returned to a different app domain. Please try connecting Stripe again from this same browser window.",
       ),
     );
@@ -115,6 +133,12 @@ export async function GET(request: NextRequest) {
       stripeError instanceof Error
         ? stripeError.message
         : "Unable to finish the Stripe connection.";
+
+    console.error("Stripe Connect callback failed", {
+      message,
+      next: parsedState.next,
+      userId: parsedState.userId,
+    });
 
     return NextResponse.redirect(buildRedirect(request, parsedState.next, message));
   }
