@@ -55,6 +55,20 @@ const HIGH_VALUE_CUSTOMER_RECOMMENDATION: OptimizeRecommendation = {
   titleBadgeClass: BADGE_CLASSES.green,
 };
 
+const URGENCY_RECOMMENDATION: OptimizeRecommendation = {
+  action: "Apply Change",
+  body: "Add a clearer deadline to later reminders so unresolved customers know when access may be affected.",
+  title: "Add urgency to Email 3",
+  titleBadgeClass: BADGE_CLASSES.purple,
+};
+
+const WHY_SECTION_RECOMMENDATION: OptimizeRecommendation = {
+  action: "Apply Change",
+  body: "Add a short explanation of common decline reasons so customers know whether to update a card, check funds, or contact their bank.",
+  title: 'Add a "Why this happened" section',
+  titleBadgeClass: BADGE_CLASSES.amber,
+};
+
 function formatCurrency(cents: number, currency = "usd") {
   return new Intl.NumberFormat("en-US", {
     currency: currency.toUpperCase(),
@@ -120,50 +134,12 @@ async function getRecoveryMessageRows(userId: string) {
   return data ?? [];
 }
 
-function buildRecommendations({
-  pendingMessagesCount,
-  sentMessagesCount,
-}: {
-  pendingMessagesCount: number;
-  sentMessagesCount: number;
-}) {
-  const recommendations: OptimizeRecommendation[] = [
+function buildRecommendations() {
+  return [
     HIGH_VALUE_CUSTOMER_RECOMMENDATION,
+    URGENCY_RECOMMENDATION,
+    WHY_SECTION_RECOMMENDATION,
   ];
-
-  if (pendingMessagesCount > 0) {
-    recommendations.push({
-      action: "Review Timing",
-      body: `${pendingMessagesCount} recovery emails are queued. Review send timing so customers get the first reminder while the failed payment is still fresh.`,
-      title: "Tune pending email timing",
-      titleBadgeClass: BADGE_CLASSES.purple,
-    });
-  } else {
-    recommendations.push({
-      action: "Add Reminder",
-      body: "No recovery emails are currently queued. Keep Email 1 immediate so every new failed payment gets a fast customer reminder.",
-      title: "Keep first outreach immediate",
-      titleBadgeClass: BADGE_CLASSES.purple,
-    });
-  }
-
-  recommendations.push({
-    action: "Apply Change",
-    body: "Add a short explanation of common decline reasons so customers know whether to update a card, check funds, or contact their bank.",
-    title: 'Add a "Why this happened" section',
-    titleBadgeClass: BADGE_CLASSES.amber,
-  });
-
-  if (sentMessagesCount > 0) {
-    recommendations.push({
-      action: "Apply Change",
-      body: `${sentMessagesCount} recovery emails have been sent. Add a clearer deadline to later reminders so unresolved customers know when access may be affected.`,
-      title: "Add urgency to Email 3",
-      titleBadgeClass: BADGE_CLASSES.amber,
-    });
-  }
-
-  return recommendations.slice(0, 3);
 }
 
 export async function getOptimizeRecommendations(
@@ -183,17 +159,11 @@ export async function getOptimizeRecommendations(
   const sentMessagesCount = recoveryMessages.filter(
     (message) => message.status === "sent",
   ).length;
-  const pendingMessagesCount = recoveryMessages.filter(
-    (message) => message.status === "pending",
-  ).length;
   const potentialRecovery = estimatePotentialRecovery(
     openRevenueAtRisk,
     sentMessagesCount,
   );
-  const recommendations = buildRecommendations({
-    pendingMessagesCount,
-    sentMessagesCount,
-  });
+  const recommendations = buildRecommendations();
 
   return {
     impactSummary: {
