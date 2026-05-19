@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { sanitizeAppRedirect } from "../lib/safe-redirect";
 import { createClient } from "../lib/supabase/server";
 import {
   getOrCreateUserOnboardingProfile,
@@ -8,6 +9,17 @@ import {
 } from "../lib/server/onboarding-store";
 
 type AuthRedirectState = "error" | "info";
+
+function getAppUrl() {
+  const rawValue = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  const normalized = rawValue.replace(/\s+/g, "").replace(/\/+$/, "");
+
+  try {
+    return new URL(normalized).toString().replace(/\/+$/, "");
+  } catch {
+    return "http://localhost:3000";
+  }
+}
 
 function redirectWithMessage({
   email,
@@ -38,7 +50,7 @@ function redirectWithMessage({
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/onboarding");
+  const next = sanitizeAppRedirect(String(formData.get("next") ?? "/onboarding"));
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -70,7 +82,7 @@ export async function signup(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirm_password") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
-  const next = String(formData.get("next") ?? "/onboarding");
+  const next = sanitizeAppRedirect(String(formData.get("next") ?? "/onboarding"));
   const source = String(formData.get("source") ?? "/login");
   const redirectPath = source === "/signup" ? "/signup" : "/login";
   if (confirmPassword && password !== confirmPassword) {
@@ -134,4 +146,58 @@ export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${getAppUrl()}/auth/confirm?next=/reset-password`,
+  });
+
+  if (error) {
+    redirectWithMessage({
+      email,
+      message: error.message,
+      path: "/login",
+      status: "error",
+    });
+  }
+
+  redirectWithMessage({
+    email,
+    message: "Password reset email sent. Check your inbox for the secure reset link.",
+    path: "/login",
+  });
+}
+
+export async function updatePassword(formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
+
+  if (password !== confirmPassword) {
+    redirectWithMessage({
+      message: "Passwords do not match.",
+      path: "/login",
+      status: "error",
+    });
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({
+    password,
+  });
+
+  if (error) {
+    redirectWithMessage({
+      message: error.message,
+      path: "/login",
+      status: "error",
+    });
+  }
+
+  redirectWithMessage({
+    message: "Password updated. You can now sign in with your new password.",
+    path: "/login",
+  });
 }

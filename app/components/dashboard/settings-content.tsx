@@ -335,14 +335,7 @@ export function SettingsContent({
   }
 
   function rotatePassword() {
-    const nextPassword = window.prompt("Enter a new password");
-
-    if (!nextPassword) {
-      return;
-    }
-
-    setStatusTone("muted");
-    setStatusMessage("Password change flow will be connected after MVP auth hardening.");
+    window.location.href = "/forgot-password";
   }
 
   function addTeamMember() {

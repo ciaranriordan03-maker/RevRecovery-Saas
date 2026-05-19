@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthMarketingPanel } from "../components/auth/auth-marketing-panel";
 import { AuthStatusPanel } from "../components/auth/auth-status-panel";
+import { sanitizeAppRedirect } from "../lib/safe-redirect";
 import { SignupForm } from "./signup-form";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ type SignupPageProps = {
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const params = await searchParams;
-  const next = params?.next ?? "/onboarding";
+  const next = sanitizeAppRedirect(params?.next, "/onboarding");
   const status = params?.status ?? "default";
   const email = params?.email ?? "";
   const isError = status === "error";

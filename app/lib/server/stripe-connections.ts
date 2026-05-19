@@ -1,6 +1,11 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "../supabase/admin";
+import {
+  decryptStripeToken,
+  encryptStripeToken,
+  isEncryptedStripeToken,
+} from "./stripe-token-vault";
 
 export type StripeSyncSummary = {
   activeSubscriptionsCount: number;
@@ -63,6 +68,45 @@ type StripeConnectionUpsert = {
 };
 
 const STRIPE_CONNECTIONS_TABLE = "stripe_connections";
+const STRIPE_CONNECTION_SELECT =
+  "id, user_id, stripe_account_id, access_token, refresh_token, connected_at, status, account_email, account_display_name, scope, livemode, last_synced_at, sync_summary, updated_at";
+const STRIPE_CONNECTION_SUMMARY_SELECT =
+  "id, user_id, stripe_account_id, connected_at, status, account_email, account_display_name, scope, livemode, last_synced_at, sync_summary, updated_at";
+
+function decryptConnectionTokens(connection: StripeConnectionRecord): StripeConnectionRecord {
+  return {
+    ...connection,
+    access_token: decryptStripeToken(connection.access_token),
+    refresh_token: connection.refresh_token
+      ? decryptStripeToken(connection.refresh_token)
+      : null,
+  };
+}
+
+async function encryptLegacyConnectionTokens(connection: StripeConnectionRecord) {
+  if (
+    isEncryptedStripeToken(connection.access_token) &&
+    (!connection.refresh_token || isEncryptedStripeToken(connection.refresh_token))
+  ) {
+    return;
+  }
+
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return;
+  }
+
+  await supabase
+    .from(STRIPE_CONNECTIONS_TABLE)
+    .update({
+      access_token: encryptStripeToken(connection.access_token),
+      refresh_token: connection.refresh_token
+        ? encryptStripeToken(connection.refresh_token)
+        : null,
+    })
+    .eq("id", connection.id);
+}
 
 export async function getStripeConnectionForUser(userId: string) {
   const supabase = createSupabaseAdminClient();
@@ -73,9 +117,7 @@ export async function getStripeConnectionForUser(userId: string) {
 
   const { data, error } = await supabase
     .from(STRIPE_CONNECTIONS_TABLE)
-    .select(
-      "id, user_id, stripe_account_id, access_token, refresh_token, connected_at, status, account_email, account_display_name, scope, livemode, last_synced_at, sync_summary, updated_at",
-    )
+    .select(STRIPE_CONNECTION_SELECT)
     .eq("user_id", userId)
     .maybeSingle<StripeConnectionRecord>();
 
@@ -83,7 +125,12 @@ export async function getStripeConnectionForUser(userId: string) {
     return null;
   }
 
-  return data ?? null;
+  if (!data) {
+    return null;
+  }
+
+  await encryptLegacyConnectionTokens(data);
+  return decryptConnectionTokens(data);
 }
 
 export async function getStripeConnectionForAccount(stripeAccountId: string) {
@@ -95,9 +142,7 @@ export async function getStripeConnectionForAccount(stripeAccountId: string) {
 
   const { data, error } = await supabase
     .from(STRIPE_CONNECTIONS_TABLE)
-    .select(
-      "id, user_id, stripe_account_id, access_token, refresh_token, connected_at, status, account_email, account_display_name, scope, livemode, last_synced_at, sync_summary, updated_at",
-    )
+    .select(STRIPE_CONNECTION_SELECT)
     .eq("stripe_account_id", stripeAccountId)
     .maybeSingle<StripeConnectionRecord>();
 
@@ -105,7 +150,12 @@ export async function getStripeConnectionForAccount(stripeAccountId: string) {
     return null;
   }
 
-  return data ?? null;
+  if (!data) {
+    return null;
+  }
+
+  await encryptLegacyConnectionTokens(data);
+  return decryptConnectionTokens(data);
 }
 
 export async function upsertStripeConnection(connection: StripeConnectionUpsert) {
@@ -117,19 +167,26 @@ export async function upsertStripeConnection(connection: StripeConnectionUpsert)
 
   const { data, error } = await supabase
     .from(STRIPE_CONNECTIONS_TABLE)
-    .upsert(connection, {
-      onConflict: "user_id",
-    })
-    .select(
-      "id, user_id, stripe_account_id, access_token, refresh_token, connected_at, status, account_email, account_display_name, scope, livemode, last_synced_at, sync_summary, updated_at",
+    .upsert(
+      {
+        ...connection,
+        access_token: encryptStripeToken(connection.access_token),
+        refresh_token: connection.refresh_token
+          ? encryptStripeToken(connection.refresh_token)
+          : null,
+      },
+      {
+        onConflict: "user_id",
+      },
     )
+    .select(STRIPE_CONNECTION_SELECT)
     .single<StripeConnectionRecord>();
 
   if (error) {
     throw new Error(`Unable to save Stripe connection: ${error.message}`);
   }
 
-  return data;
+  return decryptConnectionTokens(data);
 }
 
 export async function updateStripeConnectionStatus(
@@ -156,9 +213,28 @@ export async function updateStripeConnectionStatus(
 }
 
 export async function getStripeConnectionSummary(userId: string): Promise<StripeConnectionSummary> {
-  const connection = await getStripeConnectionForUser(userId);
+  const supabase = createSupabaseAdminClient();
 
-  if (!connection) {
+  if (!supabase) {
+    return {
+      accountDisplayName: null,
+      accountEmail: null,
+      connected: false,
+      connectedAt: null,
+      lastSyncedAt: null,
+      status: "not_connected",
+      stripeAccountId: null,
+      syncSummary: null,
+    };
+  }
+
+  const { data: connection, error } = await supabase
+    .from(STRIPE_CONNECTIONS_TABLE)
+    .select(STRIPE_CONNECTION_SUMMARY_SELECT)
+    .eq("user_id", userId)
+    .maybeSingle<Omit<StripeConnectionRecord, "access_token" | "refresh_token">>();
+
+  if (error || !connection) {
     return {
       accountDisplayName: null,
       accountEmail: null,

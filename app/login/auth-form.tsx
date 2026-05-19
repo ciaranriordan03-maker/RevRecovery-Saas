@@ -54,9 +54,9 @@ export function AuthForm({ email, next }: AuthFormProps) {
       </label>
 
       <div className="mt-3 flex justify-end">
-        <button className="text-sm font-medium text-[var(--primary)]" type="button">
+        <Link className="text-sm font-medium text-[var(--primary)]" href="/forgot-password">
           Forgot password?
-        </button>
+        </Link>
       </div>
 
       <Button
@@ -68,17 +68,6 @@ export function AuthForm({ email, next }: AuthFormProps) {
         <Icon name="arrow-right" className="size-4" />
       </Button>
 
-      <div className="my-7 flex items-center gap-5">
-        <span className="h-px flex-1 bg-[var(--border)]" />
-        <span className="text-sm text-[var(--muted)]">or</span>
-        <span className="h-px flex-1 bg-[var(--border)]" />
-      </div>
-
-      <div className="space-y-3">
-        <SocialButton icon="google" label="Continue with Google" />
-        <SocialButton icon="github" label="Continue with GitHub" />
-      </div>
-
       <p className="mt-7 text-center text-sm font-medium text-[var(--muted-strong)]">
         Don&apos;t have an account?{" "}
         <Link
@@ -89,18 +78,5 @@ export function AuthForm({ email, next }: AuthFormProps) {
         </Link>
       </p>
     </form>
-  );
-}
-
-function SocialButton({ icon, label }: { icon: string; label: string }) {
-  return (
-    <button
-      aria-disabled="true"
-      className="flex h-[46px] w-full items-center justify-center gap-3 rounded-[14px] border border-[var(--auth-input-border)] bg-white px-4 text-sm font-semibold text-[var(--auth-social-text)]"
-      type="button"
-    >
-      <Icon name={icon} className="size-5 text-[var(--auth-social-text)]" />
-      {label}
-    </button>
   );
 }

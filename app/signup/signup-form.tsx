@@ -101,23 +101,6 @@ export function SignupForm({ email, next }: SignupFormProps) {
         Create account
       </Button>
 
-      <div className="my-6 flex items-center gap-4">
-        <span className="h-px flex-1 bg-[var(--border)]" />
-        <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-          Or continue with
-        </span>
-        <span className="h-px flex-1 bg-[var(--border)]" />
-      </div>
-
-      <button
-        aria-disabled="true"
-        className="flex h-[46px] w-full items-center justify-center gap-3 rounded-[10px] border border-[var(--auth-input-border)] bg-white px-4 text-sm font-semibold text-[var(--auth-social-text)]"
-        type="button"
-      >
-        <Icon name="google" className="size-5 text-[var(--auth-social-text)]" />
-        Continue with Google
-      </button>
-
       <p className="mt-7 text-center text-sm font-medium text-[var(--muted-strong)]">
         Already have an account?{" "}
         <Link
