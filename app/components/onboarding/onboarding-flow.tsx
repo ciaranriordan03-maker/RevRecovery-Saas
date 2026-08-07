@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BrandMark } from "../brand";
 import { Button } from "../button";
@@ -193,6 +194,7 @@ export function OnboardingFlow({
 }: {
   initialStep?: OnboardingStep;
 }) {
+  const router = useRouter();
   const [activeStep, setActiveStep] = useState<OnboardingStep>(initialStep);
   const activeIndex = onboardingSteps.indexOf(activeStep);
   const isFirst = activeIndex === 0;
@@ -215,7 +217,7 @@ export function OnboardingFlow({
       return;
     }
 
-    window.location.href = "/dashboard";
+    router.push("/dashboard");
   }
 
   return (

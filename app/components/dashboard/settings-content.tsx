@@ -335,7 +335,7 @@ export function SettingsContent({
   }
 
   function rotatePassword() {
-    window.location.href = "/forgot-password";
+    router.push("/forgot-password");
   }
 
   function addTeamMember() {
