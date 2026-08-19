@@ -6,7 +6,13 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
+  org: "rev-recovery",
+  project: "rev-recovery-saas",
   silent: true,
+  widenClientFileUpload: true,
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
   webpack: {
     automaticVercelMonitors: true,
     treeshake: {
