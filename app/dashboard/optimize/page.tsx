@@ -5,7 +5,7 @@ import { requireCompletedOnboarding } from "../../lib/auth";
 import { getOptimizeRecommendations } from "../../lib/server/optimize-recommendations";
 
 export const metadata: Metadata = {
-  title: "Optimization | RecoverFlow",
+  title: "Optimization | RevRecovery",
   description: "AI-powered suggestions to improve recovery.",
 };
 

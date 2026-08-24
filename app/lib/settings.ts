@@ -55,7 +55,7 @@ export const teamRoleOptions: TeamRole[] = ["Owner", "Admin", "Member"];
 export const defaultUserSettings: UserSettings = {
   email: {
     replyToEmail: "billing@yourcompany.com",
-    senderName: "RecoverFlow Team",
+    senderName: "RevRecovery",
     supportEmail: "support@yourcompany.com",
   },
   notifications: {
@@ -117,10 +117,16 @@ export function mergeUserSettings(
     return cloneSettings(defaultUserSettings);
   }
 
+  const mergedSenderName = source.email?.senderName?.trim();
+
   return {
     email: {
       ...defaultUserSettings.email,
       ...source.email,
+      senderName:
+        !mergedSenderName || /^RecoverFlow(?: Team)?$/i.test(mergedSenderName)
+          ? defaultUserSettings.email.senderName
+          : mergedSenderName,
     },
     notifications: {
       ...defaultUserSettings.notifications,

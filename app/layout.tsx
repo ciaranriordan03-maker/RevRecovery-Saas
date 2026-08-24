@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RecoverFlow | SaaS Churn Recovery",
+  title: "RevRecovery | SaaS Churn Recovery",
   description: "Recover failed SaaS payments with automated retry flows.",
 };
 

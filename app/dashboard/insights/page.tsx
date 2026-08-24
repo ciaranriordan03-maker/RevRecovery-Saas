@@ -5,7 +5,7 @@ import { requireCompletedOnboarding } from "../../lib/auth";
 import { getInsightsMetrics } from "../../lib/server/insights-metrics";
 
 export const metadata: Metadata = {
-  title: "Insights | RecoverFlow",
+  title: "Insights | RevRecovery",
   description: "Performance breakdown and key learnings for recovery flows.",
 };
 

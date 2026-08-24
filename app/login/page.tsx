@@ -5,8 +5,8 @@ import { sanitizeAppRedirect } from "../lib/safe-redirect";
 import { AuthForm } from "./auth-form";
 
 export const metadata: Metadata = {
-  title: "Login | RecoverFlow",
-  description: "Sign in to RecoverFlow to manage recovery settings and dashboard data.",
+  title: "Login | RevRecovery",
+  description: "Sign in to RevRecovery to manage recovery settings and dashboard data.",
 };
 
 type LoginPageProps = {

@@ -5,8 +5,8 @@ import { requireCompletedOnboarding } from "../../lib/auth";
 import { getAtRiskCustomers } from "../../lib/server/at-risk-customers";
 
 export const metadata: Metadata = {
-  title: "Recovery Flow | RecoverFlow",
-  description: "Review and activate the RecoverFlow email recovery sequence.",
+  title: "Recovery Flow | RevRecovery",
+  description: "Review and activate the RevRecovery email recovery sequence.",
 };
 
 type RecoveryPageProps = {

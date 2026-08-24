@@ -33,7 +33,7 @@ STRIPE_SECRET_KEY=your_platform_stripe_secret_key
 STRIPE_CONNECT_CLIENT_ID=your_stripe_connect_client_id
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_signing_secret
 RESEND_API_KEY=your_resend_api_key
-RECOVERY_EMAIL_FROM="RecoverFlow <recoveries@yourdomain.com>"
+RECOVERY_EMAIL_FROM="RevRecovery <recoveries@yourdomain.com>"
 RECOVERY_EMAIL_CRON_SECRET=your_recovery_processing_secret
 CRON_SECRET=the_same_secret_for_vercel_cron
 ```

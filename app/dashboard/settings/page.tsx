@@ -4,8 +4,8 @@ import { SettingsContent } from "../../components/dashboard/settings-content";
 import { requireCompletedOnboarding } from "../../lib/auth";
 
 export const metadata: Metadata = {
-  title: "Settings | RecoverFlow",
-  description: "Manage account, email, recovery, and notification settings in RecoverFlow.",
+  title: "Settings | RevRecovery",
+  description: "Manage account, email, recovery, and notification settings in RevRecovery.",
 };
 
 export default async function SettingsPage() {

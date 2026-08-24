@@ -6,8 +6,8 @@ import { getDashboardMetrics } from "../lib/server/dashboard-metrics";
 import { getOptimizeRecommendations } from "../lib/server/optimize-recommendations";
 
 export const metadata: Metadata = {
-  title: "Dashboard | RecoverFlow",
-  description: "Review failed payment recovery opportunities in RecoverFlow.",
+  title: "Dashboard | RevRecovery",
+  description: "Review failed payment recovery opportunities in RevRecovery.",
 };
 
 export default async function DashboardPage() {

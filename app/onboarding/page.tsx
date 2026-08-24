@@ -4,8 +4,8 @@ import { requireIncompleteOnboarding } from "../lib/auth";
 import { onboardingSteps, type OnboardingStep } from "../lib/data";
 
 export const metadata: Metadata = {
-  title: "Onboarding | RecoverFlow",
-  description: "Set up automated failed payment recovery in RecoverFlow.",
+  title: "Onboarding | RevRecovery",
+  description: "Set up automated failed payment recovery in RevRecovery.",
 };
 
 type OnboardingPageProps = {

@@ -2,7 +2,6 @@ import "server-only";
 
 import Stripe from "stripe";
 import { createSupabaseAdminClient } from "../supabase/admin";
-import { getAppUrl } from "../stripe/env";
 import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
 import { resolveRecoverySequenceForFailedPayment } from "./recovery-sequences";
@@ -88,7 +87,7 @@ function getResendApiKey() {
   return process.env.RESEND_API_KEY ?? null;
 }
 
-function getRecoveryEmailFrom() {
+export function getRecoveryEmailFrom() {
   const from = process.env.RECOVERY_EMAIL_FROM?.trim();
 
   if (!from) {
@@ -99,14 +98,36 @@ function getRecoveryEmailFrom() {
     (from.startsWith('"') && from.endsWith('"')) ||
     (from.startsWith("'") && from.endsWith("'"))
   ) {
-    return from.slice(1, -1).trim();
+    return normalizeLegacySenderName(from.slice(1, -1).trim());
   }
 
-  return from;
+  return normalizeLegacySenderName(from);
 }
 
-function buildPortalUrl() {
-  return getAppUrl();
+function normalizeLegacySenderName(from: string) {
+  return from.replace(/^(RecoverFlow(?: Team)?)(?=\s*<)/i, "RevRecovery");
+}
+
+export function getHostedInvoiceUrl(invoice: Stripe.Invoice | null) {
+  const hostedInvoiceUrl = invoice?.hosted_invoice_url?.trim();
+
+  if (!hostedInvoiceUrl) {
+    return null;
+  }
+
+  try {
+    const url = new URL(hostedInvoiceUrl);
+    const isStripeHost =
+      url.hostname === "stripe.com" || url.hostname.endsWith(".stripe.com");
+
+    if (url.protocol !== "https:" || !isStripeHost) {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 function formatCurrency(amountDue: number, currency: string | null) {
@@ -170,6 +191,14 @@ export function buildRecoveryEmailVariables({
   latestInvoice: Stripe.Invoice | null;
   originalPayload: FailedPaymentRecord["latest_payload"];
 }): RecoveryEmailVariables {
+  const hostedInvoiceUrl = getHostedInvoiceUrl(latestInvoice);
+
+  if (!hostedInvoiceUrl) {
+    throw new Error(
+      "Stripe did not provide a secure hosted invoice URL for this payment.",
+    );
+  }
+
   const customerFullName =
     getCustomerNameFromPayload(latestInvoice ?? originalPayload) ??
     getCustomerNameFromPayload(originalPayload);
@@ -190,7 +219,7 @@ export function buildRecoveryEmailVariables({
       ("id" in originalPayload && typeof originalPayload.id === "string"
         ? originalPayload.id
         : "unknown"),
-    portalUrl: `${buildPortalUrl()}/dashboard/recovery`,
+    portalUrl: hostedInvoiceUrl,
   };
 }
 

@@ -5,8 +5,8 @@ import { sanitizeAppRedirect } from "../lib/safe-redirect";
 import { SignupForm } from "./signup-form";
 
 export const metadata: Metadata = {
-  title: "Sign Up | RecoverFlow",
-  description: "Create a RecoverFlow account to start recovering failed payments.",
+  title: "Sign Up | RevRecovery",
+  description: "Create a RevRecovery account to start recovering failed payments.",
 };
 
 type SignupPageProps = {
