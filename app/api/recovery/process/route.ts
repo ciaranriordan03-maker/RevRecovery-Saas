@@ -1,28 +1,11 @@
 import { NextResponse } from "next/server";
+import { isRecoveryCronAuthorized } from "../../../lib/server/cron-authorization";
 import { processPendingRecoveryMessages } from "../../../lib/server/recovery-delivery";
 
 export const runtime = "nodejs";
 
-function getCronSecret() {
-  return process.env.RECOVERY_EMAIL_CRON_SECRET ?? process.env.CRON_SECRET ?? null;
-}
-
-function isAuthorized(request: Request) {
-  const cronSecret = getCronSecret();
-
-  if (!cronSecret) {
-    return process.env.NODE_ENV !== "production";
-  }
-
-  const authHeader = request.headers.get("authorization");
-  const headerSecret = request.headers.get("x-cron-secret");
-  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  return bearerToken === cronSecret || headerSecret === cronSecret;
-}
-
 async function processRecoveryRequest(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isRecoveryCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
