@@ -118,15 +118,21 @@ export function mergeUserSettings(
   }
 
   const mergedSenderName = source.email?.senderName?.trim();
+  const mergedReplyToEmail = source.email?.replyToEmail?.trim();
+  const mergedSupportEmail = source.email?.supportEmail?.trim();
 
   return {
     email: {
       ...defaultUserSettings.email,
       ...source.email,
+      replyToEmail:
+        mergedReplyToEmail ?? defaultUserSettings.email.replyToEmail,
       senderName:
         !mergedSenderName || /^RecoverFlow(?: Team)?$/i.test(mergedSenderName)
           ? defaultUserSettings.email.senderName
           : mergedSenderName,
+      supportEmail:
+        mergedSupportEmail ?? defaultUserSettings.email.supportEmail,
     },
     notifications: {
       ...defaultUserSettings.notifications,
@@ -152,6 +158,22 @@ export function mergeUserSettings(
         }))
       : cloneSettings(defaultUserSettings).team,
   };
+}
+
+export function getUserSettingsValidationError(settings: UserSettings) {
+  if (!isValidEmailAddress(settings.email.supportEmail)) {
+    return "Support email must be a valid email address.";
+  }
+
+  if (!isValidEmailAddress(settings.email.replyToEmail)) {
+    return "Reply-to email must be a valid email address.";
+  }
+
+  return null;
+}
+
+function isValidEmailAddress(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@.]+$/.test(value);
 }
 
 export function cloneSettings(settings: UserSettings): UserSettings {

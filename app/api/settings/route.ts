@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { mergeUserSettings } from "../../lib/settings";
+import {
+  getUserSettingsValidationError,
+  mergeUserSettings,
+} from "../../lib/settings";
 import { getUserSettings, saveUserSettings } from "../../lib/server/settings-store";
 import { createClient } from "../../lib/supabase/server";
 
@@ -44,6 +47,12 @@ export async function PUT(request: Request) {
 
     const body = (await request.json()) as { settings?: unknown };
     const settings = mergeUserSettings(body.settings as never);
+    const validationError = getUserSettingsValidationError(settings);
+
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
     const record = await saveUserSettings(userId, settings);
 
     return NextResponse.json(record);
