@@ -38,7 +38,7 @@ type ProfilePayload = {
 };
 
 function buildAvatarOptions(identifier: string) {
-  const baseSeed = identifier.trim().toLowerCase() || "recoverflow-user";
+  const baseSeed = identifier.trim().toLowerCase() || "revrecovery-user";
 
   return Array.from({ length: 8 }, (_, index) => `${baseSeed}:avatar-${index + 1}`);
 }
@@ -675,6 +675,11 @@ export function SettingsContent({
           </div>
 
           <div className="flex flex-col gap-3">
+            {settings.team.length === 0 ? (
+              <p className="rounded-[10px] bg-[var(--background)] p-4 text-sm text-[var(--muted)]">
+                No team members have been added.
+              </p>
+            ) : null}
             {settings.team.map((member) => (
               <div
                 className="flex flex-col gap-4 rounded-[10px] bg-[var(--background)] p-3 sm:flex-row sm:items-center sm:justify-between"

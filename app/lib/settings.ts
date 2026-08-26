@@ -52,11 +52,17 @@ export const paymentRetryOptions = ["1 retry", "2 retries", "3 retries"] as cons
 
 export const teamRoleOptions: TeamRole[] = ["Owner", "Admin", "Member"];
 
+const LEGACY_DEMO_TEAM_EMAILS = new Set([
+  "sarah@acme.com",
+  "michael@acme.com",
+  "emma@acme.com",
+]);
+
 export const defaultUserSettings: UserSettings = {
   email: {
-    replyToEmail: "billing@yourcompany.com",
+    replyToEmail: "",
     senderName: "RevRecovery",
-    supportEmail: "support@yourcompany.com",
+    supportEmail: "",
   },
   notifications: {
     aiOptimizationSuggestions: false,
@@ -72,42 +78,14 @@ export const defaultUserSettings: UserSettings = {
   },
   stripe: {
     accountDisplayName: null,
-    accountEmail: "finance@acme.com",
+    accountEmail: "",
     accountId: null,
     accountLabel: "Stripe",
     connected: false,
     lastSyncedAt: null,
     status: "not_connected",
   },
-  team: [
-    {
-      id: "member-sarah",
-      accent: "primary",
-      canRemove: false,
-      email: "sarah@acme.com",
-      initials: "SC",
-      name: "Sarah Chen",
-      role: "Owner",
-    },
-    {
-      id: "member-michael",
-      accent: "purple",
-      canRemove: true,
-      email: "michael@acme.com",
-      initials: "MJ",
-      name: "Michael Johnson",
-      role: "Admin",
-    },
-    {
-      id: "member-emma",
-      accent: "success",
-      canRemove: true,
-      email: "emma@acme.com",
-      initials: "EP",
-      name: "Emma Park",
-      role: "Member",
-    },
-  ],
+  team: [],
 };
 
 export function mergeUserSettings(
@@ -146,7 +124,7 @@ export function mergeUserSettings(
       ...defaultUserSettings.stripe,
       ...source.stripe,
     },
-    team: Array.isArray(source.team) && source.team.length > 0
+    team: Array.isArray(source.team) && source.team.length > 0 && !isLegacyDemoTeam(source.team)
       ? source.team.map((member) => ({
           accent: member.accent ?? "primary",
           canRemove: member.canRemove ?? true,
@@ -158,6 +136,12 @@ export function mergeUserSettings(
         }))
       : cloneSettings(defaultUserSettings).team,
   };
+}
+
+function isLegacyDemoTeam(team: TeamMember[]) {
+  return team.length === LEGACY_DEMO_TEAM_EMAILS.size && team.every((member) =>
+    LEGACY_DEMO_TEAM_EMAILS.has(member.email?.toLowerCase()),
+  );
 }
 
 export function getUserSettingsValidationError(settings: UserSettings) {

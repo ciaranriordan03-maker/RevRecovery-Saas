@@ -145,7 +145,7 @@ function EmailPreviewCard() {
         <div>
           <p className="text-xs text-[var(--muted)]">From:</p>
           <p className="mt-1 text-[var(--foreground)]">
-            billing@yourcompany.com
+            RevRecovery &lt;recoveries@revrecovery.io&gt;
           </p>
         </div>
         <div>
@@ -175,7 +175,7 @@ function EmailPreviewCard() {
         <p>Questions? We&apos;re here to help - just reply to this email.</p>
         <div>
           <p>Thanks,</p>
-          <p>The Team</p>
+          <p>RevRecovery</p>
         </div>
       </div>
     </section>

@@ -72,10 +72,12 @@ function StepNav({
 }
 
 function StepContent({
+  accountEmail,
   activeStep,
   completeOnboarding,
   goNext,
 }: {
+  accountEmail: string;
   activeStep: OnboardingStep;
   completeOnboarding: () => void;
   goNext: () => void;
@@ -127,7 +129,10 @@ function StepContent({
       >
         <input
           className="h-[54px] w-full rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-left text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
-          defaultValue="support@yourcompany.com"
+          aria-label="Customer reply email"
+          defaultValue={accountEmail}
+          placeholder="you@company.com"
+          type="email"
         />
       </OnboardingCard>
     );
@@ -142,7 +147,7 @@ function StepContent({
       >
         <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center justify-center gap-3">
-            {["Day 1", "Day 3", "Day 7"].map((day, index) => (
+            {["Day 0", "Day 3", "Day 7"].map((day, index) => (
               <div className="flex items-center gap-3" key={day}>
                 {index > 0 ? <div className="h-px w-8 bg-[var(--border-strong)]" /> : null}
                 <div>
@@ -190,8 +195,10 @@ function StepContent({
 }
 
 export function OnboardingFlow({
+  accountEmail,
   initialStep = "Welcome",
 }: {
+  accountEmail: string;
   initialStep?: OnboardingStep;
 }) {
   const router = useRouter();
@@ -224,6 +231,7 @@ export function OnboardingFlow({
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <StepNav activeStep={activeStep} setActiveStep={setActiveStep} />
       <StepContent
+        accountEmail={accountEmail}
         activeStep={activeStep}
         completeOnboarding={() => void completeOnboarding()}
         goNext={goNext}

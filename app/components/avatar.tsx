@@ -15,7 +15,7 @@ function getAvatarSeed(seed: string | null | undefined) {
 
   return normalizedSeed && normalizedSeed.length > 0
     ? normalizedSeed.toLowerCase()
-    : "recoverflow-user";
+    : "revrecovery-user";
 }
 
 export function DiceBearAvatar({

@@ -22,14 +22,14 @@ const USER_SETTINGS_TABLE = "user_settings";
 
 function getMemoryStore() {
   const globalStore = globalThis as typeof globalThis & {
-    __recoverFlowSettingsStore?: Map<string, SettingsRecord>;
+    __revRecoverySettingsStore?: Map<string, SettingsRecord>;
   };
 
-  if (!globalStore.__recoverFlowSettingsStore) {
-    globalStore.__recoverFlowSettingsStore = new Map();
+  if (!globalStore.__revRecoverySettingsStore) {
+    globalStore.__revRecoverySettingsStore = new Map();
   }
 
-  return globalStore.__recoverFlowSettingsStore;
+  return globalStore.__revRecoverySettingsStore;
 }
 
 function getSupabaseClient() {

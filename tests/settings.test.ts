@@ -30,6 +30,25 @@ describe("user settings", () => {
     ).toBe("Acme Billing");
   });
 
+  it("removes the legacy fictional team without replacing real members", () => {
+    const legacy = mergeUserSettings({
+      team: [
+        { id: "one", accent: "primary", canRemove: false, email: "sarah@acme.com", initials: "SC", name: "Sarah Chen", role: "Owner" },
+        { id: "two", accent: "purple", canRemove: true, email: "michael@acme.com", initials: "MJ", name: "Michael Johnson", role: "Admin" },
+        { id: "three", accent: "success", canRemove: true, email: "emma@acme.com", initials: "EP", name: "Emma Park", role: "Member" },
+      ],
+    });
+    const real = mergeUserSettings({
+      team: [
+        { id: "owner", accent: "primary", canRemove: false, email: "owner@revrecovery.io", initials: "CR", name: "Ciaran Riordan", role: "Owner" },
+      ],
+    });
+
+    expect(legacy.team).toEqual([]);
+    expect(real.team).toHaveLength(1);
+    expect(real.team[0]?.email).toBe("owner@revrecovery.io");
+  });
+
   it("trims valid email settings before saving", () => {
     const settings = mergeUserSettings({
       email: {
@@ -55,6 +74,7 @@ describe("user settings", () => {
       email: {
         ...defaultUserSettings.email,
         replyToEmail: "billing@example.com.",
+        supportEmail: "support@example.com",
       },
     });
 

@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   Welcome back
                 </h2>
                 <p className="mt-2 text-sm font-medium text-[var(--auth-copy)]">
-                  Sign in to continue to RevRecover
+                  Sign in to continue to RevRecovery
                 </p>
               </div>
 

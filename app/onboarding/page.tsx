@@ -28,7 +28,14 @@ function getInitialStep(step: string | undefined): OnboardingStep {
 }
 
 export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
-  await requireIncompleteOnboarding();
+  const { claims } = await requireIncompleteOnboarding();
   const params = await searchParams;
-  return <OnboardingFlow initialStep={getInitialStep(params?.step)} />;
+  const accountEmail = typeof claims.email === "string" ? claims.email : "";
+
+  return (
+    <OnboardingFlow
+      accountEmail={accountEmail}
+      initialStep={getInitialStep(params?.step)}
+    />
+  );
 }
