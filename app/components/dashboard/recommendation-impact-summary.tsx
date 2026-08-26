@@ -4,7 +4,7 @@ type RecommendationImpactSummaryProps = {
 };
 
 export function RecommendationImpactSummary({
-  caption = "If you apply all AI optimization changes",
+  caption = "Calculated from your current failed-payment data",
   value,
 }: RecommendationImpactSummaryProps) {
   return (
@@ -12,7 +12,7 @@ export function RecommendationImpactSummary({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium text-[var(--foreground)]">
-            Potential Revenue Recovered
+            Revenue Currently at Risk
           </p>
           <p className="mt-1 text-sm text-[var(--muted-strong)]">{caption}</p>
         </div>
@@ -21,7 +21,7 @@ export function RecommendationImpactSummary({
             {value}
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Additional recovery potential
+            Open failed payments
           </p>
         </div>
       </div>

@@ -773,7 +773,7 @@ export function SettingsContent({
           />
           <Toggle
             checked={settings.notifications.aiOptimizationSuggestions}
-            label="AI Optimization Suggestions"
+            label="Optimization Suggestions"
             onChange={(checked) =>
               updateSettings((current) => ({
                 ...current,
@@ -783,7 +783,7 @@ export function SettingsContent({
                 },
               }))
             }
-            subtitle="Get notified when AI identifies new optimization opportunities"
+            subtitle="Get notified when new optimization opportunities are identified"
           />
         </SettingsSection>
 

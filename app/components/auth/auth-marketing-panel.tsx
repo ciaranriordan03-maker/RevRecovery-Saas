@@ -4,30 +4,30 @@ type AuthMarketingVariant = "signin" | "signup";
 
 const variantContent = {
   signin: {
-    brand: "RevRecover",
+    brand: "RevRecovery",
     copy:
       "Reduce failed-payment churn automatically. Connect Stripe. Recover revenue. Stay focused on growth.",
     highlights: [
-      "AI-powered recovery sequences",
+      "Automated recovery sequences",
       "Automatic Stripe integration",
-      "Real-time analytics dashboard",
+      "Recovery performance dashboard",
     ],
-    metricLabel: "Avg. Recovery Rate",
-    metricValue: "15-20%",
-    trust: "Trusted by 500+ SaaS companies",
+    metricLabel: "Email sequence",
+    metricValue: "3 steps",
+    trust: "Built for subscription businesses",
   },
   signup: {
     brand: "RevRecovery",
     copy:
-      "Stop leaving money on the table. Our AI-powered platform identifies hidden revenue opportunities in your financial data.",
+      "Connect Stripe to identify failed payments, automate customer reminders, and track recovery results.",
     highlights: [
-      "AI-powered revenue analysis",
+      "Failed-payment monitoring",
       "Automated recovery workflows",
-      "Real-time revenue insights",
+      "Account-specific revenue insights",
     ],
-    metricLabel: "Average revenue recovered",
-    metricValue: "5-10%",
-    trust: "Trusted by 500+ small companies",
+    metricLabel: "Email sequence",
+    metricValue: "3 steps",
+    trust: "Designed for recurring-revenue teams",
   },
 } as const;
 
@@ -62,7 +62,7 @@ export function AuthMarketingPanel({
             value={content.metricValue}
             variant="green"
           />
-          <MetricCard icon="clock" label="Setup Time" value="<2 min" variant="blue" />
+          <MetricCard icon="card" label="Stripe connection" value="Secure" variant="blue" />
         </div>
 
         <div className="mt-7 space-y-3.5">

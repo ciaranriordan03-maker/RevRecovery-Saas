@@ -85,15 +85,6 @@ function isOpenFailedPayment(row: FailedPaymentOptimizationRow) {
   return row.status !== "recovered";
 }
 
-function estimatePotentialRecovery(openRevenueAtRisk: number, sentMessagesCount: number) {
-  if (openRevenueAtRisk <= 0) {
-    return 0;
-  }
-
-  const recoveryMultiplier = sentMessagesCount > 0 ? 0.12 : 0.08;
-  return Math.round(openRevenueAtRisk * recoveryMultiplier);
-}
-
 async function getFailedPaymentRows(userId: string) {
   const supabase = createSupabaseAdminClient();
 
@@ -156,27 +147,20 @@ export async function getOptimizeRecommendations(
     (total, payment) => total + payment.amount_due,
     0,
   );
-  const sentMessagesCount = recoveryMessages.filter(
-    (message) => message.status === "sent",
-  ).length;
-  const potentialRecovery = estimatePotentialRecovery(
-    openRevenueAtRisk,
-    sentMessagesCount,
-  );
   const recommendations = buildRecommendations();
 
   return {
     impactSummary: {
       caption: openRevenueAtRisk > 0
-        ? `Estimated from ${formatCurrency(openRevenueAtRisk, currency)} currently at risk`
+        ? `Across ${openFailedPayments.length} open failed payment${openFailedPayments.length === 1 ? "" : "s"}`
         : "Waiting for failed payment data",
-      value: formatCurrency(potentialRecovery, currency),
+      value: formatCurrency(openRevenueAtRisk, currency),
     },
     intro: {
       count: recommendations.length,
       summary: openFailedPayments.length > 0
-        ? `Based on ${openFailedPayments.length} open failed payments and ${recoveryMessages.length} recovery emails.`
-        : "Recommendations will sharpen as failed payments and recovery emails come in.",
+        ? `Your account currently has ${openFailedPayments.length} open failed payment${openFailedPayments.length === 1 ? "" : "s"} and ${recoveryMessages.length} recovery email${recoveryMessages.length === 1 ? "" : "s"}.`
+        : "Use your own recovery results to decide which suggestions to apply.",
     },
     recommendations,
   };

@@ -20,12 +20,6 @@ export const dashboardNavItems = [
 
 export type DashboardNavItem = (typeof dashboardNavItems)[number];
 
-export const breakdown = [
-  ["Card declined", "$28,400", "bg-[var(--danger-dot)]"],
-  ["Insufficient funds", "$12,650", "bg-[var(--orange-dot)]"],
-  ["Expired card", "$6,800", "bg-[var(--yellow-dot)]"],
-] as const;
-
 export const recoveryEmails = [
   {
     title: "Day 0 - Immediate Notification",
@@ -111,28 +105,3 @@ export const recoveryAudienceOptions = [
 ] as const;
 
 export const recoveryEmailTabs = ["Email 1", "Email 2", "Email 3"] as const;
-
-export const optimizeSuggestions = [
-  {
-    title: "Add urgency to Email 3",
-    impact: "+8% recovery",
-    body: "Give customers a clear deadline before service pauses.",
-    current: '"Please update your payment method to continue your service."',
-    suggested: '"Update your payment by Friday to avoid service interruption."',
-  },
-  {
-    title: 'Add a "Why this happened" section',
-    impact: "+5% recovery",
-    body: "Reduce confusion by explaining common payment failure reasons.",
-    current: '"Your payment failed. Please update your billing details."',
-    suggested:
-      '"This can happen because of an expired card, low balance, or bank decline."',
-  },
-  {
-    title: "Segment High-Value Customers",
-    impact: "+2% recovery",
-    body: "Customers on higher-value plans may respond better to personalized recovery messaging and faster follow-up timing.",
-    current: "First reminder sends 4 hours after the failed payment.",
-    suggested: "First reminder sends within 1 hour for $200+ monthly accounts.",
-  },
-] as const;

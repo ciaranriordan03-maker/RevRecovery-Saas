@@ -84,7 +84,7 @@ function StepContent({
     return (
       <OnboardingCard
         icon="bolt"
-        subtitle="Setup takes 2 minutes"
+        subtitle="Connect Stripe and configure your recovery sequence"
         title="Recover failed payments automatically"
       >
         <Button className="w-full" onClick={goNext}>
@@ -137,7 +137,7 @@ function StepContent({
     return (
       <OnboardingCard
         icon="flow"
-        subtitle="3 emails, proven to recover 71% of failed payments"
+        subtitle="3 automated emails scheduled for Day 0, Day 3, and Day 7"
         title="Recovery flow ready"
       >
         <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">

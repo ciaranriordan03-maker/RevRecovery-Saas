@@ -18,12 +18,11 @@ export function OptimizeContent({
             </div>
             <div>
               <h2 className="text-base font-medium tracking-[-0.02em] text-[var(--foreground)]">
-                AI Recommendations Ready
+                Optimization Recommendations Ready
               </h2>
               <p className="mt-2 text-sm text-[var(--muted-strong)]">
-                Based on your performance data, we&apos;ve identified{" "}
-                {optimizeRecommendations.intro.count} opportunities to increase
-                recovery rates. {optimizeRecommendations.intro.summary}
+                Review {optimizeRecommendations.intro.count} workflow suggestions.
+                {" "}{optimizeRecommendations.intro.summary}
               </p>
             </div>
           </div>

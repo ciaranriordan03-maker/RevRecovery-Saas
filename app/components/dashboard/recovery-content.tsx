@@ -49,7 +49,7 @@ function SmartDefaultsCard() {
             Use smart defaults
           </h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            AI-optimized settings for best results
+            Recommended sequence settings
           </p>
         </div>
         <button
@@ -192,9 +192,9 @@ function RecoverySequence({
       <div className="mx-auto flex max-w-[896px] flex-col gap-8">
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <p className="text-sm leading-5 text-[var(--muted-strong)]">
-            We&apos;ve created a proven 3-step email sequence that recovers 65%
-            of failed payments on average. Each email is timed to maximize
-            recovery while maintaining customer trust.
+            This 3-step sequence sends an immediate notice followed by reminders
+            on Day 3 and Day 7. Track your account&apos;s results in Insights and
+            adjust the sequence as your own recovery data grows.
           </p>
         </section>
 
@@ -335,23 +335,23 @@ function ActivationStep() {
 
         <section className="rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-6">
           <h2 className="text-sm font-medium text-[var(--foreground)]">
-            Projected Impact
+            Sequence Overview
           </h2>
           <div className="mt-4 grid gap-6 sm:grid-cols-2">
             <div>
               <p className="text-xs text-[var(--muted-strong)]">
-                Expected Recovery Rate
+                Email Schedule
               </p>
               <p className="mt-2 text-2xl leading-8 text-[var(--primary)]">
-                ~65%
+                Day 0, 3 &amp; 7
               </p>
             </div>
             <div>
               <p className="text-xs text-[var(--muted-strong)]">
-                Potential Revenue
+                Performance
               </p>
               <p className="mt-2 text-2xl leading-8 text-[var(--success)]">
-                $31,200
+                Measured from your results
               </p>
             </div>
           </div>
