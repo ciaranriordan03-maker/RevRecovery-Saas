@@ -12,6 +12,7 @@ type FailedPaymentRecord = {
   attempt_count: number;
   created_at: string;
   currency: string | null;
+  case_status: string | null;
   id: string;
   last_event_type: string;
   latest_payload: Stripe.Invoice | Stripe.Subscription | Stripe.PaymentMethod;
@@ -64,6 +65,7 @@ type StripeStopCheckResult =
     }
   | {
       canSend: false;
+      disposition: "cancel" | "pause";
       reason: string;
       recovered: boolean;
     };
@@ -322,7 +324,7 @@ async function getFailedPaymentById(id: string) {
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
     .select(
-      "id, user_id, stripe_account_id, stripe_customer_id, stripe_subscription_id, stripe_invoice_id, amount_due, currency, attempt_count, next_payment_attempt_at, status, recovery_stage, recovered_at, last_event_type, latest_payload, created_at, updated_at",
+      "id, user_id, stripe_account_id, stripe_customer_id, stripe_subscription_id, stripe_invoice_id, amount_due, currency, attempt_count, next_payment_attempt_at, status, recovery_stage, case_status, recovered_at, last_event_type, latest_payload, created_at, updated_at",
     )
     .eq("id", id)
     .maybeSingle<FailedPaymentRecord>();
@@ -373,6 +375,8 @@ async function markFailedPaymentRecovered(
       next_payment_attempt_at: toIsoTimestamp(latestInvoice.next_payment_attempt),
       recovered_at: recoveredAt,
       recovery_stage: "recovered",
+      case_status: "recovered",
+      terminal_at: recoveredAt,
       status: "recovered",
     })
     .eq("id", failedPayment.id);
@@ -390,29 +394,12 @@ function toIsoTimestamp(epochSeconds: number | null | undefined) {
   return new Date(epochSeconds * 1000).toISOString();
 }
 
-function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
-  const invoiceWithSubscription = invoice as Stripe.Invoice & {
-    subscription?: string | Stripe.Subscription | null;
-  };
-  const subscription = invoiceWithSubscription.subscription;
-
-  if (!subscription) {
-    return null;
-  }
-
-  return typeof subscription === "string" ? subscription : subscription.id;
-}
-
 function isInvoiceRecovered(invoice: Stripe.Invoice) {
-  return invoice.status === "paid" || invoice.amount_remaining <= 0;
+  return invoice.status === "paid";
 }
 
 function isInvoiceActionable(invoice: Stripe.Invoice) {
   return invoice.status === "open" && invoice.amount_remaining > 0;
-}
-
-function isSubscriptionHealthy(subscription: Stripe.Subscription) {
-  return subscription.status === "active" || subscription.status === "trialing";
 }
 
 async function getPaymentMethodUpdatePauseReason(failedPayment: FailedPaymentRecord) {
@@ -453,6 +440,7 @@ async function checkLiveStripeStopConditions(
   if (paymentMethodPauseReason) {
     return {
       canSend: false,
+      disposition: "pause",
       reason: paymentMethodPauseReason,
       recovered: false,
     };
@@ -481,6 +469,7 @@ async function checkLiveStripeStopConditions(
 
     return {
       canSend: false,
+      disposition: "cancel",
       reason: "Stripe invoice is already paid.",
       recovered: true,
     };
@@ -489,30 +478,10 @@ async function checkLiveStripeStopConditions(
   if (!isInvoiceActionable(latestInvoice)) {
     return {
       canSend: false,
+      disposition: "cancel",
       reason: `Stripe invoice is no longer actionable (${latestInvoice.status ?? "unknown"}).`,
       recovered: false,
     };
-  }
-
-  const subscriptionId =
-    failedPayment.stripe_subscription_id ?? getInvoiceSubscriptionId(latestInvoice);
-
-  if (subscriptionId) {
-    const subscription = await stripe.subscriptions.retrieve(
-      subscriptionId,
-      {},
-      {
-        stripeAccount: failedPayment.stripe_account_id,
-      },
-    );
-
-    if (isSubscriptionHealthy(subscription)) {
-      return {
-        canSend: false,
-        reason: `Stripe subscription is healthy (${subscription.status}).`,
-        recovered: false,
-      };
-    }
   }
 
   return {
@@ -539,6 +508,28 @@ async function cancelRecoveryMessage(id: string, reason: string) {
 
   if (error) {
     throw new Error(`Unable to cancel recovery message: ${error.message}`);
+  }
+}
+
+async function pauseRecoveryMessage(id: string, reason: string) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase admin client is not configured.");
+  }
+
+  const { error } = await supabase
+    .from(RECOVERY_MESSAGES_TABLE)
+    .update({
+      claim_token: null,
+      claim_expires_at: null,
+      last_error: reason,
+      status: "paused",
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`Unable to pause recovery message: ${error.message}`);
   }
 }
 
@@ -709,8 +700,12 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
       const stopCheck = await checkLiveStripeStopConditions(failedPayment);
 
       if (!stopCheck.canSend) {
-        await cancelRecoveryMessage(message.id, stopCheck.reason);
-        result.canceled += 1;
+        if (stopCheck.disposition === "pause") {
+          await pauseRecoveryMessage(message.id, stopCheck.reason);
+        } else {
+          await cancelRecoveryMessage(message.id, stopCheck.reason);
+          result.canceled += 1;
+        }
         continue;
       }
 

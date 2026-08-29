@@ -6,20 +6,34 @@ import {
 } from "../../../../lib/server/stripe-connections";
 import {
   ensureRecoverySequenceForFailedPayment,
-  resolveRecoverySequenceForFailedPayment,
 } from "../../../../lib/server/recovery-sequences";
 import {
   recordPaymentMethodUpdated,
   recordSubscriptionState,
 } from "../../../../lib/server/stripe-customer-states";
 import {
+  claimWebhookEvent,
+  completeWebhookEvent,
+  getFailedPaymentForInvoice,
+  getWebhookEventRecord,
   insertWebhookEventRecord,
-  markWebhookEventProcessed,
-  upsertFailedPayment,
+  pauseRecoveryCasesForPaymentMethod,
+  recordStripeInvoiceEvent,
 } from "../../../../lib/server/stripe-webhooks";
 import { getStripeSecretKey } from "../../../../lib/stripe/env";
+import {
+  decideInvoiceEvent,
+  getInvoiceKind,
+  getInvoicePaymentContext,
+  getInvoiceSubscriptionId,
+} from "../../../../lib/stripe/recovery-state";
+import {
+  getWebhookClaimDisposition,
+  getWebhookRetryDelaySeconds,
+  sanitizeWebhookError,
+} from "../../../../lib/stripe/webhook-processing";
 
-export const runtime = "nodejs";
+const RETRY_RESPONSE_STATUS = 503;
 
 function getWebhookSecret() {
   return process.env.STRIPE_WEBHOOK_SECRET ?? null;
@@ -51,99 +65,61 @@ function getCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustom
   return typeof customer === "string" ? customer : customer.id;
 }
 
-function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
-  const invoiceWithSubscription = invoice as Stripe.Invoice & {
-    subscription?: string | Stripe.Subscription | null;
-  };
-  const subscription = invoiceWithSubscription.subscription;
+async function handleInvoiceEvent(
+  event: Stripe.Event,
+  invoice: Stripe.Invoice,
+  stripeAccountId: string,
+  userId: string,
+) {
+  const eventType = event.type as
+    | "invoice.paid"
+    | "invoice.payment_failed"
+    | "invoice.payment_succeeded"
+    | "invoice.updated";
+  const existingCase = await getFailedPaymentForInvoice({
+    stripeAccountId,
+    stripeInvoiceId: invoice.id,
+  });
+  const decision = decideInvoiceEvent(eventType, invoice.status, Boolean(existingCase));
 
-  if (!subscription) {
+  if (!decision.createsCase && !existingCase) {
     return null;
   }
 
-  return typeof subscription === "string" ? subscription : subscription.id;
-}
-
-async function handleInvoicePaymentFailed(
-  invoice: Stripe.Invoice,
-  stripeAccountId: string,
-  userId: string,
-) {
-  const failedPayment = await upsertFailedPayment({
-    amount_due: invoice.amount_due,
-    attempt_count: invoice.attempt_count,
+  const paymentContext = getInvoicePaymentContext(invoice);
+  const failedPayment = await recordStripeInvoiceEvent({
+    amountDue: invoice.amount_due,
+    amountPaid: invoice.amount_paid,
+    attemptCount: invoice.attempt_count,
+    billingReason: invoice.billing_reason,
     currency: invoice.currency,
-    last_event_type: "invoice.payment_failed",
-    latest_payload: invoice,
-    next_payment_attempt_at: toIsoTimestamp(invoice.next_payment_attempt),
-    recovery_stage: "email_1_pending",
-    status: "failed",
-    stripe_account_id: stripeAccountId,
-    stripe_customer_id: getCustomerId(invoice.customer),
-    stripe_invoice_id: invoice.id,
-    stripe_subscription_id: getInvoiceSubscriptionId(invoice),
-    user_id: userId,
+    declineCode: paymentContext.declineCode,
+    eventCreatedAt: toIsoTimestamp(event.created) ?? new Date().toISOString(),
+    eventType,
+    failureCode: paymentContext.failureCode,
+    failureMessage: paymentContext.failureMessage,
+    invoiceKind: getInvoiceKind(invoice),
+    invoiceStatus: invoice.status,
+    livemode: event.livemode,
+    nextPaymentAttemptAt: toIsoTimestamp(invoice.next_payment_attempt),
+    payload: invoice,
+    stripeAccountId,
+    stripeChargeId: paymentContext.stripeChargeId,
+    stripeCustomerId: getCustomerId(invoice.customer),
+    stripeEventId: event.id,
+    stripeInvoiceId: invoice.id,
+    stripePaymentIntentId: paymentContext.stripePaymentIntentId,
+    stripeSubscriptionId: getInvoiceSubscriptionId(invoice),
+    targetStatus: decision.targetStatus,
+    terminalReason: decision.terminalReason,
+    userId,
   });
 
-  await ensureRecoverySequenceForFailedPayment(failedPayment);
-  return failedPayment;
-}
-
-async function handleInvoiceRecovered(
-  invoice: Stripe.Invoice,
-  stripeAccountId: string,
-  userId: string,
-  eventType: "invoice.paid" | "invoice.payment_succeeded",
-) {
-  const failedPayment = await upsertFailedPayment({
-    amount_due: invoice.amount_due,
-    attempt_count: invoice.attempt_count,
-    currency: invoice.currency,
-    last_event_type: eventType,
-    latest_payload: invoice,
-    next_payment_attempt_at: toIsoTimestamp(invoice.next_payment_attempt),
-    recovered_at: new Date().toISOString(),
-    recovery_stage: "recovered",
-    status: "recovered",
-    stripe_account_id: stripeAccountId,
-    stripe_customer_id: getCustomerId(invoice.customer),
-    stripe_invoice_id: invoice.id,
-    stripe_subscription_id: getInvoiceSubscriptionId(invoice),
-    user_id: userId,
-  });
-
-  await resolveRecoverySequenceForFailedPayment(
-    failedPayment.id,
-    failedPayment.recovered_at ?? new Date().toISOString(),
-  );
-
-  return failedPayment;
-}
-
-async function handleInvoiceUpdated(
-  invoice: Stripe.Invoice,
-  stripeAccountId: string,
-  userId: string,
-) {
-  if (!invoice.id || invoice.amount_due <= 0) {
-    return null;
+  if (failedPayment?.case_status === "active") {
+    await ensureRecoverySequenceForFailedPayment(failedPayment);
   }
 
-  return upsertFailedPayment({
-    amount_due: invoice.amount_due,
-    attempt_count: invoice.attempt_count,
-    currency: invoice.currency,
-    last_event_type: "invoice.updated",
-    latest_payload: invoice,
-    next_payment_attempt_at: toIsoTimestamp(invoice.next_payment_attempt),
-    recovery_stage: invoice.status === "paid" ? "recovered" : "awaiting_retry",
-    status: invoice.status === "paid" ? "recovered" : "open",
-    stripe_account_id: stripeAccountId,
-    stripe_customer_id: getCustomerId(invoice.customer),
-    stripe_invoice_id: invoice.id,
-    stripe_subscription_id: getInvoiceSubscriptionId(invoice),
-    user_id: userId,
-  });
+  return failedPayment;
 }
 
 async function handleDeauthorization(stripeAccountId: string) {
@@ -184,6 +160,7 @@ export async function POST(request: Request) {
 
   const insertResult = await insertWebhookEventRecord({
     event_type: event.type,
+    event_created_at: toIsoTimestamp(event.created),
     livemode: event.livemode,
     payload: event,
     status: "received",
@@ -192,8 +169,25 @@ export async function POST(request: Request) {
     user_id: userId,
   });
 
-  if (!insertResult.inserted) {
-    return NextResponse.json({ received: true, duplicate: true });
+  const claimToken = crypto.randomUUID();
+  const claimedEvent = await claimWebhookEvent(event.id, claimToken);
+
+  if (!claimedEvent) {
+    const storedEvent = await getWebhookEventRecord(event.id);
+    const disposition = getWebhookClaimDisposition(storedEvent?.status ?? null);
+
+    if (disposition === "completed") {
+      return NextResponse.json({ duplicate: !insertResult.inserted, received: true });
+    }
+
+    const retryAfter = disposition === "in_progress" ? 5 : 30;
+    return NextResponse.json(
+      { received: false, retry: true },
+      {
+        headers: { "Retry-After": String(retryAfter) },
+        status: disposition === "in_progress" ? 409 : RETRY_RESPONSE_STATUS,
+      },
+    );
   }
 
   try {
@@ -202,19 +196,15 @@ export async function POST(request: Request) {
     } else if (userId) {
       switch (event.type) {
         case "invoice.payment_failed":
-          await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, stripeAccountId, userId);
-          break;
         case "invoice.paid":
         case "invoice.payment_succeeded":
-          await handleInvoiceRecovered(
+        case "invoice.updated":
+          await handleInvoiceEvent(
+            event,
             event.data.object as Stripe.Invoice,
             stripeAccountId,
             userId,
-            event.type,
           );
-          break;
-        case "invoice.updated":
-          await handleInvoiceUpdated(event.data.object as Stripe.Invoice, stripeAccountId, userId);
           break;
         case "customer.subscription.deleted":
         case "customer.subscription.updated":
@@ -225,32 +215,60 @@ export async function POST(request: Request) {
             userId,
           });
           break;
-        case "payment_method.updated":
+        case "payment_method.updated": {
+          const paymentMethod = event.data.object as Stripe.PaymentMethod;
           await recordPaymentMethodUpdated({
-            paymentMethod: event.data.object as Stripe.PaymentMethod,
+            paymentMethod,
             stripeAccountId,
             userId,
           });
+          const paymentMethodCustomerId = getCustomerId(paymentMethod.customer);
+
+          if (paymentMethodCustomerId) {
+            await pauseRecoveryCasesForPaymentMethod({
+              eventCreatedAt: toIsoTimestamp(event.created) ?? new Date().toISOString(),
+              livemode: event.livemode,
+              stripeAccountId,
+              stripeCustomerId: paymentMethodCustomerId,
+              stripeEventId: event.id,
+              userId,
+            });
+          }
           break;
+        }
         default:
           break;
       }
     }
 
-    await markWebhookEventProcessed(event.id, "processed");
+    await completeWebhookEvent({
+      claimToken,
+      outcome: userId || event.type === "account.application.deauthorized" ? "processed" : "ignored",
+      ignoredReason: userId ? undefined : "connected_account_not_found",
+      stripeEventId: event.id,
+    });
     return NextResponse.json({ received: true });
   } catch (error) {
-    await markWebhookEventProcessed(
-      event.id,
-      "failed",
-      error instanceof Error ? error.message : "Webhook processing failed.",
+    const sanitizedError = sanitizeWebhookError(error);
+    const retryDelaySeconds = getWebhookRetryDelaySeconds(
+      claimedEvent.processing_attempt_count,
     );
 
+    await completeWebhookEvent({
+      claimToken,
+      errorCode: sanitizedError.code,
+      errorDetails: sanitizedError.details,
+      nextAttemptAt: new Date(Date.now() + retryDelaySeconds * 1000).toISOString(),
+      outcome: "failed",
+      stripeEventId: event.id,
+    });
+
     return NextResponse.json(
+      { error: "Webhook processing failed.", retry: true },
       {
-        error: error instanceof Error ? error.message : "Webhook processing failed.",
+        headers: { "Retry-After": String(retryDelaySeconds) },
+        status: RETRY_RESPONSE_STATUS,
       },
-      { status: 500 },
     );
   }
 }
