@@ -18,6 +18,10 @@ import {
   type UserSettings,
 } from "../../lib/settings";
 import { getStripeConnectHref } from "../../lib/stripe/connect-url";
+import {
+  RECOVERY_MODES,
+  type RecoveryMode,
+} from "../../lib/recovery/mode-policy";
 
 type LoadState = {
   settings: UserSettings;
@@ -35,6 +39,44 @@ type ProfilePayload = {
     fullName: string | null;
   };
   error?: string;
+};
+
+type RecoveryModeSettings = {
+  approvedTestRecipient: string | null;
+  connected: boolean;
+  editable: boolean;
+  livemode: boolean | null;
+  mode: RecoveryMode;
+  source: "persisted" | "legacy_fallback" | "not_connected";
+  stripeAccountId: string | null;
+  timezone: string;
+};
+
+type RecoveryModePayload = {
+  error?: string;
+  recovery?: RecoveryModeSettings;
+};
+
+const recoveryModeCopy: Record<
+  RecoveryMode,
+  { description: string; label: string }
+> = {
+  off: {
+    description: "Record failed payments without scheduling or sending outreach.",
+    label: "Off",
+  },
+  test: {
+    description: "Send every recovery email only to one approved test address.",
+    label: "Test",
+  },
+  live: {
+    description: "Send recovery emails to the Stripe customer on each case.",
+    label: "Live",
+  },
+  paused: {
+    description: "Keep cases and schedules, but temporarily stop all sending.",
+    label: "Paused",
+  },
 };
 
 function buildAvatarOptions(identifier: string) {
@@ -176,6 +218,15 @@ export function SettingsContent({
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [statusTone, setStatusTone] = useState<"error" | "success" | "muted">("muted");
   const [storage, setStorage] = useState<LoadState["storage"]>("memory");
+  const [recoveryMode, setRecoveryMode] = useState<RecoveryModeSettings | null>(null);
+  const [savedRecoveryMode, setSavedRecoveryMode] =
+    useState<RecoveryModeSettings | null>(null);
+  const [isLoadingRecoveryMode, setIsLoadingRecoveryMode] = useState(true);
+  const [isSavingRecoveryMode, setIsSavingRecoveryMode] = useState(false);
+  const [recoveryModeMessage, setRecoveryModeMessage] = useState("");
+  const [recoveryModeTone, setRecoveryModeTone] = useState<"error" | "success" | "muted">(
+    "muted",
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -230,6 +281,45 @@ export function SettingsContent({
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadRecoveryMode() {
+      try {
+        const response = await fetch("/api/recovery/settings", { cache: "no-store" });
+        const payload = (await response.json()) as RecoveryModePayload;
+
+        if (!response.ok || !payload.recovery) {
+          throw new Error(payload.error ?? "Unable to load recovery delivery mode.");
+        }
+
+        if (!cancelled) {
+          setRecoveryMode(payload.recovery);
+          setSavedRecoveryMode(payload.recovery);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRecoveryModeTone("error");
+          setRecoveryModeMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load recovery delivery mode.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRecoveryMode(false);
+        }
+      }
+    }
+
+    void loadRecoveryMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!statusMessage || statusTone !== "success") {
       return;
     }
@@ -246,6 +336,11 @@ export function SettingsContent({
     [savedSnapshot, settings],
   );
   const hasAvatarChanges = avatarSeed !== savedAvatarSeed || fullName.trim() !== savedFullName;
+  const hasRecoveryModeChanges =
+    recoveryMode !== null &&
+    savedRecoveryMode !== null &&
+    (recoveryMode.mode !== savedRecoveryMode.mode ||
+      recoveryMode.approvedTestRecipient !== savedRecoveryMode.approvedTestRecipient);
 
   function updateSettings(updater: (current: UserSettings) => UserSettings) {
     setSettings((current) => updater(current));
@@ -331,6 +426,45 @@ export function SettingsContent({
       setStatusMessage(error instanceof Error ? error.message : "Unable to save avatar.");
     } finally {
       setIsSavingAvatar(false);
+    }
+  }
+
+  async function saveRecoveryMode() {
+    if (!recoveryMode) {
+      return;
+    }
+
+    setIsSavingRecoveryMode(true);
+    setRecoveryModeMessage("");
+
+    try {
+      const response = await fetch("/api/recovery/settings", {
+        body: JSON.stringify({
+          approvedTestRecipient: recoveryMode.approvedTestRecipient,
+          mode: recoveryMode.mode,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+      });
+      const payload = (await response.json()) as RecoveryModePayload;
+
+      if (!response.ok || !payload.recovery) {
+        throw new Error(payload.error ?? "Unable to save recovery delivery mode.");
+      }
+
+      setRecoveryMode(payload.recovery);
+      setSavedRecoveryMode(payload.recovery);
+      setRecoveryModeTone("success");
+      setRecoveryModeMessage("Recovery delivery mode saved.");
+    } catch (error) {
+      setRecoveryModeTone("error");
+      setRecoveryModeMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to save recovery delivery mode.",
+      );
+    } finally {
+      setIsSavingRecoveryMode(false);
     }
   }
 
@@ -523,6 +657,105 @@ export function SettingsContent({
               </div>
             </div>
           </div>
+        </SettingsSection>
+
+        <SettingsSection icon="refresh" title="Recovery Delivery">
+          {isLoadingRecoveryMode ? (
+            <p className="text-sm text-[var(--muted)]">Loading recovery mode...</p>
+          ) : recoveryMode ? (
+            <div className="flex flex-col gap-5">
+              <div className="grid gap-3 md:grid-cols-2">
+                {RECOVERY_MODES.map((mode) => {
+                  const selected = recoveryMode.mode === mode;
+                  const copy = recoveryModeCopy[mode];
+
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={`rounded-[10px] border p-4 text-left transition ${
+                        selected
+                          ? "border-[var(--primary)] bg-[var(--primary-soft)]"
+                          : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--border-strong)]"
+                      } disabled:cursor-not-allowed disabled:opacity-60`}
+                      disabled={!recoveryMode.editable}
+                      key={mode}
+                      onClick={() => {
+                        setRecoveryMode((current) =>
+                          current ? { ...current, mode } : current,
+                        );
+                        setRecoveryModeMessage("");
+                      }}
+                      type="button"
+                    >
+                      <span className="block text-sm font-medium text-[var(--foreground)]">
+                        {copy.label}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">
+                        {copy.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {recoveryMode.mode === "test" ? (
+                <Field label="Approved test recipient">
+                  <TextInput
+                    disabled={!recoveryMode.editable}
+                    onChange={(event) => {
+                      setRecoveryMode((current) =>
+                        current
+                          ? { ...current, approvedTestRecipient: event.target.value }
+                          : current,
+                      );
+                      setRecoveryModeMessage("");
+                    }}
+                    placeholder={accountEmail}
+                    type="email"
+                    value={recoveryMode.approvedTestRecipient ?? ""}
+                  />
+                </Field>
+              ) : null}
+
+              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4 text-xs leading-5 text-[var(--muted)]">
+                {!recoveryMode.connected
+                  ? "Connect Stripe before configuring recovery delivery."
+                  : recoveryMode.source === "legacy_fallback"
+                    ? "Current delivery remains live for backward compatibility. These controls become editable only after the Phase 0 migration is separately approved."
+                    : `${recoveryMode.livemode ? "Live" : "Sandbox"} Stripe account ${recoveryMode.stripeAccountId ?? ""}. Times use ${recoveryMode.timezone}.`}
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p
+                  className={`text-sm ${
+                    recoveryModeTone === "error"
+                      ? "text-[var(--danger)]"
+                      : recoveryModeTone === "success"
+                        ? "text-[var(--success)]"
+                        : "text-[var(--muted)]"
+                  }`}
+                >
+                  {recoveryModeMessage ||
+                    (hasRecoveryModeChanges ? "Recovery mode has unsaved changes." : "Recovery mode is saved.")}
+                </p>
+                <Button
+                  className="h-9 px-4 text-sm"
+                  disabled={
+                    !recoveryMode.editable ||
+                    isSavingRecoveryMode ||
+                    !hasRecoveryModeChanges
+                  }
+                  onClick={() => void saveRecoveryMode()}
+                >
+                  {isSavingRecoveryMode ? "Saving..." : "Save Recovery Mode"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--danger)]">
+              {recoveryModeMessage || "Unable to load recovery delivery mode."}
+            </p>
+          )}
         </SettingsSection>
 
         <SettingsSection icon="mail" title="Email Settings">

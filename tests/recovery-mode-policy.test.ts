@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   canScheduleRecoveryMessages,
+  getRecoveryModeInputError,
   getRecoveryDeliveryRecipient,
   isRecoveryDeliveryKillSwitchEnabled,
   isRecoveryMode,
+  normalizeApprovedTestRecipient,
 } from "../app/lib/recovery/mode-policy";
 
 describe("recovery mode policy", () => {
@@ -52,5 +54,40 @@ describe("recovery mode policy", () => {
     expect(isRecoveryDeliveryKillSwitchEnabled("TRUE")).toBe(true);
     expect(isRecoveryDeliveryKillSwitchEnabled("1")).toBe(false);
     expect(isRecoveryDeliveryKillSwitchEnabled(undefined)).toBe(false);
+  });
+
+  it("normalizes an explicitly approved test recipient", () => {
+    expect(normalizeApprovedTestRecipient(" TEST@Example.com ")).toBe(
+      "test@example.com",
+    );
+    expect(normalizeApprovedTestRecipient("  ")).toBeNull();
+    expect(normalizeApprovedTestRecipient(42)).toBeNull();
+  });
+
+  it("requires a valid approved recipient only in test mode", () => {
+    expect(
+      getRecoveryModeInputError({
+        approvedTestRecipient: null,
+        mode: "test",
+      }),
+    ).toBe("Test mode requires an approved test recipient.");
+    expect(
+      getRecoveryModeInputError({
+        approvedTestRecipient: "not-an-email",
+        mode: "test",
+      }),
+    ).toBe("Enter a valid approved test recipient.");
+    expect(
+      getRecoveryModeInputError({
+        approvedTestRecipient: "approved@example.com",
+        mode: "test",
+      }),
+    ).toBeNull();
+    expect(
+      getRecoveryModeInputError({
+        approvedTestRecipient: null,
+        mode: "paused",
+      }),
+    ).toBeNull();
   });
 });

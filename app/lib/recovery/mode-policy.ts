@@ -2,8 +2,38 @@ export const RECOVERY_MODES = ["off", "test", "live", "paused"] as const;
 
 export type RecoveryMode = (typeof RECOVERY_MODES)[number];
 
+export type RecoveryModeInput = {
+  approvedTestRecipient: string | null;
+  mode: RecoveryMode;
+};
+
 export function isRecoveryMode(value: unknown): value is RecoveryMode {
   return typeof value === "string" && RECOVERY_MODES.includes(value as RecoveryMode);
+}
+
+export function normalizeApprovedTestRecipient(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim().toLowerCase()
+    : null;
+}
+
+export function getRecoveryModeInputError({
+  approvedTestRecipient,
+  mode,
+}: RecoveryModeInput) {
+  if (mode !== "test") {
+    return null;
+  }
+
+  if (!approvedTestRecipient) {
+    return "Test mode requires an approved test recipient.";
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(approvedTestRecipient)) {
+    return "Enter a valid approved test recipient.";
+  }
+
+  return null;
 }
 
 export function isRecoveryDeliveryKillSwitchEnabled(value: string | undefined) {
