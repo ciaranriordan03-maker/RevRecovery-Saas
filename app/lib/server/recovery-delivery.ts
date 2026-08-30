@@ -1,6 +1,13 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import Stripe from "stripe";
+import {
+  classifyDeliveryHttpFailure,
+  getRecoveryDeliveryNextAttemptAt,
+  shouldRetryRecoveryDelivery,
+  type DeliveryFailureDisposition,
+} from "../recovery/delivery-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
@@ -31,12 +38,15 @@ type FailedPaymentRecord = {
 type RecoveryMessageRecord = {
   body_preview: string | null;
   channel: string;
+  claim_token: string | null;
+  delivery_generation: number;
   failed_payment_id: string;
   id: string;
   last_error: string | null;
   message_key: string;
   metadata: Record<string, unknown>;
   provider_message_id: string | null;
+  provider_idempotency_key: string;
   scheduled_for: string;
   send_attempt_count: number;
   sent_to_email: string | null;
@@ -46,6 +56,31 @@ type RecoveryMessageRecord = {
   subject: string | null;
   user_id: string;
 };
+
+type DeliveryCompletionOutcome =
+  | "sent"
+  | "failed_retryable"
+  | "failed_terminal";
+
+class RecoveryDeliveryError extends Error {
+  code: string;
+  disposition: DeliveryFailureDisposition;
+
+  constructor({
+    code,
+    disposition,
+    message,
+  }: {
+    code: string;
+    disposition: DeliveryFailureDisposition;
+    message: string;
+  }) {
+    super(message);
+    this.name = "RecoveryDeliveryError";
+    this.code = code;
+    this.disposition = disposition;
+  }
+}
 
 type ProcessRecoveryMessagesResult = {
   canceled: number;
@@ -289,29 +324,24 @@ function getInvoiceCustomerEmail(
   return null;
 }
 
-async function getPendingRecoveryMessages(limit: number) {
+async function claimDueRecoveryMessages(limit: number, claimToken: string) {
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
     throw new Error("Supabase admin client is not configured.");
   }
 
-  const { data, error } = await supabase
-    .from(RECOVERY_MESSAGES_TABLE)
-    .select(
-      "id, sequence_id, failed_payment_id, user_id, message_key, channel, step_number, subject, body_preview, scheduled_for, status, provider_message_id, metadata, send_attempt_count, last_error, sent_to_email",
-    )
-    .eq("status", "pending")
-    .lte("scheduled_for", new Date().toISOString())
-    .order("scheduled_for", { ascending: true })
-    .limit(limit)
-    .returns<RecoveryMessageRecord[]>();
+  const { data, error } = await supabase.rpc("claim_due_recovery_messages", {
+    batch_size: limit,
+    lease_seconds: 120,
+    requested_claim_token: claimToken,
+  });
 
   if (error) {
-    throw new Error(`Unable to load pending recovery messages: ${error.message}`);
+    throw new Error(`Unable to claim due recovery messages: ${error.message}`);
   }
 
-  return data ?? [];
+  return (data ?? []) as RecoveryMessageRecord[];
 }
 
 async function getFailedPaymentById(id: string) {
@@ -490,7 +520,11 @@ async function checkLiveStripeStopConditions(
   };
 }
 
-async function cancelRecoveryMessage(id: string, reason: string) {
+async function cancelRecoveryMessage(
+  id: string,
+  claimToken: string,
+  reason: string,
+) {
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
@@ -501,17 +535,25 @@ async function cancelRecoveryMessage(id: string, reason: string) {
     .from(RECOVERY_MESSAGES_TABLE)
     .update({
       canceled_at: new Date().toISOString(),
+      claim_expires_at: null,
+      claim_token: null,
       last_error: reason,
       status: "canceled",
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("claim_token", claimToken)
+    .eq("status", "claimed");
 
   if (error) {
     throw new Error(`Unable to cancel recovery message: ${error.message}`);
   }
 }
 
-async function pauseRecoveryMessage(id: string, reason: string) {
+async function pauseRecoveryMessage(
+  id: string,
+  claimToken: string,
+  reason: string,
+) {
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
@@ -526,93 +568,67 @@ async function pauseRecoveryMessage(id: string, reason: string) {
       last_error: reason,
       status: "paused",
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("claim_token", claimToken)
+    .eq("status", "claimed");
 
   if (error) {
     throw new Error(`Unable to pause recovery message: ${error.message}`);
   }
 }
 
-async function markRecoveryMessageSent(
-  messageId: string,
-  previousAttemptCount: number,
-  providerMessageId: string | null,
-  sentToEmail: string,
-) {
+async function completeRecoveryMessageDelivery({
+  claimToken,
+  errorCode = null,
+  errorDetails = {},
+  messageId,
+  nextAttemptAt = null,
+  outcome,
+  providerMessageId = null,
+  sentToEmail = null,
+}: {
+  claimToken: string;
+  errorCode?: string | null;
+  errorDetails?: Record<string, unknown>;
+  messageId: string;
+  nextAttemptAt?: string | null;
+  outcome: DeliveryCompletionOutcome;
+  providerMessageId?: string | null;
+  sentToEmail?: string | null;
+}) {
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
     throw new Error("Supabase admin client is not configured.");
   }
 
-  const { error } = await supabase
-    .from(RECOVERY_MESSAGES_TABLE)
-    .update({
-      last_error: null,
-      provider_message_id: providerMessageId,
-      send_attempt_count: previousAttemptCount + 1,
-      sent_at: new Date().toISOString(),
-      sent_to_email: sentToEmail,
-      status: "sent",
-    })
-    .eq("id", messageId);
+  const { data, error } = await supabase.rpc(
+    "complete_recovery_message_delivery",
+    {
+      requested_claim_token: claimToken,
+      requested_error_code: errorCode,
+      requested_error_details: errorDetails,
+      requested_message_id: messageId,
+      requested_next_attempt_at: nextAttemptAt,
+      requested_outcome: outcome,
+      requested_provider_message_id: providerMessageId,
+      requested_sent_to_email: sentToEmail,
+    },
+  );
 
   if (error) {
-    throw new Error(`Unable to mark recovery message sent: ${error.message}`);
-  }
-}
-
-async function markRecoveryMessageFailed(
-  messageId: string,
-  previousAttemptCount: number,
-  errorMessage: string,
-) {
-  const supabase = createSupabaseAdminClient();
-
-  if (!supabase) {
-    throw new Error("Supabase admin client is not configured.");
+    throw new Error(`Unable to complete recovery message delivery: ${error.message}`);
   }
 
-  const nextAttemptCount = previousAttemptCount + 1;
-  const nextStatus = nextAttemptCount >= 3 ? "failed" : "pending";
-
-  const { error } = await supabase
-    .from(RECOVERY_MESSAGES_TABLE)
-    .update({
-      last_error: errorMessage,
-      send_attempt_count: nextAttemptCount,
-      status: nextStatus,
-    })
-    .eq("id", messageId);
-
-  if (error) {
-    throw new Error(`Unable to mark recovery message failed: ${error.message}`);
-  }
-}
-
-async function updateSequenceProgress(sequenceId: string, stepNumber: number) {
-  const supabase = createSupabaseAdminClient();
-
-  if (!supabase) {
-    throw new Error("Supabase admin client is not configured.");
-  }
-
-  const { error } = await supabase
-    .from(RECOVERY_SEQUENCES_TABLE)
-    .update({
-      current_step: stepNumber,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", sequenceId);
-
-  if (error) {
-    throw new Error(`Unable to update recovery sequence progress: ${error.message}`);
+  if (data !== true) {
+    throw new Error("Recovery message claim was lost before completion.");
   }
 }
 
 async function sendWithResend({
   from,
   html,
+  idempotencyKey,
   replyTo,
   subject,
   text,
@@ -620,6 +636,7 @@ async function sendWithResend({
 }: {
   from: string;
   html: string;
+  idempotencyKey: string;
   replyTo: string | null;
   subject: string;
   text: string;
@@ -628,7 +645,11 @@ async function sendWithResend({
   const apiKey = getResendApiKey();
 
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured.");
+    throw new RecoveryDeliveryError({
+      code: "resend_not_configured",
+      disposition: "terminal",
+      message: "Recovery email provider is not configured.",
+    });
   }
 
   const response = await fetch("https://api.resend.com/emails", {
@@ -643,13 +664,17 @@ async function sendWithResend({
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
     },
     method: "POST",
   });
 
   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Resend request failed: ${response.status} ${errorBody}`);
+    throw new RecoveryDeliveryError({
+      code: `resend_http_${response.status}`,
+      disposition: classifyDeliveryHttpFailure(response.status),
+      message: `Recovery email provider returned HTTP ${response.status}.`,
+    });
   }
 
   const json = (await response.json()) as { id?: string };
@@ -664,7 +689,8 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
     sent: 0,
   };
 
-  const messages = await getPendingRecoveryMessages(limit);
+  const claimToken = randomUUID();
+  const messages = await claimDueRecoveryMessages(limit, claimToken);
 
   for (const message of messages) {
     result.processed += 1;
@@ -673,13 +699,13 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
       const failedPayment = await getFailedPaymentById(message.failed_payment_id);
 
       if (!failedPayment) {
-        await cancelRecoveryMessage(message.id, "Failed payment record no longer exists.");
+        await cancelRecoveryMessage(message.id, claimToken, "Failed payment record no longer exists.");
         result.canceled += 1;
         continue;
       }
 
       if (failedPayment.status === "recovered" || failedPayment.recovered_at) {
-        await cancelRecoveryMessage(message.id, "Payment has already been recovered.");
+        await cancelRecoveryMessage(message.id, claimToken, "Payment has already been recovered.");
         result.canceled += 1;
         continue;
       }
@@ -689,6 +715,7 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
       if (!sequence || sequence.status !== "active") {
         await cancelRecoveryMessage(
           message.id,
+          claimToken,
           sequence
             ? `Recovery sequence is not active (${sequence.status}).`
             : "Recovery sequence no longer exists.",
@@ -701,9 +728,9 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
 
       if (!stopCheck.canSend) {
         if (stopCheck.disposition === "pause") {
-          await pauseRecoveryMessage(message.id, stopCheck.reason);
+          await pauseRecoveryMessage(message.id, claimToken, stopCheck.reason);
         } else {
-          await cancelRecoveryMessage(message.id, stopCheck.reason);
+          await cancelRecoveryMessage(message.id, claimToken, stopCheck.reason);
           result.canceled += 1;
         }
         continue;
@@ -714,7 +741,13 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
         getInvoiceCustomerEmail(failedPayment.latest_payload);
 
       if (!recipientEmail) {
-        await markRecoveryMessageFailed(message.id, message.send_attempt_count, "No customer email found on invoice payload.");
+        await completeRecoveryMessageDelivery({
+          claimToken,
+          errorCode: "customer_email_missing",
+          errorDetails: { reason: "No customer email found on invoice payload." },
+          messageId: message.id,
+          outcome: "failed_terminal",
+        });
         result.failed += 1;
         continue;
       }
@@ -740,26 +773,45 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
       const providerMessageId = await sendWithResend({
         from,
         html: copy.html,
+        idempotencyKey: message.provider_idempotency_key,
         replyTo: emailSettings.replyToEmail,
         subject: message.subject ?? `Payment reminder for invoice ${failedPayment.stripe_invoice_id}`,
         text: copy.text,
         to: recipientEmail,
       });
 
-      await markRecoveryMessageSent(
-        message.id,
-        message.send_attempt_count,
+      await completeRecoveryMessageDelivery({
+        claimToken,
+        messageId: message.id,
+        outcome: "sent",
         providerMessageId,
-        recipientEmail,
-      );
-      await updateSequenceProgress(message.sequence_id, message.step_number);
+        sentToEmail: recipientEmail,
+      });
       result.sent += 1;
     } catch (error) {
-      await markRecoveryMessageFailed(
-        message.id,
+      const deliveryError =
+        error instanceof RecoveryDeliveryError
+          ? error
+          : new RecoveryDeliveryError({
+              code: "delivery_unexpected_error",
+              disposition: "retryable",
+              message: "An unexpected recovery email error occurred.",
+            });
+      const retry = shouldRetryRecoveryDelivery(
+        deliveryError.disposition,
         message.send_attempt_count,
-        error instanceof Error ? error.message : "Unknown recovery email error.",
       );
+
+      await completeRecoveryMessageDelivery({
+        claimToken,
+        errorCode: deliveryError.code,
+        errorDetails: { message: deliveryError.message },
+        messageId: message.id,
+        nextAttemptAt: retry
+          ? getRecoveryDeliveryNextAttemptAt(message.send_attempt_count)
+          : null,
+        outcome: retry ? "failed_retryable" : "failed_terminal",
+      });
       result.failed += 1;
     }
   }
