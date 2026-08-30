@@ -13,6 +13,7 @@ export type FailedPaymentRecord = {
   case_status: RecoveryCaseStatus | null;
   last_event_type: string;
   latest_payload: Stripe.Invoice | Stripe.Subscription | Stripe.PaymentMethod;
+  livemode: boolean | null;
   next_payment_attempt_at: string | null;
   recovered_at: string | null;
   recovery_stage: string;

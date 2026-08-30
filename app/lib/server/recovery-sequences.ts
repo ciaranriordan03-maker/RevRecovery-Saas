@@ -1,6 +1,8 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "../supabase/admin";
+import { canScheduleRecoveryMessages } from "../recovery/mode-policy";
+import { getRecoveryAccountRuntimeSettings } from "./recovery-account-settings";
 import type { FailedPaymentRecord } from "./stripe-webhooks";
 
 export type RecoverySequenceRecord = {
@@ -111,6 +113,15 @@ export async function ensureRecoverySequenceForFailedPayment(
 
   if (!supabase) {
     throw new Error("Supabase admin client is not configured.");
+  }
+
+  const accountSettings = await getRecoveryAccountRuntimeSettings({
+    livemode: failedPayment.livemode ?? false,
+    stripeAccountId: failedPayment.stripe_account_id,
+  });
+
+  if (!canScheduleRecoveryMessages(accountSettings.mode)) {
+    return null;
   }
 
   const { data: sequence, error: sequenceError } = await supabase

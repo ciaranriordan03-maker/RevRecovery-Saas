@@ -6,6 +6,7 @@ import {
   encryptStripeToken,
   isEncryptedStripeToken,
 } from "./stripe-token-vault";
+import { ensureRecoveryAccountSettings } from "./recovery-account-settings";
 
 export type StripeSyncSummary = {
   activeSubscriptionsCount: number;
@@ -185,6 +186,13 @@ export async function upsertStripeConnection(connection: StripeConnectionUpsert)
   if (error) {
     throw new Error(`Unable to save Stripe connection: ${error.message}`);
   }
+
+  await ensureRecoveryAccountSettings({
+    livemode: data.livemode ?? false,
+    stripeAccountId: data.stripe_account_id,
+    stripeConnectionId: data.id,
+    userId: data.user_id,
+  });
 
   return decryptConnectionTokens(data);
 }

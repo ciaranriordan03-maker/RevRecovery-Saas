@@ -8,9 +8,14 @@ import {
   shouldRetryRecoveryDelivery,
   type DeliveryFailureDisposition,
 } from "../recovery/delivery-policy";
+import {
+  getRecoveryDeliveryRecipient,
+  isRecoveryDeliveryKillSwitchEnabled,
+} from "../recovery/mode-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
+import { getRecoveryAccountRuntimeSettings } from "./recovery-account-settings";
 import { resolveRecoverySequenceForFailedPayment } from "./recovery-sequences";
 import { getStripeCustomerState } from "./stripe-customer-states";
 
@@ -23,6 +28,7 @@ type FailedPaymentRecord = {
   id: string;
   last_event_type: string;
   latest_payload: Stripe.Invoice | Stripe.Subscription | Stripe.PaymentMethod;
+  livemode: boolean | null;
   next_payment_attempt_at: string | null;
   recovered_at: string | null;
   recovery_stage: string;
@@ -354,7 +360,7 @@ async function getFailedPaymentById(id: string) {
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
     .select(
-      "id, user_id, stripe_account_id, stripe_customer_id, stripe_subscription_id, stripe_invoice_id, amount_due, currency, attempt_count, next_payment_attempt_at, status, recovery_stage, case_status, recovered_at, last_event_type, latest_payload, created_at, updated_at",
+      "id, user_id, stripe_account_id, stripe_customer_id, stripe_subscription_id, stripe_invoice_id, amount_due, currency, attempt_count, next_payment_attempt_at, status, recovery_stage, case_status, recovered_at, last_event_type, latest_payload, livemode, created_at, updated_at",
     )
     .eq("id", id)
     .maybeSingle<FailedPaymentRecord>();
@@ -577,6 +583,33 @@ async function pauseRecoveryMessage(
   }
 }
 
+async function releaseRecoveryMessageForAccountPause(
+  id: string,
+  claimToken: string,
+) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase admin client is not configured.");
+  }
+
+  const { error } = await supabase
+    .from(RECOVERY_MESSAGES_TABLE)
+    .update({
+      claim_expires_at: null,
+      claim_token: null,
+      claimed_at: null,
+      status: "pending",
+    })
+    .eq("id", id)
+    .eq("claim_token", claimToken)
+    .eq("status", "claimed");
+
+  if (error) {
+    throw new Error(`Unable to release paused recovery message: ${error.message}`);
+  }
+}
+
 async function completeRecoveryMessageDelivery({
   claimToken,
   errorCode = null,
@@ -689,6 +722,10 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
     sent: 0,
   };
 
+  if (isRecoveryDeliveryKillSwitchEnabled(process.env.RECOVERY_DELIVERY_KILL_SWITCH)) {
+    return result;
+  }
+
   const claimToken = randomUUID();
   const messages = await claimDueRecoveryMessages(limit, claimToken);
 
@@ -707,6 +744,22 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
       if (failedPayment.status === "recovered" || failedPayment.recovered_at) {
         await cancelRecoveryMessage(message.id, claimToken, "Payment has already been recovered.");
         result.canceled += 1;
+        continue;
+      }
+
+      const accountSettings = await getRecoveryAccountRuntimeSettings({
+        livemode: failedPayment.livemode ?? false,
+        stripeAccountId: failedPayment.stripe_account_id,
+      });
+
+      if (accountSettings.mode === "off") {
+        await cancelRecoveryMessage(message.id, claimToken, "Recovery mode is off.");
+        result.canceled += 1;
+        continue;
+      }
+
+      if (accountSettings.mode === "paused") {
+        await releaseRecoveryMessageForAccountPause(message.id, claimToken);
         continue;
       }
 
@@ -736,15 +789,28 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
         continue;
       }
 
-      const recipientEmail =
+      const customerRecipient =
         getInvoiceCustomerEmail(stopCheck.latestInvoice) ??
         getInvoiceCustomerEmail(failedPayment.latest_payload);
+      const recipientEmail = getRecoveryDeliveryRecipient({
+        approvedTestRecipient: accountSettings.approvedTestRecipient,
+        customerRecipient,
+        mode: accountSettings.mode,
+      });
 
       if (!recipientEmail) {
         await completeRecoveryMessageDelivery({
           claimToken,
-          errorCode: "customer_email_missing",
-          errorDetails: { reason: "No customer email found on invoice payload." },
+          errorCode:
+            accountSettings.mode === "test"
+              ? "approved_test_recipient_missing"
+              : "customer_email_missing",
+          errorDetails: {
+            reason:
+              accountSettings.mode === "test"
+                ? "Test mode requires an approved test recipient."
+                : "No customer email found on invoice payload.",
+          },
           messageId: message.id,
           outcome: "failed_terminal",
         });
