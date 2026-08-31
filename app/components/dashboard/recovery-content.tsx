@@ -3,7 +3,7 @@ import { Button } from "../button";
 import { Icon } from "../ui-icon";
 import { AtRiskCustomersTable } from "./at-risk-customers-table";
 import {
-  activationBenefits,
+  recoveryBenefits,
   recoveryAudienceOptions,
   recoveryEmails,
   recoveryEmailTabs,
@@ -13,7 +13,7 @@ import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
 
 type RecoveryContentProps = {
   atRiskCustomers?: AtRiskCustomer[];
-  mode?: "sequence" | "customize" | "activate";
+  mode?: "sequence" | "customize" | "review";
 };
 
 type ChoiceOptionProps = {
@@ -241,9 +241,9 @@ function RecoverySequence({
           </Link>
           <Link
             className="inline-flex h-[50px] items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] px-6 text-base font-medium text-white transition hover:bg-[var(--primary-hover)]"
-            href="/dashboard/recovery?step=activate"
+            href="/dashboard/recovery?step=review"
           >
-            Activate Flow
+            Review flow
           </Link>
         </div>
 
@@ -295,9 +295,9 @@ function CustomizeRecoveryStep() {
             </Link>
             <Link
               className="inline-flex h-[50px] items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] px-6 text-base font-medium text-white transition hover:bg-[var(--primary-hover)]"
-              href="/dashboard/recovery?step=activate"
+              href="/dashboard/recovery?step=review"
             >
-              Continue to activate
+              Review flow
             </Link>
           </div>
         </div>
@@ -306,16 +306,16 @@ function CustomizeRecoveryStep() {
   );
 }
 
-function ActivationStep() {
+function ReviewRecoveryStep() {
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-[155px]">
       <div className="mx-auto flex max-w-[816px] flex-col gap-7">
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <h2 className="text-sm font-medium text-[var(--foreground)]">
-            What happens when you activate?
+            How your recovery flow works
           </h2>
           <div className="mt-5 flex flex-col gap-4">
-            {activationBenefits.map((benefit) => (
+            {recoveryBenefits.map((benefit) => (
               <div className="flex gap-4" key={benefit.title}>
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--primary-soft)] text-[var(--primary)]">
                   <Icon name={benefit.icon} />
@@ -364,10 +364,12 @@ function ActivationStep() {
           >
             Back to customize
           </Link>
-          <Button className="gap-2">
-            <Icon name="bolt" className="size-4" />
-            Activate Recovery
-          </Button>
+          <Link
+            className="inline-flex h-[50px] items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] px-6 text-base font-medium text-white transition hover:bg-[var(--primary-hover)]"
+            href="/dashboard/recovery"
+          >
+            Back to recovery
+          </Link>
         </div>
       </div>
     </div>
@@ -378,8 +380,8 @@ export function RecoveryContent({
   atRiskCustomers = [],
   mode = "sequence",
 }: RecoveryContentProps) {
-  if (mode === "activate") {
-    return <ActivationStep />;
+  if (mode === "review") {
+    return <ReviewRecoveryStep />;
   }
 
   if (mode === "customize") {

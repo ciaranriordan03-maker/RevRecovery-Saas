@@ -6,7 +6,7 @@ import { getAtRiskCustomers } from "../../lib/server/at-risk-customers";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
-  description: "Review and activate the RevRecovery email recovery sequence.",
+  description: "Review the RevRecovery email recovery sequence.",
 };
 
 type RecoveryPageProps = {
@@ -16,16 +16,16 @@ type RecoveryPageProps = {
 };
 
 const pageCopy = {
-  activate: {
-    subtitle: "Review and launch your recovery flow",
-    title: "Ready to Activate",
+  review: {
+    subtitle: "Confirm how automated recovery operates",
+    title: "Review Recovery Flow",
   },
   customize: {
     subtitle: "Adjust tone and audience for your brand",
     title: "Customize Recovery",
   },
   sequence: {
-    subtitle: "Pre-built email sequence ready to activate",
+    subtitle: "Automated email sequence for failed payments",
     title: "Recovery Flow",
   },
 } as const;
@@ -34,8 +34,8 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
   const { claims } = await requireCompletedOnboarding();
   const params = await searchParams;
   const mode =
-    params?.step === "activate"
-      ? "activate"
+    params?.step === "review" || params?.step === "activate"
+      ? "review"
       : params?.step === "customize"
         ? "customize"
         : "sequence";

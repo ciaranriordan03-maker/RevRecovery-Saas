@@ -50,16 +50,16 @@ export const recoveryEmails = [
   },
 ] as const;
 
-export const activationBenefits = [
+export const recoveryBenefits = [
   {
     icon: "bolt",
-    title: "Immediate Processing",
-    body: "We'll start monitoring failed payments in real-time",
+    title: "Real-time Monitoring",
+    body: "Failed payments are monitored as Stripe sends recovery events",
   },
   {
     icon: "mail",
     title: "Automated Outreach",
-    body: "Recovery emails will be sent automatically based on your sequence",
+    body: "Recovery emails are sent automatically based on your sequence",
   },
   {
     icon: "users",
