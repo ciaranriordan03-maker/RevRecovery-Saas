@@ -3,6 +3,9 @@ import { AppShell } from "../../components/dashboard/app-shell";
 import { RecoveryContent } from "../../components/dashboard/recovery-content";
 import { requireCompletedOnboarding } from "../../lib/auth";
 import { getAtRiskCustomers } from "../../lib/server/at-risk-customers";
+import { getRecoveryModeSettingsForUser } from "../../lib/server/recovery-account-settings";
+import { getUserSettings } from "../../lib/server/settings-store";
+import { buildRecoveryFlowView } from "../../lib/recovery/recovery-view";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
@@ -21,8 +24,8 @@ const pageCopy = {
     title: "Review Recovery Flow",
   },
   customize: {
-    subtitle: "Adjust tone and audience for your brand",
-    title: "Customize Recovery",
+    subtitle: "Review the settings currently used for recovery",
+    title: "Recovery Settings",
   },
   sequence: {
     subtitle: "Automated email sequence for failed payments",
@@ -39,9 +42,15 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       : params?.step === "customize"
         ? "customize"
         : "sequence";
-  const atRiskCustomers = mode === "sequence"
-    ? await getAtRiskCustomers(claims.sub)
-    : [];
+  const [settingsRecord, recoverySettings, atRiskCustomers] = await Promise.all([
+    getUserSettings(claims.sub),
+    getRecoveryModeSettingsForUser(claims.sub),
+    mode === "sequence" ? getAtRiskCustomers(claims.sub) : Promise.resolve([]),
+  ]);
+  const recoveryView = buildRecoveryFlowView(
+    settingsRecord.settings,
+    recoverySettings,
+  );
 
   return (
     <AppShell
@@ -49,7 +58,11 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       subtitle={pageCopy[mode].subtitle}
       title={pageCopy[mode].title}
     >
-      <RecoveryContent atRiskCustomers={atRiskCustomers} mode={mode} />
+      <RecoveryContent
+        atRiskCustomers={atRiskCustomers}
+        mode={mode}
+        recoveryView={recoveryView}
+      />
     </AppShell>
   );
 }

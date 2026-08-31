@@ -8,6 +8,7 @@ import {
   type RecoveryScheduleSnapshot,
 } from "../recovery/schedule-policy";
 import type { FailedPaymentRecord } from "./stripe-webhooks";
+import { RECOVERY_MESSAGE_TEMPLATES } from "../recovery/message-templates";
 
 export type RecoverySequenceRecord = {
   completed_at: string | null;
@@ -57,31 +58,14 @@ export function buildRecoveryMessages(
   schedule: RecoveryScheduleSnapshot,
 ): RecoveryMessageInsert[] {
   const baseScheduledAt = failedPayment.updated_at;
-  const templates = [
-    {
-      body_preview: "Your latest invoice payment did not go through. Update your payment details to avoid service interruption.",
-      message_key: "email_1",
-      subject: "Action needed: update your payment method",
-    },
-    {
-      body_preview: "We will retry your payment soon. Update your billing details now to keep access uninterrupted.",
-      message_key: "email_2",
-      subject: "Reminder: your payment is still outstanding",
-    },
-    {
-      body_preview: "This is the final reminder before access may be impacted. Please update your payment method today.",
-      message_key: "email_3",
-      subject: "Final reminder: prevent service interruption",
-    },
-  ];
-
-  return templates.map((template, index) => {
+  return RECOVERY_MESSAGE_TEMPLATES.map((template, index) => {
     const offsetMinutes = schedule.offsetsMinutes[index];
 
     return {
-      ...template,
+      body_preview: template.bodyPreview,
       channel: "email",
       failed_payment_id: failedPayment.id,
+      message_key: template.messageKey,
       metadata: {
         recommendedSendWindow: `offset_minutes_${offsetMinutes}`,
       },
@@ -89,6 +73,7 @@ export function buildRecoveryMessages(
       sequence_id: sequenceId,
       status: "pending",
       step_number: index + 1,
+      subject: template.subject,
       user_id: failedPayment.user_id,
     } satisfies RecoveryMessageInsert;
   });
