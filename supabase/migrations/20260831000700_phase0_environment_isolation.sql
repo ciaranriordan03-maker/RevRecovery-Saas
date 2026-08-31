@@ -1,5 +1,7 @@
 -- Phase 0: isolate Stripe customer state by live/test environment.
 
+begin;
+
 update public.stripe_customer_states as customer_state
 set livemode = connection.livemode
 from public.stripe_connections as connection
@@ -18,3 +20,5 @@ on public.stripe_customer_states (stripe_account_id, livemode, stripe_customer_i
 
 create index if not exists failed_payments_account_mode_invoice_idx
 on public.failed_payments (stripe_account_id, livemode, stripe_invoice_id);
+
+commit;
