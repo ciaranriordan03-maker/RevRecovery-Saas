@@ -11,7 +11,6 @@ import {
   mergeUserSettings,
   paymentRetryOptions,
   recoveryToneOptions,
-  sendingScheduleOptions,
   teamRoleOptions,
   type TeamMember,
   type TeamRole,
@@ -22,6 +21,11 @@ import {
   RECOVERY_MODES,
   type RecoveryMode,
 } from "../../lib/recovery/mode-policy";
+import {
+  RECOVERY_SCHEDULES,
+  RECOVERY_TIMEZONES,
+  type RecoveryScheduleId,
+} from "../../lib/recovery/schedule-policy";
 
 type LoadState = {
   settings: UserSettings;
@@ -47,6 +51,7 @@ type RecoveryModeSettings = {
   editable: boolean;
   livemode: boolean | null;
   mode: RecoveryMode;
+  scheduleId: RecoveryScheduleId;
   source: "persisted" | "legacy_fallback" | "not_connected";
   stripeAccountId: string | null;
   timezone: string;
@@ -340,7 +345,9 @@ export function SettingsContent({
     recoveryMode !== null &&
     savedRecoveryMode !== null &&
     (recoveryMode.mode !== savedRecoveryMode.mode ||
-      recoveryMode.approvedTestRecipient !== savedRecoveryMode.approvedTestRecipient);
+      recoveryMode.approvedTestRecipient !== savedRecoveryMode.approvedTestRecipient ||
+      recoveryMode.scheduleId !== savedRecoveryMode.scheduleId ||
+      recoveryMode.timezone !== savedRecoveryMode.timezone);
 
   function updateSettings(updater: (current: UserSettings) => UserSettings) {
     setSettings((current) => updater(current));
@@ -442,6 +449,8 @@ export function SettingsContent({
         body: JSON.stringify({
           approvedTestRecipient: recoveryMode.approvedTestRecipient,
           mode: recoveryMode.mode,
+          scheduleId: recoveryMode.scheduleId,
+          timezone: recoveryMode.timezone,
         }),
         headers: { "Content-Type": "application/json" },
         method: "PUT",
@@ -455,7 +464,7 @@ export function SettingsContent({
       setRecoveryMode(payload.recovery);
       setSavedRecoveryMode(payload.recovery);
       setRecoveryModeTone("success");
-      setRecoveryModeMessage("Recovery delivery mode saved.");
+      setRecoveryModeMessage("Recovery delivery settings saved.");
     } catch (error) {
       setRecoveryModeTone("error");
       setRecoveryModeMessage(
@@ -717,6 +726,50 @@ export function SettingsContent({
                 </Field>
               ) : null}
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Recovery schedule">
+                  <Select
+                    disabled={!recoveryMode.editable}
+                    onChange={(event) => {
+                      setRecoveryMode((current) =>
+                        current
+                          ? {
+                              ...current,
+                              scheduleId: event.target.value as RecoveryScheduleId,
+                            }
+                          : current,
+                      );
+                      setRecoveryModeMessage("");
+                    }}
+                    value={recoveryMode.scheduleId}
+                  >
+                    {RECOVERY_SCHEDULES.map((schedule) => (
+                      <option key={schedule.id} value={schedule.id}>
+                        {schedule.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Recovery timezone">
+                  <Select
+                    disabled={!recoveryMode.editable}
+                    onChange={(event) => {
+                      setRecoveryMode((current) =>
+                        current ? { ...current, timezone: event.target.value } : current,
+                      );
+                      setRecoveryModeMessage("");
+                    }}
+                    value={recoveryMode.timezone}
+                  >
+                    {RECOVERY_TIMEZONES.map((timezone) => (
+                      <option key={timezone} value={timezone}>
+                        {timezone}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+
               <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4 text-xs leading-5 text-[var(--muted)]">
                 {!recoveryMode.connected
                   ? "Connect Stripe before configuring recovery delivery."
@@ -736,7 +789,7 @@ export function SettingsContent({
                   }`}
                 >
                   {recoveryModeMessage ||
-                    (hasRecoveryModeChanges ? "Recovery mode has unsaved changes." : "Recovery mode is saved.")}
+                    (hasRecoveryModeChanges ? "Recovery delivery has unsaved changes." : "Recovery delivery is saved.")}
                 </p>
                 <Button
                   className="h-9 px-4 text-sm"
@@ -747,7 +800,7 @@ export function SettingsContent({
                   }
                   onClick={() => void saveRecoveryMode()}
                 >
-                  {isSavingRecoveryMode ? "Saving..." : "Save Recovery Mode"}
+                  {isSavingRecoveryMode ? "Saving..." : "Save Recovery Delivery"}
                 </Button>
               </div>
             </div>
@@ -827,27 +880,7 @@ export function SettingsContent({
                 ))}
               </Select>
             </Field>
-            <Field label="Sending Schedule">
-              <Select
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    recovery: {
-                      ...current.recovery,
-                      sendingSchedule: event.target.value,
-                    },
-                  }))
-                }
-                value={settings.recovery.sendingSchedule}
-              >
-                {sendingScheduleOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div className="md:col-span-2">
+            <div>
               <Field label="Payment Retry Attempts">
                 <Select
                   onChange={(event) =>

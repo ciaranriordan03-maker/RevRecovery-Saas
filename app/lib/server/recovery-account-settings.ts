@@ -6,10 +6,20 @@ import {
   isRecoveryMode,
   normalizeApprovedTestRecipient,
 } from "../recovery/mode-policy";
+import {
+  buildRecoveryScheduleSnapshot,
+  DEFAULT_RECOVERY_SCHEDULE_ID,
+  getRecoverySchedule,
+  isRecoveryScheduleId,
+  isValidTimezone,
+  type RecoveryScheduleId,
+  type RecoveryScheduleSnapshot,
+} from "../recovery/schedule-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
 type RecoveryAccountSettingsRow = {
   approved_test_recipient: string | null;
+  active_policy_version_id: string | null;
   livemode: boolean;
   recovery_mode: string;
   stripe_account_id: string;
@@ -22,6 +32,8 @@ export type RecoveryAccountRuntimeSettings = {
   approvedTestRecipient: string | null;
   livemode: boolean;
   mode: RecoveryMode;
+  policyVersionId: string | null;
+  schedule: RecoveryScheduleSnapshot;
   source: "persisted" | "legacy_fallback";
   timezone: string;
 };
@@ -32,12 +44,15 @@ export type RecoveryModeSettings = {
   editable: boolean;
   livemode: boolean | null;
   mode: RecoveryMode;
+  scheduleId: RecoveryScheduleId;
   source: "persisted" | "legacy_fallback" | "not_connected";
   stripeAccountId: string | null;
   timezone: string;
 };
 
 const RECOVERY_ACCOUNT_SETTINGS_TABLE = "recovery_account_settings";
+const RECOVERY_POLICY_STEPS_TABLE = "recovery_policy_steps";
+const RECOVERY_POLICY_VERSIONS_TABLE = "recovery_policy_versions";
 const STRIPE_CONNECTIONS_TABLE = "stripe_connections";
 
 function isMissingSettingsTableError(error: { code?: string } | null) {
@@ -52,6 +67,76 @@ export class RecoveryModeSettingsError extends Error {
     super(message);
     this.name = "RecoveryModeSettingsError";
   }
+}
+
+async function getScheduleSnapshot({
+  policyVersionId,
+  timezone,
+}: {
+  policyVersionId: string | null;
+  timezone: string;
+}): Promise<RecoveryScheduleSnapshot> {
+  const fallback = buildRecoveryScheduleSnapshot({
+    scheduleId: DEFAULT_RECOVERY_SCHEDULE_ID,
+    timezone,
+  });
+
+  if (!policyVersionId) {
+    return fallback;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) {
+    return fallback;
+  }
+
+  const { data: version, error: versionError } = await supabase
+    .from(RECOVERY_POLICY_VERSIONS_TABLE)
+    .select("id, version, timezone, configuration")
+    .eq("id", policyVersionId)
+    .maybeSingle<{
+      configuration: { scheduleId?: unknown } | null;
+      id: string;
+      timezone: string;
+      version: number;
+    }>();
+
+  if (versionError || !version) {
+    if (isMissingSettingsTableError(versionError)) {
+      return fallback;
+    }
+    throw new Error(`Unable to load recovery schedule: ${versionError?.message ?? "Policy not found"}`);
+  }
+
+  const { data: steps, error: stepsError } = await supabase
+    .from(RECOVERY_POLICY_STEPS_TABLE)
+    .select("step_number, offset_minutes")
+    .eq("policy_version_id", policyVersionId)
+    .order("step_number", { ascending: true });
+
+  if (stepsError) {
+    throw new Error(`Unable to load recovery schedule steps: ${stepsError.message}`);
+  }
+
+  const scheduleId = version.configuration?.scheduleId;
+  if (!isRecoveryScheduleId(scheduleId)) {
+    throw new Error("Recovery schedule configuration is invalid.");
+  }
+
+  const expectedOffsets = getRecoverySchedule(scheduleId).offsetsMinutes;
+  const storedOffsets = (steps ?? []).map((step) => step.offset_minutes);
+  if (
+    storedOffsets.length !== expectedOffsets.length ||
+    storedOffsets.some((offset, index) => offset !== expectedOffsets[index])
+  ) {
+    throw new Error("Recovery schedule steps do not match the published policy.");
+  }
+
+  return buildRecoveryScheduleSnapshot({
+    policyVersion: version.version,
+    scheduleId,
+    timezone: version.timezone,
+  });
 }
 
 async function getStripeConnectionIdentityForUser(userId: string) {
@@ -127,6 +212,11 @@ export async function getRecoveryAccountRuntimeSettings({
     approvedTestRecipient: null,
     livemode,
     mode: "live",
+    policyVersionId: null,
+    schedule: buildRecoveryScheduleSnapshot({
+      scheduleId: DEFAULT_RECOVERY_SCHEDULE_ID,
+      timezone: "UTC",
+    }),
     source: "legacy_fallback",
     timezone: "UTC",
   };
@@ -139,7 +229,7 @@ export async function getRecoveryAccountRuntimeSettings({
   const { data, error } = await supabase
     .from(RECOVERY_ACCOUNT_SETTINGS_TABLE)
     .select(
-      "user_id, stripe_connection_id, stripe_account_id, livemode, recovery_mode, approved_test_recipient, timezone",
+      "user_id, stripe_connection_id, stripe_account_id, livemode, recovery_mode, approved_test_recipient, timezone, active_policy_version_id",
     )
     .eq("stripe_account_id", stripeAccountId)
     .eq("livemode", livemode)
@@ -161,10 +251,17 @@ export async function getRecoveryAccountRuntimeSettings({
     throw new Error("Recovery mode configuration is invalid.");
   }
 
+  const schedule = await getScheduleSnapshot({
+    policyVersionId: data.active_policy_version_id,
+    timezone: data.timezone,
+  });
+
   return {
     approvedTestRecipient: data.approved_test_recipient,
     livemode: data.livemode,
     mode: data.recovery_mode,
+    policyVersionId: data.active_policy_version_id,
+    schedule,
     source: "persisted",
     timezone: data.timezone,
   };
@@ -182,6 +279,7 @@ export async function getRecoveryModeSettingsForUser(
       editable: false,
       livemode: null,
       mode: "off",
+      scheduleId: DEFAULT_RECOVERY_SCHEDULE_ID,
       source: "not_connected",
       stripeAccountId: null,
       timezone: "UTC",
@@ -194,16 +292,26 @@ export async function getRecoveryModeSettingsForUser(
   });
 
   return {
-    ...runtime,
+    approvedTestRecipient: runtime.approvedTestRecipient,
     connected: connection.status === "connected",
     editable: runtime.source === "persisted",
+    livemode: runtime.livemode,
+    mode: runtime.mode,
+    scheduleId: runtime.schedule.scheduleId,
+    source: runtime.source,
     stripeAccountId: connection.stripeAccountId,
+    timezone: runtime.timezone,
   };
 }
 
 export async function updateRecoveryModeSettingsForUser(
   userId: string,
-  input: { approvedTestRecipient?: unknown; mode?: unknown },
+  input: {
+    approvedTestRecipient?: unknown;
+    mode?: unknown;
+    scheduleId?: unknown;
+    timezone?: unknown;
+  },
 ): Promise<RecoveryModeSettings> {
   if (!isRecoveryMode(input.mode)) {
     throw new RecoveryModeSettingsError("Choose a valid recovery mode.", 400);
@@ -219,6 +327,14 @@ export async function updateRecoveryModeSettingsForUser(
 
   if (inputError) {
     throw new RecoveryModeSettingsError(inputError, 400);
+  }
+
+  if (!isRecoveryScheduleId(input.scheduleId)) {
+    throw new RecoveryModeSettingsError("Choose a valid recovery schedule.", 400);
+  }
+
+  if (!isValidTimezone(input.timezone)) {
+    throw new RecoveryModeSettingsError("Choose a valid recovery timezone.", 400);
   }
 
   const connection = await getStripeConnectionIdentityForUser(userId);
@@ -246,29 +362,27 @@ export async function updateRecoveryModeSettingsForUser(
     userId,
   });
 
-  const now = new Date().toISOString();
-  const { error } = await supabase
-    .from(RECOVERY_ACCOUNT_SETTINGS_TABLE)
-    .update({
-      approved_test_recipient: approvedTestRecipient,
-      paused_at: input.mode === "paused" ? now : null,
-      paused_reason: input.mode === "paused" ? "merchant_paused" : null,
-      recovery_mode: input.mode,
-      updated_at: now,
-    })
-    .eq("user_id", userId)
-    .eq("stripe_connection_id", connection.id);
+  const schedule = getRecoverySchedule(input.scheduleId);
+  const { error: policyError } = await supabase.rpc("publish_recovery_policy", {
+    requested_approved_test_recipient: approvedTestRecipient,
+    requested_connection_id: connection.id,
+    requested_mode: input.mode,
+    requested_offsets: [...schedule.offsetsMinutes],
+    requested_schedule_id: input.scheduleId,
+    requested_timezone: input.timezone.trim(),
+    requested_user_id: userId,
+  });
 
-  if (error) {
-    if (isMissingSettingsTableError(error)) {
+  if (policyError) {
+    if (isMissingSettingsTableError(policyError) || policyError.code === "PGRST202") {
       throw new RecoveryModeSettingsError(
-        "Recovery mode controls will be available after the Phase 0 migration is approved.",
+        "Recovery schedules will be available after the Batch 7 migration is approved.",
         503,
       );
     }
 
     throw new RecoveryModeSettingsError(
-      `Unable to save recovery mode: ${error.message}`,
+      `Unable to publish recovery schedule: ${policyError.message}`,
       500,
     );
   }

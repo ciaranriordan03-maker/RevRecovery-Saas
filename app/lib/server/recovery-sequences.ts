@@ -3,6 +3,10 @@ import "server-only";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { canScheduleRecoveryMessages } from "../recovery/mode-policy";
 import { getRecoveryAccountRuntimeSettings } from "./recovery-account-settings";
+import {
+  scheduleFromOffset,
+  type RecoveryScheduleSnapshot,
+} from "../recovery/schedule-policy";
 import type { FailedPaymentRecord } from "./stripe-webhooks";
 
 export type RecoverySequenceRecord = {
@@ -17,6 +21,8 @@ export type RecoverySequenceRecord = {
     currency: string | null;
     lastEventType: string;
   };
+  configuration_snapshot: RecoveryScheduleSnapshot;
+  policy_version_id: string | null;
   started_at: string;
   status: string;
   stripe_account_id: string;
@@ -45,65 +51,47 @@ type RecoveryMessageInsert = {
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 const RECOVERY_SEQUENCES_TABLE = "recovery_sequences";
 
-function addHours(isoTimestamp: string, hours: number) {
-  const date = new Date(isoTimestamp);
-  date.setHours(date.getHours() + hours);
-  return date.toISOString();
-}
-
-function buildDefaultRecoveryMessages(
+export function buildRecoveryMessages(
   failedPayment: FailedPaymentRecord,
   sequenceId: string,
+  schedule: RecoveryScheduleSnapshot,
 ): RecoveryMessageInsert[] {
   const baseScheduledAt = failedPayment.updated_at;
-
-  return [
+  const templates = [
     {
       body_preview: "Your latest invoice payment did not go through. Update your payment details to avoid service interruption.",
-      channel: "email",
-      failed_payment_id: failedPayment.id,
       message_key: "email_1",
-      metadata: {
-        recommendedSendWindow: "immediate",
-      },
-      scheduled_for: baseScheduledAt,
-      sequence_id: sequenceId,
-      status: "pending",
-      step_number: 1,
       subject: "Action needed: update your payment method",
-      user_id: failedPayment.user_id,
     },
     {
       body_preview: "We will retry your payment soon. Update your billing details now to keep access uninterrupted.",
-      channel: "email",
-      failed_payment_id: failedPayment.id,
       message_key: "email_2",
-      metadata: {
-        recommendedSendWindow: "24_hours",
-      },
-      scheduled_for: addHours(baseScheduledAt, 24),
-      sequence_id: sequenceId,
-      status: "pending",
-      step_number: 2,
       subject: "Reminder: your payment is still outstanding",
-      user_id: failedPayment.user_id,
     },
     {
       body_preview: "This is the final reminder before access may be impacted. Please update your payment method today.",
-      channel: "email",
-      failed_payment_id: failedPayment.id,
       message_key: "email_3",
-      metadata: {
-        recommendedSendWindow: "72_hours",
-      },
-      scheduled_for: addHours(baseScheduledAt, 72),
-      sequence_id: sequenceId,
-      status: "pending",
-      step_number: 3,
       subject: "Final reminder: prevent service interruption",
-      user_id: failedPayment.user_id,
     },
   ];
+
+  return templates.map((template, index) => {
+    const offsetMinutes = schedule.offsetsMinutes[index];
+
+    return {
+      ...template,
+      channel: "email",
+      failed_payment_id: failedPayment.id,
+      metadata: {
+        recommendedSendWindow: `offset_minutes_${offsetMinutes}`,
+      },
+      scheduled_for: scheduleFromOffset(baseScheduledAt, offsetMinutes),
+      sequence_id: sequenceId,
+      status: "pending",
+      step_number: index + 1,
+      user_id: failedPayment.user_id,
+    } satisfies RecoveryMessageInsert;
+  });
 }
 
 export async function ensureRecoverySequenceForFailedPayment(
@@ -124,10 +112,36 @@ export async function ensureRecoverySequenceForFailedPayment(
     return null;
   }
 
-  const { data: sequence, error: sequenceError } = await supabase
+  const sequenceSelect =
+    "id, user_id, failed_payment_id, stripe_account_id, stripe_customer_id, stripe_invoice_id, status, current_step, started_at, completed_at, metadata, policy_version_id, configuration_snapshot, created_at, updated_at";
+  const { data: existingSequence, error: existingSequenceError } = await supabase
     .from(RECOVERY_SEQUENCES_TABLE)
-    .upsert(
-      {
+    .select(sequenceSelect)
+    .eq("failed_payment_id", failedPayment.id)
+    .maybeSingle<RecoverySequenceRecord>();
+
+  if (existingSequenceError) {
+    throw new Error(`Unable to inspect recovery sequence: ${existingSequenceError.message}`);
+  }
+
+  let sequence = existingSequence;
+
+  if (!sequence) {
+    const { error: snapshotError } = await supabase
+      .from("failed_payments")
+      .update({
+        policy_snapshot: accountSettings.schedule,
+      })
+      .eq("id", failedPayment.id);
+
+    if (snapshotError) {
+      throw new Error(`Unable to snapshot recovery policy: ${snapshotError.message}`);
+    }
+
+    const { data: insertedSequence, error: sequenceError } = await supabase
+      .from(RECOVERY_SEQUENCES_TABLE)
+      .insert({
+        configuration_snapshot: accountSettings.schedule,
         current_step: Math.max(failedPayment.attempt_count, 1),
         failed_payment_id: failedPayment.id,
         metadata: {
@@ -136,24 +150,40 @@ export async function ensureRecoverySequenceForFailedPayment(
           currency: failedPayment.currency,
           lastEventType: failedPayment.last_event_type,
         },
+        policy_version_id: accountSettings.policyVersionId,
         started_at: failedPayment.created_at,
         status: failedPayment.status === "recovered" ? "recovered" : "active",
         stripe_account_id: failedPayment.stripe_account_id,
         stripe_customer_id: failedPayment.stripe_customer_id,
         stripe_invoice_id: failedPayment.stripe_invoice_id,
         user_id: failedPayment.user_id,
-      },
-      { onConflict: "failed_payment_id" },
-    )
-    .select(
-      "id, user_id, failed_payment_id, stripe_account_id, stripe_customer_id, stripe_invoice_id, status, current_step, started_at, completed_at, metadata, created_at, updated_at",
-    )
-    .single<RecoverySequenceRecord>();
+      })
+      .select(sequenceSelect)
+      .single<RecoverySequenceRecord>();
 
-  if (sequenceError || !sequence) {
-    throw new Error(
-      `Unable to save recovery sequence: ${sequenceError?.message ?? "Unknown error"}`,
-    );
+    if (sequenceError && sequenceError.code !== "23505") {
+      throw new Error(
+        `Unable to save recovery sequence: ${sequenceError.message}`,
+      );
+    }
+
+    if (insertedSequence) {
+      sequence = insertedSequence;
+    } else {
+      const { data: concurrentSequence, error: concurrentSequenceError } = await supabase
+        .from(RECOVERY_SEQUENCES_TABLE)
+        .select(sequenceSelect)
+        .eq("failed_payment_id", failedPayment.id)
+        .single<RecoverySequenceRecord>();
+
+      if (concurrentSequenceError || !concurrentSequence) {
+        throw new Error(
+          `Unable to load concurrent recovery sequence: ${concurrentSequenceError?.message ?? "Unknown error"}`,
+        );
+      }
+
+      sequence = concurrentSequence;
+    }
   }
 
   const { count, error: countError } = await supabase
@@ -166,8 +196,17 @@ export async function ensureRecoverySequenceForFailedPayment(
   }
 
   if ((count ?? 0) === 0 && sequence.status === "active") {
-    const messages = buildDefaultRecoveryMessages(failedPayment, sequence.id);
-    const { error: messageError } = await supabase.from(RECOVERY_MESSAGES_TABLE).insert(messages);
+    const messages = buildRecoveryMessages(
+      failedPayment,
+      sequence.id,
+      sequence.configuration_snapshot,
+    );
+    const { error: messageError } = await supabase
+      .from(RECOVERY_MESSAGES_TABLE)
+      .upsert(messages, {
+        ignoreDuplicates: true,
+        onConflict: "sequence_id,message_key",
+      });
 
     if (messageError) {
       throw new Error(`Unable to seed recovery messages: ${messageError.message}`);

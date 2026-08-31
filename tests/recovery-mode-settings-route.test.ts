@@ -9,6 +9,13 @@ const storeSource = readFileSync(
   new URL("../app/lib/server/recovery-account-settings.ts", import.meta.url),
   "utf8",
 );
+const scheduleMigrationSource = readFileSync(
+  new URL(
+    "../supabase/migrations/20260831000600_phase0_recovery_schedules.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 describe("recovery mode settings boundary", () => {
   it("requires an authenticated user for reads and writes", () => {
@@ -20,7 +27,7 @@ describe("recovery mode settings boundary", () => {
 
   it("derives the Stripe connection from the authenticated user", () => {
     expect(storeSource).toContain('.eq("user_id", userId)');
-    expect(storeSource).toContain('.eq("stripe_connection_id", connection.id)');
+    expect(storeSource).toContain("requested_connection_id: connection.id");
     expect(routeSource).not.toContain("stripeAccountId?: unknown");
     expect(routeSource).not.toContain("stripeConnectionId?: unknown");
   });
@@ -32,10 +39,26 @@ describe("recovery mode settings boundary", () => {
   });
 
   it("persists pause metadata without canceling recovery messages", () => {
-    expect(storeSource).toContain('paused_at: input.mode === "paused" ? now : null');
-    expect(storeSource).toContain(
-      'paused_reason: input.mode === "paused" ? "merchant_paused" : null',
+    expect(storeSource).toContain("requested_mode: input.mode");
+    expect(scheduleMigrationSource).toContain(
+      "paused_at = case when requested_mode = 'paused'",
+    );
+    expect(scheduleMigrationSource).toContain(
+      "paused_reason = case when requested_mode = 'paused'",
     );
     expect(storeSource).not.toContain("recovery_messages");
+  });
+
+  it("validates and publishes the recovery schedule for the authenticated connection", () => {
+    expect(routeSource).toContain("scheduleId?: unknown");
+    expect(routeSource).toContain("timezone?: unknown");
+    expect(storeSource).toContain("isRecoveryScheduleId(input.scheduleId)");
+    expect(storeSource).toContain("isValidTimezone(input.timezone)");
+    expect(storeSource).toContain('supabase.rpc("publish_recovery_policy"');
+    expect(storeSource).toContain("requested_mode: input.mode");
+    expect(storeSource).toContain("requested_approved_test_recipient: approvedTestRecipient");
+    expect(storeSource).toContain("requested_connection_id: connection.id");
+    expect(storeSource).toContain("requested_user_id: userId");
+    expect(storeSource).not.toContain('.from(RECOVERY_ACCOUNT_SETTINGS_TABLE)\n    .update(');
   });
 });

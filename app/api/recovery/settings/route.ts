@@ -51,6 +51,8 @@ export async function PUT(request: Request) {
     const body = (await request.json()) as {
       approvedTestRecipient?: unknown;
       mode?: unknown;
+      scheduleId?: unknown;
+      timezone?: unknown;
     };
     const recovery = await updateRecoveryModeSettingsForUser(userId, body);
     return NextResponse.json({ recovery });
