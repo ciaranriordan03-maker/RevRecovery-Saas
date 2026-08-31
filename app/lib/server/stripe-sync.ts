@@ -1,5 +1,7 @@
 import "server-only";
 
+import type Stripe from "stripe";
+import { aggregateCurrencyAmounts } from "../currency";
 import { createStripePlatformClient } from "../stripe/server";
 import type { StripeSyncSummary } from "./stripe-connections";
 
@@ -21,7 +23,15 @@ export async function performInitialStripeSync(
     stripe.invoices.list({ limit: 100 }, { stripeAccount: stripeAccountId }),
   ]);
 
-  const failedInvoices = invoices.data.filter(
+  return buildStripeSyncSummary(customers.data, subscriptions.data, invoices.data);
+}
+
+export function buildStripeSyncSummary(
+  customers: Stripe.Customer[],
+  subscriptions: Stripe.Subscription[],
+  invoices: Stripe.Invoice[],
+): StripeSyncSummary {
+  const failedInvoices = invoices.filter(
     (invoice) => invoice.status !== "paid" && invoice.attempt_count > 0 && invoice.amount_due > 0,
   );
 
@@ -33,17 +43,19 @@ export async function performInitialStripeSync(
       .filter(Boolean),
   );
 
-  const revenueAtRiskAmount = failedInvoices.reduce(
-    (total, invoice) => total + invoice.amount_due,
-    0,
+  const revenueAtRiskByCurrency = aggregateCurrencyAmounts(
+    failedInvoices.map((invoice) => ({
+      amount: invoice.amount_due,
+      currency: invoice.currency,
+    })),
   );
 
   return {
-    activeSubscriptionsCount: subscriptions.data.filter(
+    activeSubscriptionsCount: subscriptions.filter(
       (subscription) => subscription.status === "active" || subscription.status === "past_due",
     ).length,
     atRiskCustomersCount: atRiskCustomers.size,
-    customersCount: customers.data.length,
+    customersCount: customers.length,
     failedPaymentsCount: failedInvoices.length,
     recentFailedInvoices: failedInvoices.slice(0, 20).map((invoice) => ({
       amountDue: invoice.amount_due,
@@ -54,7 +66,6 @@ export async function performInitialStripeSync(
       invoiceId: invoice.id,
       status: invoice.status,
     })),
-    revenueAtRiskAmount,
-    revenueAtRiskCurrency: failedInvoices[0]?.currency ?? null,
+    revenueAtRiskByCurrency,
   };
 }

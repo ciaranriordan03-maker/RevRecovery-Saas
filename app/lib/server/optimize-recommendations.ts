@@ -1,5 +1,6 @@
 import "server-only";
 
+import { aggregateCurrencyAmounts, formatCurrencyAmounts } from "../currency";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
 export type OptimizeRecommendation = {
@@ -69,20 +70,10 @@ const WHY_SECTION_RECOMMENDATION: OptimizeRecommendation = {
   titleBadgeClass: BADGE_CLASSES.amber,
 };
 
-function formatCurrency(cents: number, currency = "usd") {
-  return new Intl.NumberFormat("en-US", {
-    currency: currency.toUpperCase(),
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(cents / 100);
-}
-
-function getPrimaryCurrency(rows: FailedPaymentOptimizationRow[]) {
-  return rows.find((row) => row.currency)?.currency ?? "usd";
-}
-
 function isOpenFailedPayment(row: FailedPaymentOptimizationRow) {
-  return row.status !== "recovered";
+  return !["recovered", "no_longer_applicable", "canceled_by_merchant"].includes(
+    row.status,
+  );
 }
 
 async function getFailedPaymentRows(userId: string) {
@@ -141,20 +132,28 @@ export async function getOptimizeRecommendations(
     getRecoveryMessageRows(userId),
   ]);
 
+  return buildOptimizeRecommendations(failedPayments, recoveryMessages);
+}
+
+export function buildOptimizeRecommendations(
+  failedPayments: FailedPaymentOptimizationRow[],
+  recoveryMessages: RecoveryMessageOptimizationRow[],
+): OptimizeRecommendations {
   const openFailedPayments = failedPayments.filter(isOpenFailedPayment);
-  const currency = getPrimaryCurrency(failedPayments);
-  const openRevenueAtRisk = openFailedPayments.reduce(
-    (total, payment) => total + payment.amount_due,
-    0,
+  const openRevenueAtRisk = aggregateCurrencyAmounts(
+    openFailedPayments.map((payment) => ({
+      amount: payment.amount_due,
+      currency: payment.currency,
+    })),
   );
   const recommendations = buildRecommendations();
 
   return {
     impactSummary: {
-      caption: openRevenueAtRisk > 0
+      caption: openFailedPayments.length > 0
         ? `Across ${openFailedPayments.length} open failed payment${openFailedPayments.length === 1 ? "" : "s"}`
         : "Waiting for failed payment data",
-      value: formatCurrency(openRevenueAtRisk, currency),
+      value: formatCurrencyAmounts(openRevenueAtRisk),
     },
     intro: {
       count: recommendations.length,

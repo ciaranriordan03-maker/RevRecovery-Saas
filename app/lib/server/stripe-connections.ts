@@ -1,5 +1,6 @@
 import "server-only";
 
+import { aggregateCurrencyAmounts, type CurrencyAmount } from "../currency";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import {
   decryptStripeToken,
@@ -21,8 +22,10 @@ export type StripeSyncSummary = {
     invoiceId: string;
     status: string | null;
   }>;
-  revenueAtRiskAmount: number;
-  revenueAtRiskCurrency: string | null;
+  revenueAtRiskByCurrency: CurrencyAmount[];
+  /** Legacy fields retained only so previously persisted JSON summaries remain readable. */
+  revenueAtRiskAmount?: number;
+  revenueAtRiskCurrency?: string | null;
 };
 
 export type StripeConnectionRecord = {
@@ -53,6 +56,33 @@ export type StripeConnectionSummary = {
   syncSummary: StripeSyncSummary | null;
 };
 
+export function normalizeStripeSyncSummary(
+  summary: StripeSyncSummary | null,
+): StripeSyncSummary | null {
+  if (!summary) {
+    return null;
+  }
+
+  if (Array.isArray(summary.revenueAtRiskByCurrency)) {
+    return summary;
+  }
+
+  const legacyAmount = summary.revenueAtRiskAmount ?? 0;
+
+  return {
+    ...summary,
+    revenueAtRiskByCurrency:
+      legacyAmount > 0
+        ? aggregateCurrencyAmounts([
+            {
+              amount: legacyAmount,
+              currency: summary.revenueAtRiskCurrency ?? null,
+            },
+          ])
+        : [],
+  };
+}
+
 type StripeConnectionUpsert = {
   access_token: string;
   account_display_name: string | null;
@@ -77,6 +107,7 @@ const STRIPE_CONNECTION_SUMMARY_SELECT =
 function decryptConnectionTokens(connection: StripeConnectionRecord): StripeConnectionRecord {
   return {
     ...connection,
+    sync_summary: normalizeStripeSyncSummary(connection.sync_summary),
     access_token: decryptStripeToken(connection.access_token),
     refresh_token: connection.refresh_token
       ? decryptStripeToken(connection.refresh_token)
@@ -263,6 +294,6 @@ export async function getStripeConnectionSummary(userId: string): Promise<Stripe
     lastSyncedAt: connection.last_synced_at,
     status: connection.status,
     stripeAccountId: connection.stripe_account_id,
-    syncSummary: connection.sync_summary,
+    syncSummary: normalizeStripeSyncSummary(connection.sync_summary),
   };
 }

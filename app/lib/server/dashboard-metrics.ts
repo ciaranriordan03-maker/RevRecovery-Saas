@@ -1,5 +1,10 @@
 import "server-only";
 
+import {
+  aggregateCurrencyAmounts,
+  formatCurrencyAmounts,
+  type CurrencyAmount,
+} from "../currency";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
 export type DashboardMetricCard = {
@@ -13,9 +18,9 @@ export type DashboardMetrics = {
   atRiskCustomersCount: number;
   failedPaymentsCount: number;
   metricCards: DashboardMetricCard[];
-  recoveredRevenueAmount: number;
+  recoveredRevenueByCurrency: CurrencyAmount[];
   recoveryRate: number;
-  revenueAtRiskAmount: number;
+  revenueAtRiskByCurrency: CurrencyAmount[];
 };
 
 type FailedPaymentMetricRow = {
@@ -32,20 +37,14 @@ type RecoveryMessageMetricRow = {
 const FAILED_PAYMENTS_TABLE = "failed_payments";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 
-function formatCurrency(cents: number, currency = "usd") {
-  return new Intl.NumberFormat("en-US", {
-    currency: currency.toUpperCase(),
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(cents / 100);
-}
-
-function getPrimaryCurrency(rows: FailedPaymentMetricRow[]) {
-  return rows.find((row) => row.currency)?.currency ?? "usd";
-}
-
 function isRecovered(row: FailedPaymentMetricRow) {
   return row.status === "recovered";
+}
+
+function isRevenueAtRisk(row: FailedPaymentMetricRow) {
+  return !["recovered", "no_longer_applicable", "canceled_by_merchant"].includes(
+    row.status,
+  );
 }
 
 function buildEmptyMetrics(): DashboardMetrics {
@@ -72,9 +71,9 @@ function buildEmptyMetrics(): DashboardMetrics {
         value: "$0",
       },
     ],
-    recoveredRevenueAmount: 0,
+    recoveredRevenueByCurrency: [],
     recoveryRate: 0,
-    revenueAtRiskAmount: 0,
+    revenueAtRiskByCurrency: [],
   };
 }
 
@@ -124,12 +123,16 @@ export async function getDashboardMetrics(userId: string): Promise<DashboardMetr
     getRecoveryMessageRows(userId),
   ]);
 
-  if (failedPaymentRows.length === 0) {
-    return buildEmptyMetrics();
-  }
+  return buildDashboardMetrics(failedPaymentRows, recoveryMessageRows);
+}
 
-  const currency = getPrimaryCurrency(failedPaymentRows);
-  const openFailedPayments = failedPaymentRows.filter((row) => !isRecovered(row));
+export function buildDashboardMetrics(
+  failedPaymentRows: FailedPaymentMetricRow[],
+  recoveryMessageRows: RecoveryMessageMetricRow[],
+): DashboardMetrics {
+  if (failedPaymentRows.length === 0) return buildEmptyMetrics();
+
+  const openFailedPayments = failedPaymentRows.filter(isRevenueAtRisk);
   const recoveredPayments = failedPaymentRows.filter(isRecovered);
   const atRiskCustomers = new Set(
     openFailedPayments
@@ -137,16 +140,15 @@ export async function getDashboardMetrics(userId: string): Promise<DashboardMetr
       .filter((customerId): customerId is string => Boolean(customerId)),
   );
 
-  const revenueAtRiskAmount = openFailedPayments.reduce(
-    (total, row) => total + row.amount_due,
-    0,
+  const revenueAtRiskByCurrency = aggregateCurrencyAmounts(
+    openFailedPayments.map((row) => ({ amount: row.amount_due, currency: row.currency })),
   );
-  const recoveredRevenueAmount = recoveredPayments.reduce(
-    (total, row) => total + row.amount_due,
-    0,
+  const recoveredRevenueByCurrency = aggregateCurrencyAmounts(
+    recoveredPayments.map((row) => ({ amount: row.amount_due, currency: row.currency })),
   );
-  const recoveryRate = failedPaymentRows.length > 0
-    ? Math.round((recoveredPayments.length / failedPaymentRows.length) * 100)
+  const eligiblePaymentsCount = openFailedPayments.length + recoveredPayments.length;
+  const recoveryRate = eligiblePaymentsCount > 0
+    ? Math.round((recoveredPayments.length / eligiblePaymentsCount) * 100)
     : 0;
   const sentMessagesCount = recoveryMessageRows.filter(
     (row) => row.status === "sent",
@@ -160,7 +162,7 @@ export async function getDashboardMetrics(userId: string): Promise<DashboardMetr
         caption: `${openFailedPayments.length} open failed payments`,
         label: "Revenue at Risk",
         tone: "risk",
-        value: formatCurrency(revenueAtRiskAmount, currency),
+        value: formatCurrencyAmounts(revenueAtRiskByCurrency),
       },
       {
         caption: `Across ${atRiskCustomers.size} customers`,
@@ -172,11 +174,11 @@ export async function getDashboardMetrics(userId: string): Promise<DashboardMetr
         caption: `${recoveryRate}% recovery rate · ${sentMessagesCount} emails sent`,
         label: "Recovered Revenue",
         tone: "success",
-        value: formatCurrency(recoveredRevenueAmount, currency),
+        value: formatCurrencyAmounts(recoveredRevenueByCurrency),
       },
     ],
-    recoveredRevenueAmount,
+    recoveredRevenueByCurrency,
     recoveryRate,
-    revenueAtRiskAmount,
+    revenueAtRiskByCurrency,
   };
 }
