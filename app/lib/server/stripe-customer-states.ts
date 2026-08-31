@@ -6,6 +6,7 @@ import { createSupabaseAdminClient } from "../supabase/admin";
 type StripeCustomerStateUpsert = {
   latest_event_type: string;
   latest_payload: Stripe.PaymentMethod | Stripe.Subscription;
+  livemode: boolean;
   payment_method_updated_at?: string | null;
   stripe_account_id: string;
   stripe_customer_id: string;
@@ -18,6 +19,7 @@ type StripeCustomerStateUpsert = {
 
 export type StripeCustomerStateRecord = {
   latest_event_type: string;
+  livemode: boolean;
   payment_method_updated_at: string | null;
   stripe_account_id: string;
   stripe_customer_id: string;
@@ -53,7 +55,7 @@ export async function upsertStripeCustomerState(record: StripeCustomerStateUpser
   }
 
   const { error } = await supabase.from(STRIPE_CUSTOMER_STATES_TABLE).upsert(record, {
-    onConflict: "stripe_account_id,stripe_customer_id",
+    onConflict: "stripe_account_id,livemode,stripe_customer_id",
   });
 
   if (error) {
@@ -62,10 +64,12 @@ export async function upsertStripeCustomerState(record: StripeCustomerStateUpser
 }
 
 export async function recordPaymentMethodUpdated({
+  livemode,
   paymentMethod,
   stripeAccountId,
   userId,
 }: {
+  livemode: boolean;
   paymentMethod: Stripe.PaymentMethod;
   stripeAccountId: string;
   userId: string;
@@ -79,6 +83,7 @@ export async function recordPaymentMethodUpdated({
   await upsertStripeCustomerState({
     latest_event_type: "payment_method.updated",
     latest_payload: paymentMethod,
+    livemode,
     payment_method_updated_at: toIsoTimestamp(paymentMethod.created) ?? new Date().toISOString(),
     stripe_account_id: stripeAccountId,
     stripe_customer_id: stripeCustomerId,
@@ -88,11 +93,13 @@ export async function recordPaymentMethodUpdated({
 
 export async function recordSubscriptionState({
   eventType,
+  livemode,
   stripeAccountId,
   subscription,
   userId,
 }: {
   eventType: "customer.subscription.deleted" | "customer.subscription.updated";
+  livemode: boolean;
   stripeAccountId: string;
   subscription: Stripe.Subscription;
   userId: string;
@@ -109,6 +116,7 @@ export async function recordSubscriptionState({
   await upsertStripeCustomerState({
     latest_event_type: eventType,
     latest_payload: subscription,
+    livemode,
     stripe_account_id: stripeAccountId,
     stripe_customer_id: stripeCustomerId,
     stripe_subscription_id: subscription.id,
@@ -120,10 +128,12 @@ export async function recordSubscriptionState({
 }
 
 export async function getStripeCustomerState({
+  livemode,
   stripeAccountId,
   stripeCustomerId,
   userId,
 }: {
+  livemode: boolean;
   stripeAccountId: string;
   stripeCustomerId: string;
   userId: string;
@@ -137,10 +147,11 @@ export async function getStripeCustomerState({
   const { data, error } = await supabase
     .from(STRIPE_CUSTOMER_STATES_TABLE)
     .select(
-      "stripe_account_id, stripe_customer_id, stripe_subscription_id, subscription_status, payment_method_updated_at, subscription_updated_at, subscription_deleted_at, latest_event_type",
+      "stripe_account_id, stripe_customer_id, stripe_subscription_id, subscription_status, payment_method_updated_at, subscription_updated_at, subscription_deleted_at, latest_event_type, livemode",
     )
     .eq("user_id", userId)
     .eq("stripe_account_id", stripeAccountId)
+    .eq("livemode", livemode)
     .eq("stripe_customer_id", stripeCustomerId)
     .maybeSingle<StripeCustomerStateRecord>();
 

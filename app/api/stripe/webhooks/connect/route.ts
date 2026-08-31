@@ -32,6 +32,7 @@ import {
   getWebhookRetryDelaySeconds,
   sanitizeWebhookError,
 } from "../../../../lib/stripe/webhook-processing";
+import { getWebhookEnvironmentDisposition } from "../../../../lib/stripe/webhook-environment";
 
 const RETRY_RESPONSE_STATUS = 503;
 
@@ -77,6 +78,7 @@ async function handleInvoiceEvent(
     | "invoice.payment_succeeded"
     | "invoice.updated";
   const existingCase = await getFailedPaymentForInvoice({
+    livemode: event.livemode,
     stripeAccountId,
     stripeInvoiceId: invoice.id,
   });
@@ -191,6 +193,25 @@ export async function POST(request: Request) {
   }
 
   try {
+    const environmentDisposition = getWebhookEnvironmentDisposition(
+      connection?.livemode,
+      event.livemode,
+    );
+
+    if (environmentDisposition !== "process") {
+      await completeWebhookEvent({
+        claimToken,
+        ignoredReason: environmentDisposition,
+        outcome: "ignored",
+        stripeEventId: event.id,
+      });
+      return NextResponse.json({
+        ignored: true,
+        reason: environmentDisposition,
+        received: true,
+      });
+    }
+
     if (event.type === "account.application.deauthorized") {
       await handleDeauthorization(stripeAccountId);
     } else if (userId) {
@@ -210,6 +231,7 @@ export async function POST(request: Request) {
         case "customer.subscription.updated":
           await recordSubscriptionState({
             eventType: event.type,
+            livemode: event.livemode,
             stripeAccountId,
             subscription: event.data.object as Stripe.Subscription,
             userId,
@@ -218,6 +240,7 @@ export async function POST(request: Request) {
         case "payment_method.updated": {
           const paymentMethod = event.data.object as Stripe.PaymentMethod;
           await recordPaymentMethodUpdated({
+            livemode: event.livemode,
             paymentMethod,
             stripeAccountId,
             userId,

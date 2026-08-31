@@ -439,11 +439,12 @@ function isInvoiceActionable(invoice: Stripe.Invoice) {
 }
 
 async function getPaymentMethodUpdatePauseReason(failedPayment: FailedPaymentRecord) {
-  if (!failedPayment.stripe_customer_id) {
+  if (!failedPayment.stripe_customer_id || failedPayment.livemode === null) {
     return null;
   }
 
   const customerState = await getStripeCustomerState({
+    livemode: failedPayment.livemode,
     stripeAccountId: failedPayment.stripe_account_id,
     stripeCustomerId: failedPayment.stripe_customer_id,
     userId: failedPayment.user_id,

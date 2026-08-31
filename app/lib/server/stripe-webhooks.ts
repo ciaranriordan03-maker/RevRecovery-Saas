@@ -205,9 +205,11 @@ export async function requestWebhookEventReplay(
 }
 
 export async function getFailedPaymentForInvoice({
+  livemode,
   stripeAccountId,
   stripeInvoiceId,
 }: {
+  livemode: boolean;
   stripeAccountId: string;
   stripeInvoiceId: string;
 }) {
@@ -222,6 +224,7 @@ export async function getFailedPaymentForInvoice({
     .select("id, case_status")
     .eq("stripe_account_id", stripeAccountId)
     .eq("stripe_invoice_id", stripeInvoiceId)
+    .eq("livemode", livemode)
     .maybeSingle<{ case_status: RecoveryCaseStatus | null; id: string }>();
 
   if (error) {
