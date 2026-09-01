@@ -62,6 +62,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
         atRiskCustomers={atRiskCustomers}
         mode={mode}
         recoveryView={recoveryView}
+        userSettings={settingsRecord.settings}
       />
     </AppShell>
   );

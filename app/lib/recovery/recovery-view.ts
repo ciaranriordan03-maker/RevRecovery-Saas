@@ -46,6 +46,7 @@ export function buildRecoveryFlowView(
     })),
     mode: recoverySettings.mode,
     replyToEmail: userSettings.email.replyToEmail || "Not configured",
+    scheduleId: recoverySettings.scheduleId,
     scheduleLabel: schedule.label,
     senderName: userSettings.email.senderName,
     supportEmail: userSettings.email.supportEmail || "Not configured",

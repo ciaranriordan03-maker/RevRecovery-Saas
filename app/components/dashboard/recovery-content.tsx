@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { Icon } from "../ui-icon";
 import { AtRiskCustomersTable } from "./at-risk-customers-table";
+import { RecoverySettingsForm } from "./recovery-settings-form";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
+import type { UserSettings } from "../../lib/settings";
 
 type RecoveryContentProps = {
   atRiskCustomers?: AtRiskCustomer[];
   mode?: "sequence" | "customize" | "review";
   recoveryView: RecoveryFlowView;
+  userSettings: UserSettings;
 };
 
 const modeLabels = { live: "Live", off: "Off", paused: "Paused", test: "Test" } as const;
@@ -69,15 +72,14 @@ function RecoverySequence({ atRiskCustomers, recoveryView }: { atRiskCustomers: 
   );
 }
 
-function CustomizeRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowView }) {
+function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: RecoveryFlowView; userSettings: UserSettings }) {
   const recipient = recoveryView.approvedTestRecipient ?? "Not configured";
   return (
     <div className="px-5 py-7 sm:px-8 xl:px-[143px]">
       <div className="mx-auto flex max-w-[896px] flex-col gap-7">
         <section className="rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-6">
-          <h2 className="text-sm font-medium text-[var(--foreground)]">Persisted recovery settings</h2>
-          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">These are the saved values the recovery pipeline currently reads. Change supported account settings on the Settings page; message editing and audience segmentation are not available yet.</p>
-          <Link className="mt-5 inline-flex h-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] px-4 text-sm font-medium text-white transition hover:bg-[var(--primary-hover)]" href="/dashboard/settings">Manage saved settings</Link>
+          <h2 className="text-sm font-medium text-[var(--foreground)]">Saved recovery configuration</h2>
+          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">The editable controls below save directly to the settings used by the recovery pipeline. Audience segmentation and individual message editing are not available yet.</p>
         </section>
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Detail label="Recovery mode" value={modeLabels[recoveryView.mode]} />
@@ -91,6 +93,20 @@ function CustomizeRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowVie
           <Detail label="Reply-to email" value={recoveryView.replyToEmail} />
           <Detail label="Support email" value={recoveryView.supportEmail} />
         </dl>
+        <RecoverySettingsForm
+          editable={recoveryView.editable}
+          initialRecoverySettings={{
+            approvedTestRecipient: recoveryView.approvedTestRecipient ?? "",
+            mode: recoveryView.mode,
+            scheduleId: recoveryView.scheduleId,
+            timezone: recoveryView.timezone,
+          }}
+          initialUserSettings={userSettings}
+        />
+        <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+          <h2 className="text-base font-medium text-[var(--foreground)]">Message templates</h2>
+          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">These are the messages currently sent by the delivery worker. Template editing is planned for a later phase.</p>
+        </section>
         <MessageCards recoveryView={recoveryView} />
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
           <Link className="inline-flex h-[50px] items-center text-base font-medium text-[var(--muted-strong)] hover:text-[var(--foreground)]" href="/dashboard/recovery">Back to flow</Link>
@@ -136,8 +152,8 @@ function ReviewRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowView }
   );
 }
 
-export function RecoveryContent({ atRiskCustomers = [], mode = "sequence", recoveryView }: RecoveryContentProps) {
+export function RecoveryContent({ atRiskCustomers = [], mode = "sequence", recoveryView, userSettings }: RecoveryContentProps) {
   if (mode === "review") return <ReviewRecoveryStep recoveryView={recoveryView} />;
-  if (mode === "customize") return <CustomizeRecoveryStep recoveryView={recoveryView} />;
+  if (mode === "customize") return <CustomizeRecoveryStep recoveryView={recoveryView} userSettings={userSettings} />;
   return <RecoverySequence atRiskCustomers={atRiskCustomers} recoveryView={recoveryView} />;
 }

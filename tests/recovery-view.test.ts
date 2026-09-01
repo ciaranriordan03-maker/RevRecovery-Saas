@@ -35,6 +35,7 @@ describe("recovery flow view", () => {
       environment: "Stripe sandbox data",
       mode: "test",
       replyToEmail: "replies@example.com",
+      scheduleId: "day_3_7",
       scheduleLabel: "Immediate, Day 3, Day 7",
       senderName: "Example Billing",
       supportEmail: "support@example.com",
