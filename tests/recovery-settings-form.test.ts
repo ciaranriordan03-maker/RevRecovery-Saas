@@ -18,7 +18,7 @@ describe("recovery settings form", () => {
   it("preserves the full user settings object when saving email identity", () => {
     expect(source).toContain('fetch("/api/settings"');
     expect(source).toContain("JSON.stringify({ settings })");
-    expect(source).toContain("Save email identity");
+    expect(source).toContain("Save email settings");
     expect(source).toContain("router.refresh()");
   });
 

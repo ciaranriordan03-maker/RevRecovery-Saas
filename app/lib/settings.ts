@@ -1,3 +1,9 @@
+import {
+  cloneRecoveryMessageTemplates,
+  normalizeRecoveryMessageTemplates,
+  type RecoveryMessageTemplate,
+} from "./recovery/message-templates";
+
 export type TeamRole = "Owner" | "Admin" | "Member";
 
 export type TeamMember = {
@@ -24,6 +30,7 @@ export type UserSettings = {
   };
   recovery: {
     defaultEmailTone: string;
+    messageTemplates: RecoveryMessageTemplate[];
     paymentRetryAttempts: string;
     prioritizeHighValueCustomers: boolean;
     sendingSchedule: string;
@@ -72,6 +79,7 @@ export const defaultUserSettings: UserSettings = {
   },
   recovery: {
     defaultEmailTone: "Friendly",
+    messageTemplates: cloneRecoveryMessageTemplates(),
     paymentRetryAttempts: "3 retries",
     prioritizeHighValueCustomers: true,
     sendingSchedule: "Immediate, Day 3, Day 7",
@@ -119,6 +127,9 @@ export function mergeUserSettings(
     recovery: {
       ...defaultUserSettings.recovery,
       ...source.recovery,
+      messageTemplates: normalizeRecoveryMessageTemplates(
+        source.recovery?.messageTemplates,
+      ),
     },
     stripe: {
       ...defaultUserSettings.stripe,
@@ -155,6 +166,32 @@ export function getUserSettingsValidationError(settings: UserSettings) {
 
   if (!isValidEmailAddress(settings.email.replyToEmail)) {
     return "Reply-to email must be a valid email address.";
+  }
+
+  for (const [index, template] of settings.recovery.messageTemplates.entries()) {
+    const messageNumber = index + 1;
+    const subject = template.subject.trim();
+    const body = template.bodyPreview.trim();
+
+    if (!subject) {
+      return `Recovery email ${messageNumber} subject is required.`;
+    }
+
+    if (subject.length > 120) {
+      return `Recovery email ${messageNumber} subject must be 120 characters or fewer.`;
+    }
+
+    if (!body) {
+      return `Recovery email ${messageNumber} message is required.`;
+    }
+
+    if (body.length > 1000) {
+      return `Recovery email ${messageNumber} message must be 1000 characters or fewer.`;
+    }
+
+    if (/https?:\/\//i.test(subject) || /https?:\/\//i.test(body)) {
+      return `Recovery email ${messageNumber} cannot include a URL. RevRecovery adds the secure payment link automatically.`;
+    }
   }
 
   return null;

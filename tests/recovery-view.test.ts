@@ -73,6 +73,40 @@ describe("recovery flow view", () => {
       "After 3 days",
     ]);
   });
+
+  it("shows persisted recovery email copy in the review screen", () => {
+    const customTemplates = defaultUserSettings.recovery.messageTemplates.map(
+      (template, index) => ({
+        ...template,
+        bodyPreview: `Saved body ${index + 1}`,
+        subject: `Saved subject ${index + 1}`,
+      }),
+    );
+    const view = buildRecoveryFlowView(
+      {
+        ...defaultUserSettings,
+        recovery: {
+          ...defaultUserSettings.recovery,
+          messageTemplates: customTemplates,
+        },
+      },
+      {
+        approvedTestRecipient: null,
+        connected: true,
+        editable: true,
+        livemode: true,
+        mode: "live",
+        scheduleId: "day_3_7",
+        source: "persisted",
+        stripeAccountId: "acct_live",
+        timezone: "Europe/Dublin",
+      },
+    );
+
+    expect(view.messages.map(({ bodyPreview, subject }) => ({ bodyPreview, subject }))).toEqual(
+      customTemplates.map(({ bodyPreview, subject }) => ({ bodyPreview, subject })),
+    );
+  });
 });
 
 describe("recovery status summary", () => {

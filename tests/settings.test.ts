@@ -10,6 +10,47 @@ describe("user settings", () => {
     expect(defaultUserSettings.email.senderName).toBe("RevRecovery");
   });
 
+  it("adds default recovery copy when loading legacy settings", () => {
+    const settings = mergeUserSettings({
+      recovery: {
+        defaultEmailTone: "Professional",
+        paymentRetryAttempts: "3 retries",
+        prioritizeHighValueCustomers: true,
+        sendingSchedule: "Immediate, Day 3, Day 7",
+      } as typeof defaultUserSettings.recovery,
+    });
+
+    expect(settings.recovery.messageTemplates).toHaveLength(3);
+    expect(settings.recovery.messageTemplates[0]).toMatchObject({
+      messageKey: "email_1",
+      subject: "Action needed: update your payment method",
+    });
+  });
+
+  it("preserves customized recovery email copy", () => {
+    const templates = defaultUserSettings.recovery.messageTemplates.map(
+      (template, index) => ({
+        ...template,
+        bodyPreview: `Custom message ${index + 1}`,
+        subject: `Custom subject ${index + 1}`,
+      }),
+    );
+    const settings = mergeUserSettings({
+      email: {
+        replyToEmail: "replies@example.com",
+        senderName: "RevRecovery",
+        supportEmail: "support@example.com",
+      },
+      recovery: {
+        ...defaultUserSettings.recovery,
+        messageTemplates: templates,
+      },
+    });
+
+    expect(settings.recovery.messageTemplates).toEqual(templates);
+    expect(getUserSettingsValidationError(settings)).toBeNull();
+  });
+
   it("upgrades the legacy RecoverFlow sender name without replacing custom names", () => {
     expect(
       mergeUserSettings({
@@ -98,6 +139,32 @@ describe("user settings", () => {
 
     expect(getUserSettingsValidationError(settings)).toBe(
       "Sender name is required.",
+    );
+  });
+
+  it("rejects recovery copy containing a merchant-supplied URL", () => {
+    const settings = mergeUserSettings({
+      email: {
+        replyToEmail: "replies@example.com",
+        senderName: "RevRecovery",
+        supportEmail: "support@example.com",
+      },
+      recovery: {
+        ...defaultUserSettings.recovery,
+        messageTemplates: defaultUserSettings.recovery.messageTemplates.map(
+          (template, index) =>
+            index === 0
+              ? {
+                  ...template,
+                  bodyPreview: "Pay at https://example.com instead.",
+                }
+              : template,
+        ),
+      },
+    });
+
+    expect(getUserSettingsValidationError(settings)).toBe(
+      "Recovery email 1 cannot include a URL. RevRecovery adds the secure payment link automatically.",
     );
   });
 });

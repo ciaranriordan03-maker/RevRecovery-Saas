@@ -12,6 +12,7 @@ import {
   getRecoveryDeliveryRecipient,
   isRecoveryDeliveryKillSwitchEnabled,
 } from "../recovery/mode-policy";
+import { RECOVERY_MESSAGE_COPY_VERSION } from "../recovery/message-templates";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
@@ -270,6 +271,7 @@ export function buildMessageCopy(
   stepNumber: number,
   tone: string,
   variables: RecoveryEmailVariables,
+  customBody?: string,
 ) {
   const safeGreeting = escapeHtml(variables.greeting);
   const safeFormattedAmount = escapeHtml(variables.formattedAmount);
@@ -289,18 +291,23 @@ export function buildMessageCopy(
         ? "We’ll retry the payment soon. Updating your payment method now gives you the best chance of avoiding any interruption."
         : "This is the final reminder before your account may be affected. Please update your billing details today.";
 
+  const customBodyText = customBody?.trim();
+  const messageBodyHtml = customBodyText
+    ? `<p>${escapeHtml(customBodyText).replace(/\r?\n/g, "<br />")}</p>`
+    : `<p>${tonePrefix}</p>\n        <p>${stepBody}</p>`;
+  const messageBodyText = customBodyText ?? `${tonePrefix}\n\n${stepBody}`;
+
   return {
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: rgb(17 24 39);">
         <p>${safeGreeting}</p>
-        <p>${tonePrefix}</p>
-        <p>${stepBody}</p>
+        ${messageBodyHtml}
         <p><strong>Outstanding amount:</strong> ${safeFormattedAmount}</p>
         <p><a href="${safePortalUrl}" style="display:inline-block;padding:12px 18px;background:rgb(91 76 240);color:white;text-decoration:none;border-radius:8px;">Update billing details</a></p>
         <p>If you’ve already taken care of this, you can ignore this email.</p>
       </div>
     `.trim(),
-    text: `${variables.greeting}\n\n${tonePrefix}\n\n${stepBody}\n\nOutstanding amount: ${variables.formattedAmount}\n\nUpdate billing details: ${variables.portalUrl}\n\nIf you've already taken care of this, you can ignore this email.`,
+    text: `${variables.greeting}\n\n${messageBodyText}\n\nOutstanding amount: ${variables.formattedAmount}\n\nUpdate billing details: ${variables.portalUrl}\n\nIf you've already taken care of this, you can ignore this email.`,
   };
 }
 
@@ -831,6 +838,9 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
         message.step_number,
         settingsRecord.settings.recovery.defaultEmailTone,
         variables,
+        message.metadata?.copyVersion === RECOVERY_MESSAGE_COPY_VERSION
+          ? message.body_preview ?? undefined
+          : undefined,
       );
 
       const from =

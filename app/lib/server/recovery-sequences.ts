@@ -8,7 +8,12 @@ import {
   type RecoveryScheduleSnapshot,
 } from "../recovery/schedule-policy";
 import type { FailedPaymentRecord } from "./stripe-webhooks";
-import { RECOVERY_MESSAGE_TEMPLATES } from "../recovery/message-templates";
+import {
+  RECOVERY_MESSAGE_COPY_VERSION,
+  RECOVERY_MESSAGE_TEMPLATES,
+  type RecoveryMessageTemplate,
+} from "../recovery/message-templates";
+import { getUserSettings } from "./settings-store";
 
 export type RecoverySequenceRecord = {
   completed_at: string | null;
@@ -39,6 +44,7 @@ type RecoveryMessageInsert = {
   failed_payment_id: string;
   message_key: string;
   metadata: {
+    copyVersion: typeof RECOVERY_MESSAGE_COPY_VERSION;
     recommendedSendWindow: string;
   };
   scheduled_for: string;
@@ -56,9 +62,10 @@ export function buildRecoveryMessages(
   failedPayment: FailedPaymentRecord,
   sequenceId: string,
   schedule: RecoveryScheduleSnapshot,
+  templates: RecoveryMessageTemplate[] = RECOVERY_MESSAGE_TEMPLATES,
 ): RecoveryMessageInsert[] {
   const baseScheduledAt = failedPayment.updated_at;
-  return RECOVERY_MESSAGE_TEMPLATES.map((template, index) => {
+  return templates.map((template, index) => {
     const offsetMinutes = schedule.offsetsMinutes[index];
 
     return {
@@ -67,6 +74,7 @@ export function buildRecoveryMessages(
       failed_payment_id: failedPayment.id,
       message_key: template.messageKey,
       metadata: {
+        copyVersion: RECOVERY_MESSAGE_COPY_VERSION,
         recommendedSendWindow: `offset_minutes_${offsetMinutes}`,
       },
       scheduled_for: scheduleFromOffset(baseScheduledAt, offsetMinutes),
@@ -181,10 +189,12 @@ export async function ensureRecoverySequenceForFailedPayment(
   }
 
   if ((count ?? 0) === 0 && sequence.status === "active") {
+    const settingsRecord = await getUserSettings(failedPayment.user_id);
     const messages = buildRecoveryMessages(
       failedPayment,
       sequence.id,
       sequence.configuration_snapshot,
+      settingsRecord.settings.recovery.messageTemplates,
     );
     const { error: messageError } = await supabase
       .from(RECOVERY_MESSAGES_TABLE)

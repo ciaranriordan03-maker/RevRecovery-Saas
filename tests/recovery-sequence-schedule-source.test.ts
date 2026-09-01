@@ -27,4 +27,11 @@ describe("recovery sequence schedule source", () => {
     expect(source).toContain("ignoreDuplicates: true");
     expect(source).toContain('onConflict: "sequence_id,message_key"');
   });
+
+  it("snapshots the persisted recovery copy onto newly created messages", () => {
+    expect(source).toContain("settings.recovery.messageTemplates");
+    expect(source).toContain("RECOVERY_MESSAGE_COPY_VERSION");
+    expect(source).toContain("body_preview: template.bodyPreview");
+    expect(source).toContain("subject: template.subject");
+  });
 });

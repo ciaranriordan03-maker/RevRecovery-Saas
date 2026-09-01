@@ -39,6 +39,28 @@ describe("recovery email delivery", () => {
     expect(copy.html).not.toContain("/dashboard/recovery");
   });
 
+  it("renders customized copy while retaining the system payment details", () => {
+    const variables = buildRecoveryEmailVariables({
+      amountDue: 2000,
+      currency: "usd",
+      latestInvoice: invoice(),
+      originalPayload: invoice(),
+    });
+    const copy = buildMessageCopy(
+      1,
+      "Friendly",
+      variables,
+      "A tailored reminder.\nPlease update <today>.",
+    );
+
+    expect(copy.html).toContain("A tailored reminder.<br />Please update &lt;today&gt;.");
+    expect(copy.text).toContain("A tailored reminder.\nPlease update <today>.");
+    expect(copy.html).toContain("Outstanding amount:");
+    expect(copy.html).toContain(variables.portalUrl);
+    expect(copy.text).toContain(variables.portalUrl);
+    expect(copy.html).not.toContain("Just a quick heads-up");
+  });
+
   it("refuses to send when Stripe has not provided a hosted invoice page", () => {
     expect(() =>
       buildRecoveryEmailVariables({

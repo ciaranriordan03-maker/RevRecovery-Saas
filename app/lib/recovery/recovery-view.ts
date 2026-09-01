@@ -1,6 +1,5 @@
 import type { RecoveryModeSettings } from "../server/recovery-account-settings";
 import type { UserSettings } from "../settings";
-import { RECOVERY_MESSAGE_TEMPLATES } from "./message-templates";
 import { getRecoverySchedule } from "./schedule-policy";
 
 export type RecoveryFlowView = ReturnType<typeof buildRecoveryFlowView>;
@@ -93,7 +92,7 @@ export function buildRecoveryFlowView(
         : recoverySettings.livemode
           ? "Live Stripe data"
           : "Stripe sandbox data",
-    messages: RECOVERY_MESSAGE_TEMPLATES.map((template, index) => ({
+    messages: userSettings.recovery.messageTemplates.map((template, index) => ({
       ...template,
       timing: formatRecoveryOffset(schedule.offsetsMinutes[index] ?? 0),
     })),
