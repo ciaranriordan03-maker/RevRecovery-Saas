@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { OnboardingFlow } from "../components/onboarding/onboarding-flow";
 import { requireIncompleteOnboarding } from "../lib/auth";
 import { onboardingSteps, type OnboardingStep } from "../lib/data";
+import { getRecoveryModeSettingsForUser } from "../lib/server/recovery-account-settings";
+import { buildRecoveryStatusSummary } from "../lib/recovery/recovery-view";
 
 export const metadata: Metadata = {
   title: "Onboarding | RevRecovery",
@@ -31,11 +33,13 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
   const { claims } = await requireIncompleteOnboarding();
   const params = await searchParams;
   const accountEmail = typeof claims.email === "string" ? claims.email : "";
+  const recoverySettings = await getRecoveryModeSettingsForUser(claims.sub);
 
   return (
     <OnboardingFlow
       accountEmail={accountEmail}
       initialStep={getInitialStep(params?.step)}
+      recoverySummary={buildRecoveryStatusSummary(recoverySettings)}
     />
   );
 }

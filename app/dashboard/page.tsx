@@ -4,6 +4,8 @@ import { DashboardContent } from "../components/dashboard/dashboard-content";
 import { requireCompletedOnboarding } from "../lib/auth";
 import { getDashboardMetrics } from "../lib/server/dashboard-metrics";
 import { getOptimizeRecommendations } from "../lib/server/optimize-recommendations";
+import { getRecoveryModeSettingsForUser } from "../lib/server/recovery-account-settings";
+import { buildRecoveryStatusSummary } from "../lib/recovery/recovery-view";
 
 export const metadata: Metadata = {
   title: "Dashboard | RevRecovery",
@@ -12,9 +14,10 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const { claims } = await requireCompletedOnboarding();
-  const [dashboardMetrics, optimizeRecommendations] = await Promise.all([
+  const [dashboardMetrics, optimizeRecommendations, recoverySettings] = await Promise.all([
     getDashboardMetrics(claims.sub),
     getOptimizeRecommendations(claims.sub),
+    getRecoveryModeSettingsForUser(claims.sub),
   ]);
 
   return (
@@ -26,6 +29,7 @@ export default async function DashboardPage() {
       <DashboardContent
         metrics={dashboardMetrics.metricCards}
         optimizeRecommendations={optimizeRecommendations}
+        recoverySummary={buildRecoveryStatusSummary(recoverySettings)}
       />
     </AppShell>
   );

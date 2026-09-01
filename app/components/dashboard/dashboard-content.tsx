@@ -4,13 +4,16 @@ import { RecommendationCard } from "./recommendation-card";
 import { RecommendationImpactSummary } from "./recommendation-impact-summary";
 import type { DashboardMetricCard } from "../../lib/server/dashboard-metrics";
 import type { OptimizeRecommendations } from "../../lib/server/optimize-recommendations";
+import type { RecoveryStatusSummary } from "../../lib/recovery/recovery-view";
 
 export function DashboardContent({
   metrics,
   optimizeRecommendations,
+  recoverySummary,
 }: {
   metrics: DashboardMetricCard[];
   optimizeRecommendations: OptimizeRecommendations;
+  recoverySummary: RecoveryStatusSummary;
 }) {
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-20">
@@ -56,9 +59,9 @@ export function DashboardContent({
           <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <p className="text-sm font-medium">Recovery flow ready</p>
+                <p className="text-sm font-medium">{recoverySummary.title}</p>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  3 automated emails scheduled for Day 0, Day 3, and Day 7.
+                  {recoverySummary.description}
                 </p>
               </div>
               <Link

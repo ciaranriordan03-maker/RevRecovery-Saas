@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildRecoveryFlowView } from "../app/lib/recovery/recovery-view";
+import {
+  buildRecoveryFlowView,
+  buildRecoveryStatusSummary,
+} from "../app/lib/recovery/recovery-view";
 import { defaultUserSettings } from "../app/lib/settings";
 
 describe("recovery flow view", () => {
@@ -69,5 +72,49 @@ describe("recovery flow view", () => {
       "After 1 day",
       "After 3 days",
     ]);
+  });
+});
+
+describe("recovery status summary", () => {
+  const connectedSettings = {
+    approvedTestRecipient: "qa@example.com",
+    connected: true,
+    editable: true,
+    livemode: true,
+    mode: "live" as const,
+    scheduleId: "day_3_7" as const,
+    source: "persisted" as const,
+    stripeAccountId: "acct_live",
+    timezone: "Europe/Dublin",
+  };
+
+  it("uses the persisted mode and schedule for live recovery", () => {
+    const summary = buildRecoveryStatusSummary(connectedSettings);
+
+    expect(summary.title).toBe("Recovery is set up and live");
+    expect(summary.description).toContain("immediate, day 3, day 7");
+    expect(summary.timings).toEqual(["Immediately", "After 3 days", "After 7 days"]);
+  });
+
+  it.each([
+    ["test", "Recovery test mode is set up"],
+    ["paused", "Recovery is safely paused"],
+    ["off", "Recovery monitoring is off"],
+  ] as const)("uses truthful wording for %s mode", (mode, title) => {
+    expect(buildRecoveryStatusSummary({ ...connectedSettings, mode }).title).toBe(title);
+  });
+
+  it("does not claim recovery is active without Stripe", () => {
+    const summary = buildRecoveryStatusSummary({
+      ...connectedSettings,
+      connected: false,
+      editable: false,
+      livemode: null,
+      mode: "off",
+      source: "not_connected",
+      stripeAccountId: null,
+    });
+
+    expect(summary.title).toBe("Connect Stripe to finish recovery setup");
   });
 });

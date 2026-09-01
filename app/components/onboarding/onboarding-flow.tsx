@@ -7,6 +7,7 @@ import { Button } from "../button";
 import { Icon } from "../ui-icon";
 import { onboardingSteps, type OnboardingStep } from "../../lib/data";
 import { getStripeConnectHref } from "../../lib/stripe/connect-url";
+import type { RecoveryStatusSummary } from "../../lib/recovery/recovery-view";
 
 function OnboardingCard({
   icon,
@@ -76,11 +77,13 @@ function StepContent({
   activeStep,
   completeOnboarding,
   goNext,
+  recoverySummary,
 }: {
   accountEmail: string;
   activeStep: OnboardingStep;
   completeOnboarding: () => void;
   goNext: () => void;
+  recoverySummary: RecoveryStatusSummary;
 }) {
   if (activeStep === "Welcome") {
     return (
@@ -142,19 +145,19 @@ function StepContent({
     return (
       <OnboardingCard
         icon="flow"
-        subtitle="3 automated emails scheduled for Day 0, Day 3, and Day 7"
-        title="Recovery flow ready"
+        subtitle={recoverySummary.description}
+        title={recoverySummary.title}
       >
         <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center justify-center gap-3">
-            {["Day 0", "Day 3", "Day 7"].map((day, index) => (
-              <div className="flex items-center gap-3" key={day}>
+            {recoverySummary.timings.map((timing, index) => (
+              <div className="flex items-center gap-3" key={timing}>
                 {index > 0 ? <div className="h-px w-8 bg-[var(--border-strong)]" /> : null}
                 <div>
                   <div className="flex size-10 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-medium text-white">
                     {index + 1}
                   </div>
-                  <p className="mt-2 text-xs text-[var(--muted)]">{day}</p>
+                  <p className="mt-2 text-xs text-[var(--muted)]">{timing}</p>
                 </div>
               </div>
             ))}
@@ -168,11 +171,11 @@ function StepContent({
     return (
       <OnboardingCard
         icon="check"
-        subtitle="Ready to start recovering failed payments"
-        title="You're all set"
+        subtitle="Review complete. Continue to confirm your current recovery setup."
+        title="Your recovery setup is ready"
       >
         <Button className="w-full" onClick={goNext}>
-          Activate recovery
+          Continue
         </Button>
       </OnboardingCard>
     );
@@ -181,8 +184,8 @@ function StepContent({
   return (
     <OnboardingCard
       icon="check"
-      subtitle="Recovery is running. We'll email you when we recover your first failed payment."
-      title="You're live"
+      subtitle={recoverySummary.description}
+      title={recoverySummary.title}
     >
       <Button
         className="w-full"
@@ -197,9 +200,11 @@ function StepContent({
 export function OnboardingFlow({
   accountEmail,
   initialStep = "Welcome",
+  recoverySummary,
 }: {
   accountEmail: string;
   initialStep?: OnboardingStep;
+  recoverySummary: RecoveryStatusSummary;
 }) {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState<OnboardingStep>(initialStep);
@@ -235,6 +240,7 @@ export function OnboardingFlow({
         activeStep={activeStep}
         completeOnboarding={() => void completeOnboarding()}
         goNext={goNext}
+        recoverySummary={recoverySummary}
       />
       <footer className="border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
