@@ -79,7 +79,7 @@ function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: R
       <div className="mx-auto flex max-w-[896px] flex-col gap-7">
         <section className="rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-6">
           <h2 className="text-sm font-medium text-[var(--foreground)]">Saved recovery configuration</h2>
-          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">The editable controls below save directly to the settings used by the recovery pipeline. Audience segmentation and individual message editing are not available yet.</p>
+          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">The editable controls below save directly to the settings used by the recovery pipeline. Message copy can be edited here; audience segmentation is not available yet.</p>
         </section>
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Detail label="Recovery mode" value={modeLabels[recoveryView.mode]} />
@@ -104,8 +104,8 @@ function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: R
           initialUserSettings={userSettings}
         />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
-          <h2 className="text-base font-medium text-[var(--foreground)]">Message templates</h2>
-          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">These are the messages currently sent by the delivery worker. Template editing is planned for a later phase.</p>
+          <h2 className="text-base font-medium text-[var(--foreground)]">Saved message preview</h2>
+          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">These previews show the message copy currently saved for new recovery cases. Existing active sequences keep the configuration snapshot they started with.</p>
         </section>
         <MessageCards recoveryView={recoveryView} />
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
