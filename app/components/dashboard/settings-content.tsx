@@ -9,7 +9,6 @@ import {
   defaultUserSettings,
   getInitials,
   mergeUserSettings,
-  paymentRetryOptions,
   recoveryToneOptions,
   teamRoleOptions,
   type TeamMember,
@@ -859,77 +858,26 @@ export function SettingsContent({
         </SettingsSection>
 
         <SettingsSection icon="refresh" title="Recovery Preferences">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Default Email Tone">
-              <Select
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    recovery: {
-                      ...current.recovery,
-                      defaultEmailTone: event.target.value,
-                    },
-                  }))
-                }
-                value={settings.recovery.defaultEmailTone}
-              >
-                {recoveryToneOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div>
-              <Field label="Payment Retry Attempts">
-                <Select
-                  onChange={(event) =>
-                    updateSettings((current) => ({
-                      ...current,
-                      recovery: {
-                        ...current.recovery,
-                        paymentRetryAttempts: event.target.value,
-                      },
-                    }))
-                  }
-                  value={settings.recovery.paymentRetryAttempts}
-                >
-                  {paymentRetryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-            <label className="flex items-start gap-3">
-              <input
-                checked={settings.recovery.prioritizeHighValueCustomers}
-                className="mt-0.5 size-4 rounded border-[var(--border-strong)] text-[var(--primary)]"
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    recovery: {
-                      ...current.recovery,
-                      prioritizeHighValueCustomers: event.target.checked,
-                    },
-                  }))
-                }
-                type="checkbox"
-              />
-              <span>
-                <span className="block text-sm text-[var(--foreground)]">
-                  Prioritize high-value customers ($100+/month)
-                </span>
-                <span className="mt-1 block text-xs text-[var(--muted)]">
-                  Send recovery emails within 1 hour for customers spending more each month.
-                </span>
-              </span>
-            </label>
-          </div>
+          <Field label="Default Email Tone">
+            <Select
+              onChange={(event) =>
+                updateSettings((current) => ({
+                  ...current,
+                  recovery: {
+                    ...current.recovery,
+                    defaultEmailTone: event.target.value,
+                  },
+                }))
+              }
+              value={settings.recovery.defaultEmailTone}
+            >
+              {recoveryToneOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+          </Field>
         </SettingsSection>
 
         <SettingsSection icon="users" title="Team Members">
