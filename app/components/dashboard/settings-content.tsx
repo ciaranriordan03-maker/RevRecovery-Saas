@@ -7,12 +7,8 @@ import { Button } from "../button";
 import { Icon } from "../ui-icon";
 import {
   defaultUserSettings,
-  getInitials,
   mergeUserSettings,
   recoveryToneOptions,
-  teamRoleOptions,
-  type TeamMember,
-  type TeamRole,
   type UserSettings,
 } from "../../lib/settings";
 import { getStripeConnectHref } from "../../lib/stripe/connect-url";
@@ -154,43 +150,6 @@ function getErrorMessage(payload: ErrorState | LoadState, fallback: string) {
 
 function isLoadState(payload: ErrorState | LoadState): payload is LoadState {
   return "settings" in payload && "storage" in payload;
-}
-
-function Toggle({
-  checked,
-  label,
-  onChange,
-  subtitle,
-}: {
-  checked: boolean;
-  label: string;
-  onChange: (checked: boolean) => void;
-  subtitle: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-t border-[var(--border)] py-5 first:border-t-0 first:pt-0 last:pb-0">
-      <div>
-        <p className="text-sm text-[var(--foreground)]">{label}</p>
-        <p className="mt-1 text-xs text-[var(--muted)]">{subtitle}</p>
-      </div>
-      <button
-        aria-pressed={checked}
-        className={`flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition ${
-          checked
-            ? "justify-end bg-[var(--primary)]"
-            : "justify-start bg-[var(--border-strong)]"
-        }`}
-        onClick={() => onChange(!checked)}
-        type="button"
-      >
-        <span className="size-4 rounded-full bg-[var(--surface)]" />
-      </button>
-    </div>
-  );
-}
-
-function getNextAccent(index: number): TeamMember["accent"] {
-  return (["primary", "purple", "success"] as const)[index % 3];
 }
 
 export function SettingsContent({
@@ -478,55 +437,6 @@ export function SettingsContent({
 
   function rotatePassword() {
     router.push("/forgot-password");
-  }
-
-  function addTeamMember() {
-    const name = window.prompt("Invite member name");
-    if (!name) {
-      return;
-    }
-
-    const email = window.prompt("Invite member email");
-    if (!email) {
-      return;
-    }
-
-    updateSettings((current) => ({
-      ...current,
-      team: [
-        ...current.team,
-        {
-          accent: getNextAccent(current.team.length),
-          canRemove: true,
-          email,
-          id: `member-${Date.now()}`,
-          initials: getInitials(name),
-          name,
-          role: "Member",
-        },
-      ],
-    }));
-  }
-
-  function updateMemberRole(memberId: string, role: TeamRole) {
-    updateSettings((current) => ({
-      ...current,
-      team: current.team.map((member) =>
-        member.id === memberId
-          ? {
-              ...member,
-              role,
-            }
-          : member,
-      ),
-    }));
-  }
-
-  function removeMember(memberId: string) {
-    updateSettings((current) => ({
-      ...current,
-      team: current.team.filter((member) => member.id !== memberId),
-    }));
   }
 
   return (
@@ -878,132 +788,6 @@ export function SettingsContent({
               ))}
             </Select>
           </Field>
-        </SettingsSection>
-
-        <SettingsSection icon="users" title="Team Members">
-          <div className="mb-5 flex justify-end">
-            <Button className="h-9 gap-2 px-4 text-sm" onClick={addTeamMember}>
-              <Icon className="size-4" name="plus" />
-              Invite Member
-            </Button>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {settings.team.length === 0 ? (
-              <p className="rounded-[10px] bg-[var(--background)] p-4 text-sm text-[var(--muted)]">
-                No team members have been added.
-              </p>
-            ) : null}
-            {settings.team.map((member) => (
-              <div
-                className="flex flex-col gap-4 rounded-[10px] bg-[var(--background)] p-3 sm:flex-row sm:items-center sm:justify-between"
-                key={member.id}
-              >
-                <div className="flex items-center gap-3">
-                  <DiceBearAvatar
-                    alt={`${member.name || "Team member"} avatar`}
-                    className="size-9"
-                    seed={member.email || member.id}
-                    size={36}
-                  />
-                  <div>
-                    <p className="text-sm text-[var(--foreground)]">{member.name}</p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{member.email}</p>
-                  </div>
-                </div>
-
-                {member.role === "Owner" ? (
-                  <span className="rounded px-2 py-1 text-xs text-[var(--primary)] bg-[var(--primary-border)]">
-                    Owner
-                  </span>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <Select
-                      className="h-8 min-w-[96px] rounded border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-xs text-[var(--foreground)]"
-                      onChange={(event) =>
-                        updateMemberRole(member.id, event.target.value as TeamRole)
-                      }
-                      value={member.role}
-                    >
-                      {teamRoleOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </Select>
-                    {member.canRemove ? (
-                      <button
-                        className="text-xs font-medium text-[var(--muted)] transition hover:text-[var(--foreground)]"
-                        onClick={() => removeMember(member.id)}
-                        type="button"
-                      >
-                        Remove
-                      </button>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </SettingsSection>
-
-        <SettingsSection icon="bell" title="Notifications">
-          <Toggle
-            checked={settings.notifications.failedPaymentAlerts}
-            label="Failed Payment Alerts"
-            onChange={(checked) =>
-              updateSettings((current) => ({
-                ...current,
-                notifications: {
-                  ...current.notifications,
-                  failedPaymentAlerts: checked,
-                },
-              }))
-            }
-            subtitle="Get notified when a payment fails"
-          />
-          <Toggle
-            checked={settings.notifications.recoveredRevenueAlerts}
-            label="Recovered Revenue Alerts"
-            onChange={(checked) =>
-              updateSettings((current) => ({
-                ...current,
-                notifications: {
-                  ...current.notifications,
-                  recoveredRevenueAlerts: checked,
-                },
-              }))
-            }
-            subtitle="Get notified when a payment is recovered"
-          />
-          <Toggle
-            checked={settings.notifications.weeklySummaryEmails}
-            label="Weekly Summary Emails"
-            onChange={(checked) =>
-              updateSettings((current) => ({
-                ...current,
-                notifications: {
-                  ...current.notifications,
-                  weeklySummaryEmails: checked,
-                },
-              }))
-            }
-            subtitle="Receive a weekly digest of recovery performance"
-          />
-          <Toggle
-            checked={settings.notifications.aiOptimizationSuggestions}
-            label="Optimization Suggestions"
-            onChange={(checked) =>
-              updateSettings((current) => ({
-                ...current,
-                notifications: {
-                  ...current.notifications,
-                  aiOptimizationSuggestions: checked,
-                },
-              }))
-            }
-            subtitle="Get notified when new optimization opportunities are identified"
-          />
         </SettingsSection>
 
         <SettingsSection icon="shield" title="Security">
