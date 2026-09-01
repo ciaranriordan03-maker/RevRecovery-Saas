@@ -7,9 +7,16 @@ const source = readFileSync(
 );
 
 describe("settings content truthfulness", () => {
-  it("shows the recovery preference that is actually used by delivery", () => {
-    expect(source).toContain("Default Email Tone");
+  it("keeps recovery configuration editing in the Recovery workspace", () => {
+    expect(source).toContain('title="Recovery Configuration"');
+    expect(source).toContain('href="/dashboard/recovery?step=customize"');
+    expect(source).toContain("Customize recovery");
     expect(source).toContain("settings.recovery.defaultEmailTone");
+    expect(source).toContain("settings.email.senderName");
+    expect(source).toContain("getRecoverySchedule");
+    expect(source).not.toContain("Save Recovery Delivery");
+    expect(source).not.toContain('title="Email Settings"');
+    expect(source).not.toContain('title="Recovery Preferences"');
   });
 
   it("does not promise unsupported payment retries or customer prioritization", () => {

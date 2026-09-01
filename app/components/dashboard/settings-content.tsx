@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DiceBearAvatar } from "../avatar";
@@ -8,17 +9,12 @@ import { Icon } from "../ui-icon";
 import {
   defaultUserSettings,
   mergeUserSettings,
-  recoveryToneOptions,
   type UserSettings,
 } from "../../lib/settings";
 import { getStripeConnectHref } from "../../lib/stripe/connect-url";
+import { type RecoveryMode } from "../../lib/recovery/mode-policy";
 import {
-  RECOVERY_MODES,
-  type RecoveryMode,
-} from "../../lib/recovery/mode-policy";
-import {
-  RECOVERY_SCHEDULES,
-  RECOVERY_TIMEZONES,
+  getRecoverySchedule,
   type RecoveryScheduleId,
 } from "../../lib/recovery/schedule-policy";
 
@@ -107,43 +103,6 @@ function SettingsSection({
   );
 }
 
-function Field({
-  children,
-  label,
-}: {
-  children: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <label className="flex flex-col gap-2">
-      <span className="text-sm text-[var(--foreground)]">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  const { className = "", ...rest } = props;
-
-  return (
-    <input
-      className={`h-11 rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--primary)] ${className}`}
-      {...rest}
-    />
-  );
-}
-
-function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  const { className = "", ...rest } = props;
-
-  return (
-    <select
-      className={`h-11 rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] ${className}`}
-      {...rest}
-    />
-  );
-}
-
 function getErrorMessage(payload: ErrorState | LoadState, fallback: string) {
   return "error" in payload ? payload.error ?? fallback : fallback;
 }
@@ -165,7 +124,6 @@ export function SettingsContent({
 }) {
   const router = useRouter();
   const [settings, setSettings] = useState<UserSettings>(defaultUserSettings);
-  const [savedSnapshot, setSavedSnapshot] = useState<UserSettings>(defaultUserSettings);
   const avatarOptions = useMemo(
     () => buildAvatarOptions(accountEmail || userId),
     [accountEmail, userId],
@@ -177,19 +135,12 @@ export function SettingsContent({
   const [savedFullName, setSavedFullName] = useState(initialFullName ?? "");
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [statusTone, setStatusTone] = useState<"error" | "success" | "muted">("muted");
   const [storage, setStorage] = useState<LoadState["storage"]>("memory");
   const [recoveryMode, setRecoveryMode] = useState<RecoveryModeSettings | null>(null);
-  const [savedRecoveryMode, setSavedRecoveryMode] =
-    useState<RecoveryModeSettings | null>(null);
   const [isLoadingRecoveryMode, setIsLoadingRecoveryMode] = useState(true);
-  const [isSavingRecoveryMode, setIsSavingRecoveryMode] = useState(false);
   const [recoveryModeMessage, setRecoveryModeMessage] = useState("");
-  const [recoveryModeTone, setRecoveryModeTone] = useState<"error" | "success" | "muted">(
-    "muted",
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -217,7 +168,6 @@ export function SettingsContent({
 
         const nextSettings = mergeUserSettings(payload.settings);
         setSettings(nextSettings);
-        setSavedSnapshot(nextSettings);
         setStorage(payload.storage);
         setStatusMessage("");
       } catch (error) {
@@ -257,11 +207,9 @@ export function SettingsContent({
 
         if (!cancelled) {
           setRecoveryMode(payload.recovery);
-          setSavedRecoveryMode(payload.recovery);
         }
       } catch (error) {
         if (!cancelled) {
-          setRecoveryModeTone("error");
           setRecoveryModeMessage(
             error instanceof Error
               ? error.message
@@ -294,67 +242,7 @@ export function SettingsContent({
     return () => window.clearTimeout(timeout);
   }, [statusMessage, statusTone]);
 
-  const hasChanges = useMemo(
-    () => JSON.stringify(settings) !== JSON.stringify(savedSnapshot),
-    [savedSnapshot, settings],
-  );
   const hasAvatarChanges = avatarSeed !== savedAvatarSeed || fullName.trim() !== savedFullName;
-  const hasRecoveryModeChanges =
-    recoveryMode !== null &&
-    savedRecoveryMode !== null &&
-    (recoveryMode.mode !== savedRecoveryMode.mode ||
-      recoveryMode.approvedTestRecipient !== savedRecoveryMode.approvedTestRecipient ||
-      recoveryMode.scheduleId !== savedRecoveryMode.scheduleId ||
-      recoveryMode.timezone !== savedRecoveryMode.timezone);
-
-  function updateSettings(updater: (current: UserSettings) => UserSettings) {
-    setSettings((current) => updater(current));
-    if (statusMessage && statusTone !== "success") {
-      setStatusMessage("");
-    }
-  }
-
-  async function saveSettings() {
-    setIsSaving(true);
-    setStatusMessage("");
-
-    try {
-      const response = await fetch("/api/settings", {
-        body: JSON.stringify({ settings }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "PUT",
-      });
-        const payload = (await response.json()) as
-          | LoadState
-          | {
-            error?: string;
-          };
-
-      if (!response.ok) {
-        throw new Error(getErrorMessage(payload, "Unable to save settings."));
-      }
-
-      if (!isLoadState(payload)) {
-        throw new Error("Unable to save settings.");
-      }
-
-      const nextSettings = mergeUserSettings(payload.settings);
-      setSettings(nextSettings);
-      setSavedSnapshot(nextSettings);
-      setStorage(payload.storage);
-      setStatusTone("success");
-      setStatusMessage("Settings saved");
-    } catch (error) {
-      setStatusTone("error");
-      setStatusMessage(
-        error instanceof Error ? error.message : "Unable to save settings.",
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   async function saveAvatar() {
     setIsSavingAvatar(true);
@@ -394,47 +282,6 @@ export function SettingsContent({
     }
   }
 
-  async function saveRecoveryMode() {
-    if (!recoveryMode) {
-      return;
-    }
-
-    setIsSavingRecoveryMode(true);
-    setRecoveryModeMessage("");
-
-    try {
-      const response = await fetch("/api/recovery/settings", {
-        body: JSON.stringify({
-          approvedTestRecipient: recoveryMode.approvedTestRecipient,
-          mode: recoveryMode.mode,
-          scheduleId: recoveryMode.scheduleId,
-          timezone: recoveryMode.timezone,
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "PUT",
-      });
-      const payload = (await response.json()) as RecoveryModePayload;
-
-      if (!response.ok || !payload.recovery) {
-        throw new Error(payload.error ?? "Unable to save recovery delivery mode.");
-      }
-
-      setRecoveryMode(payload.recovery);
-      setSavedRecoveryMode(payload.recovery);
-      setRecoveryModeTone("success");
-      setRecoveryModeMessage("Recovery delivery settings saved.");
-    } catch (error) {
-      setRecoveryModeTone("error");
-      setRecoveryModeMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to save recovery delivery mode.",
-      );
-    } finally {
-      setIsSavingRecoveryMode(false);
-    }
-  }
-
   function rotatePassword() {
     router.push("/forgot-password");
   }
@@ -458,16 +305,9 @@ export function SettingsContent({
                     : "text-[var(--muted-strong)]"
               }`}
             >
-              {statusMessage || (hasChanges ? "You have unsaved changes." : "All changes saved.")}
+              {statusMessage || (isLoading ? "Loading account settings..." : "Account settings loaded.")}
             </p>
           </div>
-          <Button
-            className="h-11 px-5 text-sm"
-            disabled={isLoading || isSaving || !hasChanges}
-            onClick={() => void saveSettings()}
-          >
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
         </div>
 
         <SettingsSection icon="users" title="Profile">
@@ -577,106 +417,63 @@ export function SettingsContent({
           </div>
         </SettingsSection>
 
-        <SettingsSection icon="refresh" title="Recovery Delivery">
+        <SettingsSection icon="refresh" title="Recovery Configuration">
           {isLoadingRecoveryMode ? (
-            <p className="text-sm text-[var(--muted)]">Loading recovery mode...</p>
+            <p className="text-sm text-[var(--muted)]">Loading recovery configuration...</p>
           ) : recoveryMode ? (
             <div className="flex flex-col gap-5">
               <div className="grid gap-3 md:grid-cols-2">
-                {RECOVERY_MODES.map((mode) => {
-                  const selected = recoveryMode.mode === mode;
-                  const copy = recoveryModeCopy[mode];
+                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    Delivery mode
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
+                    {recoveryModeCopy[recoveryMode.mode].label}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                    {recoveryModeCopy[recoveryMode.mode].description}
+                  </p>
+                  {recoveryMode.mode === "test" ? (
+                    <p className="mt-2 text-xs text-[var(--muted-strong)]">
+                      Test recipient: {recoveryMode.approvedTestRecipient || "Not set"}
+                    </p>
+                  ) : null}
+                </div>
 
-                  return (
-                    <button
-                      aria-pressed={selected}
-                      className={`rounded-[10px] border p-4 text-left transition ${
-                        selected
-                          ? "border-[var(--primary)] bg-[var(--primary-soft)]"
-                          : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--border-strong)]"
-                      } disabled:cursor-not-allowed disabled:opacity-60`}
-                      disabled={!recoveryMode.editable}
-                      key={mode}
-                      onClick={() => {
-                        setRecoveryMode((current) =>
-                          current ? { ...current, mode } : current,
-                        );
-                        setRecoveryModeMessage("");
-                      }}
-                      type="button"
-                    >
-                      <span className="block text-sm font-medium text-[var(--foreground)]">
-                        {copy.label}
-                      </span>
-                      <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">
-                        {copy.description}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    Schedule
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
+                    {getRecoverySchedule(recoveryMode.scheduleId).label}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                    Times use {recoveryMode.timezone}.
+                  </p>
+                </div>
 
-              {recoveryMode.mode === "test" ? (
-                <Field label="Approved test recipient">
-                  <TextInput
-                    disabled={!recoveryMode.editable}
-                    onChange={(event) => {
-                      setRecoveryMode((current) =>
-                        current
-                          ? { ...current, approvedTestRecipient: event.target.value }
-                          : current,
-                      );
-                      setRecoveryModeMessage("");
-                    }}
-                    placeholder={accountEmail}
-                    type="email"
-                    value={recoveryMode.approvedTestRecipient ?? ""}
-                  />
-                </Field>
-              ) : null}
+                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    Email identity
+                  </p>
+                  <dl className="mt-2 space-y-1 text-xs leading-5 text-[var(--muted)]">
+                    <div><dt className="inline text-[var(--muted-strong)]">Sender: </dt><dd className="inline">{settings.email.senderName}</dd></div>
+                    <div><dt className="inline text-[var(--muted-strong)]">Reply-to: </dt><dd className="inline">{settings.email.replyToEmail}</dd></div>
+                    <div><dt className="inline text-[var(--muted-strong)]">Support: </dt><dd className="inline">{settings.email.supportEmail}</dd></div>
+                  </dl>
+                </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Recovery schedule">
-                  <Select
-                    disabled={!recoveryMode.editable}
-                    onChange={(event) => {
-                      setRecoveryMode((current) =>
-                        current
-                          ? {
-                              ...current,
-                              scheduleId: event.target.value as RecoveryScheduleId,
-                            }
-                          : current,
-                      );
-                      setRecoveryModeMessage("");
-                    }}
-                    value={recoveryMode.scheduleId}
-                  >
-                    {RECOVERY_SCHEDULES.map((schedule) => (
-                      <option key={schedule.id} value={schedule.id}>
-                        {schedule.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Recovery timezone">
-                  <Select
-                    disabled={!recoveryMode.editable}
-                    onChange={(event) => {
-                      setRecoveryMode((current) =>
-                        current ? { ...current, timezone: event.target.value } : current,
-                      );
-                      setRecoveryModeMessage("");
-                    }}
-                    value={recoveryMode.timezone}
-                  >
-                    {RECOVERY_TIMEZONES.map((timezone) => (
-                      <option key={timezone} value={timezone}>
-                        {timezone}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
+                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    Default email tone
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
+                    {settings.recovery.defaultEmailTone}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                    Applied to recovery messages unless a message is customized.
+                  </p>
+                </div>
               </div>
 
               <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4 text-xs leading-5 text-[var(--muted)]">
@@ -684,33 +481,19 @@ export function SettingsContent({
                   ? "Connect Stripe before configuring recovery delivery."
                   : recoveryMode.source === "legacy_fallback"
                     ? "Current delivery remains live for backward compatibility. These controls become editable only after the Phase 0 migration is separately approved."
-                    : `${recoveryMode.livemode ? "Live" : "Sandbox"} Stripe account ${recoveryMode.stripeAccountId ?? ""}. Times use ${recoveryMode.timezone}.`}
+                    : `${recoveryMode.livemode ? "Live" : "Sandbox"} Stripe account ${recoveryMode.stripeAccountId ?? ""}.`}
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p
-                  className={`text-sm ${
-                    recoveryModeTone === "error"
-                      ? "text-[var(--danger)]"
-                      : recoveryModeTone === "success"
-                        ? "text-[var(--success)]"
-                        : "text-[var(--muted)]"
-                  }`}
-                >
-                  {recoveryModeMessage ||
-                    (hasRecoveryModeChanges ? "Recovery delivery has unsaved changes." : "Recovery delivery is saved.")}
+              <div className="flex flex-col gap-3 rounded-[10px] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm leading-6 text-[var(--muted-strong)]">
+                  Recovery delivery, schedule, sender identity, and tone are managed in one place.
                 </p>
-                <Button
-                  className="h-9 px-4 text-sm"
-                  disabled={
-                    !recoveryMode.editable ||
-                    isSavingRecoveryMode ||
-                    !hasRecoveryModeChanges
-                  }
-                  onClick={() => void saveRecoveryMode()}
+                <Link
+                  className="inline-flex h-10 shrink-0 items-center justify-center rounded-[8px] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-foreground)] transition hover:opacity-90"
+                  href="/dashboard/recovery?step=customize"
                 >
-                  {isSavingRecoveryMode ? "Saving..." : "Save Recovery Delivery"}
-                </Button>
+                  Customize recovery
+                </Link>
               </div>
             </div>
           ) : (
@@ -718,76 +501,6 @@ export function SettingsContent({
               {recoveryModeMessage || "Unable to load recovery delivery mode."}
             </p>
           )}
-        </SettingsSection>
-
-        <SettingsSection icon="mail" title="Email Settings">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Support Email">
-              <TextInput
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    email: {
-                      ...current.email,
-                      supportEmail: event.target.value,
-                    },
-                  }))
-                }
-                value={settings.email.supportEmail}
-              />
-            </Field>
-            <Field label="Sender Name">
-              <TextInput
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    email: {
-                      ...current.email,
-                      senderName: event.target.value,
-                    },
-                  }))
-                }
-                value={settings.email.senderName}
-              />
-            </Field>
-            <Field label="Reply-To Email">
-              <TextInput
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    email: {
-                      ...current.email,
-                      replyToEmail: event.target.value,
-                    },
-                  }))
-                }
-                value={settings.email.replyToEmail}
-              />
-            </Field>
-          </div>
-        </SettingsSection>
-
-        <SettingsSection icon="refresh" title="Recovery Preferences">
-          <Field label="Default Email Tone">
-            <Select
-              onChange={(event) =>
-                updateSettings((current) => ({
-                  ...current,
-                  recovery: {
-                    ...current.recovery,
-                    defaultEmailTone: event.target.value,
-                  },
-                }))
-              }
-              value={settings.recovery.defaultEmailTone}
-            >
-              {recoveryToneOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </Field>
         </SettingsSection>
 
         <SettingsSection icon="shield" title="Security">
