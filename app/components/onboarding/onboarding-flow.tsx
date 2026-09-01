@@ -8,6 +8,9 @@ import { Icon } from "../ui-icon";
 import { onboardingSteps, type OnboardingStep } from "../../lib/data";
 import { getStripeConnectHref } from "../../lib/stripe/connect-url";
 import type { RecoveryStatusSummary } from "../../lib/recovery/recovery-view";
+import type { UserSettings } from "../../lib/settings";
+
+type EmailSettings = UserSettings["email"];
 
 function OnboardingCard({
   icon,
@@ -38,9 +41,11 @@ function OnboardingCard({
 
 function StepNav({
   activeStep,
+  disabled,
   setActiveStep,
 }: {
   activeStep: OnboardingStep;
+  disabled: boolean;
   setActiveStep: (step: OnboardingStep) => void;
 }) {
   return (
@@ -57,6 +62,7 @@ function StepNav({
                   : "text-[var(--muted-strong)] hover:bg-[var(--background)]"
               }`}
               key={step}
+              disabled={disabled}
               onClick={() => setActiveStep(step)}
               type="button"
             >
@@ -73,17 +79,21 @@ function StepNav({
 }
 
 function StepContent({
-  accountEmail,
   activeStep,
   completeOnboarding,
+  emailSettings,
+  emailSettingsError,
   goNext,
   recoverySummary,
+  setEmailSettings,
 }: {
-  accountEmail: string;
   activeStep: OnboardingStep;
   completeOnboarding: () => void;
+  emailSettings: EmailSettings;
+  emailSettingsError: string | null;
   goNext: () => void;
   recoverySummary: RecoveryStatusSummary;
+  setEmailSettings: (settings: EmailSettings) => void;
 }) {
   if (activeStep === "Welcome") {
     return (
@@ -130,13 +140,52 @@ function StepContent({
         subtitle="One email for customer replies"
         title="Email setup"
       >
-        <input
-          className="h-[54px] w-full rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-left text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
-          aria-label="Customer reply email"
-          defaultValue={accountEmail}
-          placeholder="you@company.com"
-          type="email"
-        />
+        <div className="space-y-5 text-left">
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Sender name
+            <input
+              className="mt-2 h-[54px] w-full rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-normal text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
+              onChange={(event) =>
+                setEmailSettings({ ...emailSettings, senderName: event.target.value })
+              }
+              placeholder="RevRecovery"
+              required
+              type="text"
+              value={emailSettings.senderName}
+            />
+          </label>
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Reply-to email
+            <input
+              className="mt-2 h-[54px] w-full rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-normal text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
+              onChange={(event) =>
+                setEmailSettings({ ...emailSettings, replyToEmail: event.target.value })
+              }
+              placeholder="you@company.com"
+              required
+              type="email"
+              value={emailSettings.replyToEmail}
+            />
+          </label>
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Support email
+            <input
+              className="mt-2 h-[54px] w-full rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-normal text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
+              onChange={(event) =>
+                setEmailSettings({ ...emailSettings, supportEmail: event.target.value })
+              }
+              placeholder="support@company.com"
+              required
+              type="email"
+              value={emailSettings.supportEmail}
+            />
+          </label>
+          {emailSettingsError ? (
+            <p aria-live="polite" className="text-sm text-[var(--danger)]" role="alert">
+              {emailSettingsError}
+            </p>
+          ) : null}
+        </div>
       </OnboardingCard>
     );
   }
@@ -198,16 +247,19 @@ function StepContent({
 }
 
 export function OnboardingFlow({
-  accountEmail,
+  initialEmailSettings,
   initialStep = "Welcome",
   recoverySummary,
 }: {
-  accountEmail: string;
+  initialEmailSettings: EmailSettings;
   initialStep?: OnboardingStep;
   recoverySummary: RecoveryStatusSummary;
 }) {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState<OnboardingStep>(initialStep);
+  const [emailSettings, setEmailSettings] = useState(initialEmailSettings);
+  const [emailSettingsError, setEmailSettingsError] = useState<string | null>(null);
+  const [isSavingEmailSettings, setIsSavingEmailSettings] = useState(false);
   const activeIndex = onboardingSteps.indexOf(activeStep);
   const isFirst = activeIndex === 0;
   const isLast = activeIndex === onboardingSteps.length - 1;
@@ -216,8 +268,62 @@ export function OnboardingFlow({
     setActiveStep(onboardingSteps[Math.max(activeIndex - 1, 0)]);
   }
 
+  async function saveEmailSettings() {
+    if (isSavingEmailSettings) {
+      return false;
+    }
+
+    setIsSavingEmailSettings(true);
+    setEmailSettingsError(null);
+
+    try {
+      const response = await fetch("/api/settings", {
+        body: JSON.stringify({ email: emailSettings }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        settings?: UserSettings;
+      };
+
+      if (!response.ok) {
+        setEmailSettingsError(result.error ?? "Unable to save email settings.");
+        return false;
+      }
+
+      if (result.settings?.email) {
+        setEmailSettings(result.settings.email);
+      }
+
+      return true;
+    } catch {
+      setEmailSettingsError("Unable to save email settings. Please try again.");
+      return false;
+    } finally {
+      setIsSavingEmailSettings(false);
+    }
+  }
+
+  async function requestStep(nextStep: OnboardingStep) {
+    const nextIndex = onboardingSteps.indexOf(nextStep);
+
+    if (
+      activeStep === "Email Setup" &&
+      nextIndex > activeIndex &&
+      !(await saveEmailSettings())
+    ) {
+      return;
+    }
+
+    setActiveStep(nextStep);
+  }
+
   function goNext() {
-    setActiveStep(onboardingSteps[Math.min(activeIndex + 1, onboardingSteps.length - 1)]);
+    const nextStep = onboardingSteps[
+      Math.min(activeIndex + 1, onboardingSteps.length - 1)
+    ];
+    void requestStep(nextStep);
   }
 
   async function completeOnboarding() {
@@ -234,13 +340,19 @@ export function OnboardingFlow({
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <StepNav activeStep={activeStep} setActiveStep={setActiveStep} />
+      <StepNav
+        activeStep={activeStep}
+        disabled={isSavingEmailSettings}
+        setActiveStep={(step) => void requestStep(step)}
+      />
       <StepContent
-        accountEmail={accountEmail}
         activeStep={activeStep}
         completeOnboarding={() => void completeOnboarding()}
+        emailSettings={emailSettings}
+        emailSettingsError={emailSettingsError}
         goNext={goNext}
         recoverySummary={recoverySummary}
+        setEmailSettings={setEmailSettings}
       />
       <footer className="border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
@@ -252,7 +364,9 @@ export function OnboardingFlow({
               Go to dashboard
             </Button>
           ) : (
-            <Button onClick={goNext}>Next</Button>
+            <Button disabled={isSavingEmailSettings} onClick={goNext}>
+              {isSavingEmailSettings ? "Saving..." : "Next"}
+            </Button>
           )}
         </div>
       </footer>

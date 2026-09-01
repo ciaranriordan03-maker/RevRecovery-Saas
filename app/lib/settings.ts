@@ -145,6 +145,10 @@ function isLegacyDemoTeam(team: TeamMember[]) {
 }
 
 export function getUserSettingsValidationError(settings: UserSettings) {
+  if (!settings.email.senderName.trim()) {
+    return "Sender name is required.";
+  }
+
   if (!isValidEmailAddress(settings.email.supportEmail)) {
     return "Support email must be a valid email address.";
   }

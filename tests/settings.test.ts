@@ -85,4 +85,19 @@ describe("user settings", () => {
       "Reply-to email must be a valid email address.",
     );
   });
+
+  it("requires a sender name", () => {
+    const settings = {
+      ...defaultUserSettings,
+      email: {
+        replyToEmail: "billing@example.com",
+        senderName: "   ",
+        supportEmail: "support@example.com",
+      },
+    };
+
+    expect(getUserSettingsValidationError(settings)).toBe(
+      "Sender name is required.",
+    );
+  });
 });
