@@ -18,10 +18,12 @@ export type RecoveryMessageEventType =
 
 export type VerifiedResendWebhookEvent = {
   eventType: RecoveryMessageEventType;
+  metadata: Record<string, string>;
   occurredAt: string;
   providerEventId: string;
   providerEventType: string;
   providerMessageId: string;
+  shouldSuppressRecipient: boolean;
 };
 
 export class ResendWebhookValidationError extends Error {
@@ -62,6 +64,15 @@ function getRequiredString(value: unknown, maxLength: number) {
   return normalized;
 }
 
+function getOptionalMetadataString(value: unknown, maxLength = 100) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized && normalized.length <= maxLength ? normalized : null;
+}
+
 export function normalizeResendWebhookEvent(
   providerEventId: string,
   rawEvent: unknown,
@@ -79,12 +90,31 @@ export function normalizeResendWebhookEvent(
     throw new ResendWebhookValidationError();
   }
 
+  const eventType = RESEND_EVENT_TYPES[providerEventType] ?? "unknown";
+  const metadata: Record<string, string> = {};
+  const bounce = isObject(rawEvent.data.bounce) ? rawEvent.data.bounce : null;
+  const suppressed = isObject(rawEvent.data.suppressed)
+    ? rawEvent.data.suppressed
+    : null;
+  const bounceType = getOptionalMetadataString(bounce?.type);
+  const bounceSubType = getOptionalMetadataString(bounce?.subType);
+  const suppressedType = getOptionalMetadataString(suppressed?.type);
+
+  if (bounceType) metadata.bounceType = bounceType;
+  if (bounceSubType) metadata.bounceSubType = bounceSubType;
+  if (suppressedType) metadata.suppressedType = suppressedType;
+
   return {
-    eventType: RESEND_EVENT_TYPES[providerEventType] ?? "unknown",
+    eventType,
+    metadata,
     occurredAt: occurredAt.toISOString(),
     providerEventId: getRequiredString(providerEventId, 255),
     providerEventType,
     providerMessageId,
+    shouldSuppressRecipient:
+      eventType === "complained" ||
+      eventType === "suppressed" ||
+      (eventType === "bounced" && bounceType?.toLowerCase() === "permanent"),
   };
 }
 

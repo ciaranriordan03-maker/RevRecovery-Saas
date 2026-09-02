@@ -17,6 +17,7 @@ import { createSupabaseAdminClient } from "../supabase/admin";
 import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
 import { getRecoveryAccountRuntimeSettings } from "./recovery-account-settings";
+import { getRecoveryRecipientSuppression } from "./recovery-recipient-suppressions";
 import { resolveRecoverySequenceForFailedPayment } from "./recovery-sequences";
 import { getStripeCustomerState } from "./stripe-customer-states";
 
@@ -823,6 +824,21 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
           outcome: "failed_terminal",
         });
         result.failed += 1;
+        continue;
+      }
+
+      const suppression = await getRecoveryRecipientSuppression({
+        email: recipientEmail,
+        userId: message.user_id,
+      });
+
+      if (suppression) {
+        await cancelRecoveryMessage(
+          message.id,
+          claimToken,
+          `Recipient is suppressed after a provider ${suppression.reason} event.`,
+        );
+        result.canceled += 1;
         continue;
       }
 
