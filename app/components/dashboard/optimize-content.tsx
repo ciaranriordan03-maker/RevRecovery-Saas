@@ -18,10 +18,10 @@ export function OptimizeContent({
             </div>
             <div>
               <h2 className="text-base font-medium tracking-[-0.02em] text-[var(--foreground)]">
-                Optimization Recommendations Ready
+                Recovery guidance
               </h2>
               <p className="mt-2 text-sm text-[var(--muted-strong)]">
-                Review {optimizeRecommendations.intro.count} workflow suggestions.
+                Review {optimizeRecommendations.intro.count} practical action{optimizeRecommendations.intro.count === 1 ? "" : "s"}.
                 {" "}{optimizeRecommendations.intro.summary}
               </p>
             </div>
@@ -36,7 +36,8 @@ export function OptimizeContent({
         <section className="flex flex-col gap-4">
           {optimizeRecommendations.recommendations.map((item) => (
             <RecommendationCard
-              action={item.action}
+              actionHref={item.actionHref}
+              actionLabel={item.actionLabel}
               body={item.body}
               impactBadgeClass={item.impactBadgeClass}
               impactLabel={item.impactLabel}

@@ -76,9 +76,9 @@ export function DashboardContent({
 
         <section>
           <div className="mb-4 rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-gradient-to-br from-[var(--primary-soft)] to-[var(--purple-soft)] p-6">
-            <h2 className="text-base font-medium">Optimization Recommendations Ready</h2>
+            <h2 className="text-base font-medium">Recovery guidance</h2>
             <p className="mt-2 text-sm text-[var(--muted-strong)]">
-              Review {optimizeRecommendations.intro.count} workflow suggestions
+              Review {optimizeRecommendations.intro.count} practical action{optimizeRecommendations.intro.count === 1 ? "" : "s"}
               alongside your account&apos;s recovery results.
             </p>
           </div>
@@ -91,7 +91,8 @@ export function DashboardContent({
           <div className="grid gap-4">
             {optimizeRecommendations.recommendations.map((item) => (
               <RecommendationCard
-                action={item.action}
+                actionHref={item.actionHref}
+                actionLabel={item.actionLabel}
                 body={item.body}
                 impactBadgeClass={item.impactBadgeClass}
                 impactLabel={item.impactLabel}

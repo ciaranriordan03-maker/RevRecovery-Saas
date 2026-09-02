@@ -1,7 +1,8 @@
-import { Button } from "../button";
+import Link from "next/link";
 
 type RecommendationCardProps = {
-  action: string;
+  actionHref: string;
+  actionLabel: string;
   body: string;
   impactBadgeClass?: string;
   impactLabel?: string;
@@ -10,7 +11,8 @@ type RecommendationCardProps = {
 };
 
 export function RecommendationCard({
-  action,
+  actionHref,
+  actionLabel,
   body,
   impactBadgeClass,
   impactLabel,
@@ -33,11 +35,13 @@ export function RecommendationCard({
       </h3>
       <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">{body}</p>
 
-      <div className="mt-4 flex justify-end gap-3">
-        <Button className="h-9 px-4 text-sm" variant="secondary">
-          Dismiss
-        </Button>
-        <Button className="h-9 px-4 text-sm">{action}</Button>
+      <div className="mt-4 flex justify-end">
+        <Link
+          className="inline-flex h-9 items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] px-4 text-sm font-medium text-white transition hover:bg-[var(--primary-hover)]"
+          href={actionHref}
+        >
+          {actionLabel}
+        </Link>
       </div>
     </article>
   );
