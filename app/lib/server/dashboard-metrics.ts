@@ -6,6 +6,10 @@ import {
   type CurrencyAmount,
 } from "../currency";
 import { createSupabaseAdminClient } from "../supabase/admin";
+import {
+  getEffectiveRecoveryCaseStatus,
+  isOpenRecoveryCase,
+} from "../stripe/recovery-state";
 
 export type DashboardMetricCard = {
   caption: string;
@@ -25,6 +29,7 @@ export type DashboardMetrics = {
 
 type FailedPaymentMetricRow = {
   amount_due: number;
+  case_status?: string | null;
   currency: string | null;
   status: string;
   stripe_customer_id: string | null;
@@ -38,13 +43,11 @@ const FAILED_PAYMENTS_TABLE = "failed_payments";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 
 function isRecovered(row: FailedPaymentMetricRow) {
-  return row.status === "recovered";
+  return getEffectiveRecoveryCaseStatus(row.case_status, row.status) === "recovered";
 }
 
 function isRevenueAtRisk(row: FailedPaymentMetricRow) {
-  return !["recovered", "no_longer_applicable", "canceled_by_merchant"].includes(
-    row.status,
-  );
+  return isOpenRecoveryCase(row.case_status, row.status);
 }
 
 function buildEmptyMetrics(): DashboardMetrics {
@@ -56,7 +59,7 @@ function buildEmptyMetrics(): DashboardMetrics {
         caption: "No open failed payments",
         label: "Revenue at Risk",
         tone: "risk",
-        value: "$0",
+        value: formatCurrencyAmounts([]),
       },
       {
         caption: "Across 0 customers",
@@ -68,7 +71,7 @@ function buildEmptyMetrics(): DashboardMetrics {
         caption: "0% recovery rate",
         label: "Recovered Revenue",
         tone: "success",
-        value: "$0",
+        value: formatCurrencyAmounts([]),
       },
     ],
     recoveredRevenueByCurrency: [],
@@ -86,7 +89,7 @@ async function getFailedPaymentRows(userId: string) {
 
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
-    .select("amount_due, currency, status, stripe_customer_id")
+    .select("amount_due, currency, status, case_status, stripe_customer_id")
     .eq("user_id", userId)
     .returns<FailedPaymentMetricRow[]>();
 

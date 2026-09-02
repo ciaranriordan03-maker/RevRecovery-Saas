@@ -2,11 +2,32 @@ import type Stripe from "stripe";
 import { describe, expect, it } from "vitest";
 import {
   decideInvoiceEvent,
+  getEffectiveRecoveryCaseStatus,
   getInvoiceKind,
   getInvoicePaymentContext,
+  isOpenRecoveryCase,
 } from "../app/lib/stripe/recovery-state";
 
 describe("Stripe recovery event policy", () => {
+  it("uses case_status as the authoritative lifecycle state", () => {
+    expect(getEffectiveRecoveryCaseStatus("active", "recovered")).toBe("active");
+    expect(isOpenRecoveryCase("active", "recovered")).toBe(true);
+  });
+
+  it("falls back to legacy status and excludes closed cases", () => {
+    expect(getEffectiveRecoveryCaseStatus(null, "awaiting_retry")).toBe(
+      "awaiting_retry",
+    );
+    expect(isOpenRecoveryCase(null, "recovered")).toBe(false);
+    expect(isOpenRecoveryCase(null, "canceled_by_merchant")).toBe(false);
+    expect(isOpenRecoveryCase(null, "no_longer_applicable")).toBe(false);
+  });
+
+  it("keeps unresolved attention states open", () => {
+    expect(isOpenRecoveryCase("exhausted", "failed")).toBe(true);
+    expect(isOpenRecoveryCase("failed_operationally", "failed")).toBe(true);
+  });
+
   it("only creates a case for invoice.payment_failed", () => {
     expect(decideInvoiceEvent("invoice.payment_failed", "open", false)).toMatchObject({
       createsCase: true,

@@ -1,9 +1,14 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "../supabase/admin";
+import {
+  getEffectiveRecoveryCaseStatus,
+  isOpenRecoveryCase,
+} from "../stripe/recovery-state";
 
 export type AtRiskCustomer = {
   amountDue: number;
+  caseStatus: string;
   currency: string | null;
   customerEmail: string | null;
   customerId: string | null;
@@ -20,6 +25,7 @@ export type AtRiskCustomer = {
 
 type FailedPaymentRow = {
   amount_due: number;
+  case_status: string | null;
   currency: string | null;
   id: string;
   latest_payload: Record<string, unknown>;
@@ -72,10 +78,9 @@ async function getFailedPaymentRows(userId: string) {
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
     .select(
-      "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, recovery_stage, latest_payload, updated_at",
+      "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, case_status, recovery_stage, latest_payload, updated_at",
     )
     .eq("user_id", userId)
-    .neq("status", "recovered")
     .order("updated_at", { ascending: false })
     .returns<FailedPaymentRow[]>();
 
@@ -83,7 +88,9 @@ async function getFailedPaymentRows(userId: string) {
     throw new Error(`Unable to load at-risk customers: ${error.message}`);
   }
 
-  return data ?? [];
+  return (data ?? []).filter((row) =>
+    isOpenRecoveryCase(row.case_status, row.status),
+  );
 }
 
 async function getRecoverySequences(failedPaymentIds: string[]) {
@@ -160,6 +167,10 @@ export async function getAtRiskCustomers(userId: string): Promise<AtRiskCustomer
 
     return {
       amountDue: payment.amount_due,
+      caseStatus: getEffectiveRecoveryCaseStatus(
+        payment.case_status,
+        payment.status,
+      ),
       currency: payment.currency,
       customerEmail: getCustomerEmail(payment.latest_payload),
       customerId: payment.stripe_customer_id,

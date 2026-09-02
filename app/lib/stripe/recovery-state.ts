@@ -14,6 +14,30 @@ export const RECOVERY_CASE_STATUSES = [
 
 export type RecoveryCaseStatus = (typeof RECOVERY_CASE_STATUSES)[number];
 
+export const CLOSED_RECOVERY_CASE_STATUSES = [
+  "recovered",
+  "canceled_by_merchant",
+  "no_longer_applicable",
+] as const satisfies readonly RecoveryCaseStatus[];
+
+export function getEffectiveRecoveryCaseStatus(
+  caseStatus: string | null | undefined,
+  legacyStatus: string | null | undefined,
+) {
+  return caseStatus?.trim() || legacyStatus?.trim() || "detected";
+}
+
+export function isOpenRecoveryCase(
+  caseStatus: string | null | undefined,
+  legacyStatus: string | null | undefined,
+) {
+  const status = getEffectiveRecoveryCaseStatus(caseStatus, legacyStatus);
+
+  return !CLOSED_RECOVERY_CASE_STATUSES.some(
+    (closedStatus) => closedStatus === status,
+  );
+}
+
 export type InvoiceEventDecision = {
   createsCase: boolean;
   targetStatus: RecoveryCaseStatus | null;

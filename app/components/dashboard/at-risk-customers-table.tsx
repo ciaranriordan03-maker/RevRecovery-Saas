@@ -40,7 +40,12 @@ function getStatusClass(status: string) {
     return "bg-[var(--success-soft)] text-[var(--success-badge-text)]";
   }
 
-  if (status === "failed" || status === "open") {
+  if (
+    status === "failed" ||
+    status === "open" ||
+    status === "exhausted" ||
+    status === "failed_operationally"
+  ) {
     return "bg-[var(--warning-soft)] text-[var(--warning-text)]";
   }
 
@@ -61,11 +66,11 @@ export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
               At-Risk Customers
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Customers currently moving through recovery.
+              Open failed-payment cases, including any that need attention.
             </p>
           </div>
           <p className="text-sm text-[var(--muted-strong)]">
-            {customers.length} active {customers.length === 1 ? "case" : "cases"}
+            {customers.length} open {customers.length === 1 ? "case" : "cases"}
           </p>
         </div>
       </div>
@@ -132,9 +137,9 @@ export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`inline-flex rounded px-2 py-1 text-xs font-medium ${getStatusClass(customer.status)}`}
+                      className={`inline-flex rounded px-2 py-1 text-xs font-medium ${getStatusClass(customer.caseStatus)}`}
                     >
-                      {formatLabel(customer.status)}
+                      {formatLabel(customer.caseStatus)}
                     </span>
                   </td>
                 </tr>

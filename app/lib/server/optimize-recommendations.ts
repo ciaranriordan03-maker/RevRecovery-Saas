@@ -2,6 +2,7 @@ import "server-only";
 
 import { aggregateCurrencyAmounts, formatCurrencyAmounts } from "../currency";
 import { createSupabaseAdminClient } from "../supabase/admin";
+import { isOpenRecoveryCase } from "../stripe/recovery-state";
 import {
   getRecoveryModeSettingsForUser,
   type RecoveryModeSettings,
@@ -31,6 +32,7 @@ export type OptimizeRecommendations = {
 
 type FailedPaymentOptimizationRow = {
   amount_due: number;
+  case_status?: string | null;
   currency: string | null;
   recovery_stage: string;
   status: string;
@@ -65,9 +67,7 @@ const DEFAULT_RECOVERY_CONTEXT: OptimizeRecoveryContext = {
 };
 
 function isOpenFailedPayment(row: FailedPaymentOptimizationRow) {
-  return !["recovered", "no_longer_applicable", "canceled_by_merchant"].includes(
-    row.status,
-  );
+  return isOpenRecoveryCase(row.case_status, row.status);
 }
 
 async function getFailedPaymentRows(userId: string) {
@@ -79,7 +79,9 @@ async function getFailedPaymentRows(userId: string) {
 
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
-    .select("amount_due, currency, recovery_stage, status, stripe_customer_id")
+    .select(
+      "amount_due, currency, recovery_stage, status, case_status, stripe_customer_id",
+    )
     .eq("user_id", userId)
     .returns<FailedPaymentOptimizationRow[]>();
 
