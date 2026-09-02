@@ -23,8 +23,11 @@ function RecoveryFunnelCard({ funnel }: { funnel: InsightFunnelMetric[] }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
       <h2 className="text-sm font-medium text-[var(--foreground)]">
-        Recovery Funnel
+        Delivery and Recovery Status
       </h2>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        Message delivery and payment recovery are separate operational measures.
+      </p>
       <div className="mt-6 flex flex-col gap-5">
         {funnel.map((item) => (
           <div key={item.label}>
@@ -100,10 +103,10 @@ function EmailRecoveryTable({ rows }: { rows: EmailRecoveryMetric[] }) {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-[var(--foreground)]">
-            Recovery Rate by Email
+            Recoveries Attributed by Email Step
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Recovery is credited to the latest sent email before payment recovered.
+            For directional reporting, each recovery is attributed to the latest email sent before the payment recovered.
           </p>
         </div>
       </div>
@@ -112,8 +115,8 @@ function EmailRecoveryTable({ rows }: { rows: EmailRecoveryMetric[] }) {
         <div className="grid grid-cols-[1.2fr_0.8fr_0.8fr_1fr] bg-[var(--surface-muted)] px-4 py-3 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
           <span>Email</span>
           <span>Sent</span>
-          <span>Recovered</span>
-          <span>Rate</span>
+          <span>Attributed</span>
+          <span>Attributed rate</span>
         </div>
 
         {rows.length === 0 ? (

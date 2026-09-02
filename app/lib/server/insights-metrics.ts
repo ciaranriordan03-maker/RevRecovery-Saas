@@ -28,7 +28,7 @@ export type InsightsMetrics = {
   sequenceSummary: SequenceSummaryMetric[];
 };
 
-type RecoveryMessageMetricRow = {
+export type RecoveryMessageMetricRow = {
   failed_payment_id: string;
   message_key: string;
   sequence_id: string;
@@ -37,7 +37,7 @@ type RecoveryMessageMetricRow = {
   status: string;
 };
 
-type FailedPaymentMetricRow = {
+export type FailedPaymentMetricRow = {
   created_at: string;
   id: string;
   last_event_type: string;
@@ -45,7 +45,7 @@ type FailedPaymentMetricRow = {
   status: string;
 };
 
-type RecoverySequenceMetricRow = {
+export type RecoverySequenceMetricRow = {
   completed_at: string | null;
   id: string;
   started_at: string;
@@ -137,7 +137,7 @@ function hoursBetween(start: string, end: string) {
   return (endMs - startMs) / (1000 * 60 * 60);
 }
 
-function getBestEmail(messages: RecoveryMessageMetricRow[]) {
+function getMostSentEmail(messages: RecoveryMessageMetricRow[]) {
   const sentMessages = messages.filter((message) => message.status === "sent");
 
   if (sentMessages.length === 0) {
@@ -307,7 +307,7 @@ function buildSequenceSummaryMetrics(
     (payment) => payment.status === "recovered" && payment.recovered_at,
   );
   const recoveredSequenceCount = sequences.filter(
-    (sequence) => sequence.status === "recovered" || sequence.completed_at,
+    (sequence) => sequence.status === "recovered",
   ).length;
   const conversionRate = percent(recoveredSequenceCount, sequences.length);
   const recoveryHours = recoveredPayments
@@ -320,7 +320,7 @@ function buildSequenceSummaryMetrics(
   return [
     {
       caption: `${recoveredSequenceCount} of ${sequences.length} sequences recovered`,
-      label: "Sequence Conversion",
+      label: "Sequence Recovery Rate",
       value: formatPercent(conversionRate),
     },
     {
@@ -333,21 +333,25 @@ function buildSequenceSummaryMetrics(
   ];
 }
 
-export async function getInsightsMetrics(userId: string): Promise<InsightsMetrics> {
-  const [messages, failedPayments, sequences] = await Promise.all([
-    getRecoveryMessageRows(userId),
-    getFailedPaymentRows(userId),
-    getRecoverySequenceRows(userId),
-  ]);
-
+export function buildInsightsMetrics({
+  failedPayments,
+  messages,
+  sequences,
+}: {
+  failedPayments: FailedPaymentMetricRow[];
+  messages: RecoveryMessageMetricRow[];
+  sequences: RecoverySequenceMetricRow[];
+}): InsightsMetrics {
   const sentCount = messages.filter((message) => message.status === "sent").length;
-  const pendingCount = messages.filter((message) => message.status === "pending").length;
+  const pendingStatuses = new Set(["claimed", "paused", "pending", "scheduled"]);
+  const failureStatuses = new Set(["failed", "failed_retryable", "failed_terminal"]);
+  const pendingCount = messages.filter((message) => pendingStatuses.has(message.status)).length;
   const canceledCount = messages.filter((message) => message.status === "canceled").length;
-  const failedMessageCount = messages.filter((message) => message.status === "failed").length;
+  const failedMessageCount = messages.filter((message) => failureStatuses.has(message.status)).length;
   const recoveredCount = failedPayments.filter((payment) => payment.status === "recovered").length;
   const recoveryRate = percent(recoveredCount, failedPayments.length);
   const sentRate = percent(sentCount, messages.length);
-  const bestEmail = getBestEmail(messages);
+  const mostSentEmail = getMostSentEmail(messages);
   const emailRecovery = buildEmailRecoveryMetrics(messages, failedPayments);
   const sequenceSummary = buildSequenceSummaryMetrics(sequences, failedPayments);
 
@@ -358,19 +362,19 @@ export async function getInsightsMetrics(userId: string): Promise<InsightsMetric
         iconClass: "bg-[var(--primary-soft)] text-[var(--primary)]",
         rows: [
           {
-            label: bestEmail.label,
+            label: mostSentEmail.label,
             rowClass: "bg-[var(--success-soft)] border-[var(--success-badge)]",
-            value: bestEmail.value,
+            value: mostSentEmail.value,
             valueClass: "text-[var(--success)]",
           },
           {
-            label: "Pending recovery emails",
+            label: "Messages awaiting completion",
             rowClass: "bg-[var(--background)] border-[var(--border)]",
             value: String(pendingCount),
             valueClass: "text-[var(--muted-strong)]",
           },
         ],
-        title: "Email Performance",
+        title: "Email Delivery",
       },
       {
         icon: "target",
@@ -383,42 +387,52 @@ export async function getInsightsMetrics(userId: string): Promise<InsightsMetric
             valueClass: "text-[var(--success)]",
           },
           {
-            label: "Most recent signal",
+            label: "Most common Stripe event",
             rowClass: "bg-[var(--background)] border-[var(--border)]",
             value: getMostCommonFailure(failedPayments),
             valueClass: "text-[var(--muted-strong)]",
           },
         ],
-        title: "Recovery Outcome",
+        title: "Recovery Outcomes",
       },
     ],
     emailRecovery,
     funnel: [
       {
         barClass: `${getWidthClass(sentRate)} bg-[var(--primary)]`,
-        label: "Emails Sent",
+        label: "Messages sent",
         trackClass: "bg-[var(--primary-soft)]",
         value: messages.length === 0 ? "0 sent" : formatPercent(sentRate),
       },
       {
         barClass: `${getWidthClass(percent(pendingCount, messages.length))} bg-[var(--chart-blue)]`,
-        label: "Pending",
+        label: "Messages awaiting completion",
         trackClass: "bg-[var(--blue-soft)]",
         value: String(pendingCount),
       },
       {
         barClass: `${getWidthClass(percent(canceledCount + failedMessageCount, messages.length))} bg-[var(--chart-green)]`,
-        label: "Canceled or Failed",
+        label: "Canceled or failed messages",
         trackClass: "bg-[var(--chart-green-track)]",
         value: String(canceledCount + failedMessageCount),
       },
       {
         barClass: `${getWidthClass(recoveryRate)} bg-[var(--chart-green-dark)]`,
-        label: "Payment Recovered",
+        label: "Payments recovered",
         trackClass: "bg-[var(--chart-green-track)]",
         value: formatPercent(recoveryRate),
       },
     ],
     sequenceSummary,
   };
+}
+
+export async function getInsightsMetrics(userId: string): Promise<InsightsMetrics> {
+  const [messages, failedPayments, sequences] = await Promise.all([
+    getRecoveryMessageRows(userId),
+    getFailedPaymentRows(userId),
+    getRecoverySequenceRows(userId),
+  ]);
+
+  return buildInsightsMetrics({ failedPayments, messages, sequences });
 }
