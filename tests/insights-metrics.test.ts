@@ -22,6 +22,8 @@ const message = (
 ): RecoveryMessageMetricRow => ({
   failed_payment_id: "payment-1",
   message_key: "email_1",
+  provider_delivery_occurred_at: null,
+  provider_delivery_status: null,
   sequence_id: "sequence-1",
   sent_at: null,
   status: "pending",
@@ -114,5 +116,76 @@ describe("Insights metrics", () => {
     ]);
     expect(insights.cards[0]?.title).toBe("Email Delivery");
     expect(insights.cards[1]?.rows[1]?.label).toBe("Most common Stripe event");
+  });
+
+  it("reports provider delivery health separately from payment recovery", () => {
+    const insights = buildInsightsMetrics({
+      failedPayments: [failedPayment()],
+      messages: [
+        message({
+          provider_delivery_occurred_at: "2026-08-01T11:01:00.000Z",
+          provider_delivery_status: "delivered",
+          sent_at: "2026-08-01T11:00:00.000Z",
+          status: "sent",
+        }),
+        message({
+          message_key: "email_2",
+          provider_delivery_occurred_at: "2026-08-01T12:01:00.000Z",
+          provider_delivery_status: "bounced",
+          sent_at: "2026-08-01T12:00:00.000Z",
+          status: "sent",
+          step_number: 2,
+        }),
+        message({
+          message_key: "email_3",
+          provider_delivery_occurred_at: "2026-08-01T13:01:00.000Z",
+          provider_delivery_status: "delivery_delayed",
+          sent_at: "2026-08-01T13:00:00.000Z",
+          status: "sent",
+          step_number: 3,
+        }),
+        message({
+          message_key: "email_4",
+          provider_delivery_status: "sent",
+          sent_at: "2026-08-01T14:00:00.000Z",
+          status: "sent",
+          step_number: 4,
+        }),
+      ],
+      sequences: [sequence()],
+    });
+
+    expect(insights.deliveryHealth).toEqual({
+      deliveryRate: 50,
+      rows: [
+        { label: "Accepted by email provider", value: 4 },
+        { label: "Confirmed delivered", value: 1 },
+        { label: "Temporarily delayed", value: 1 },
+        { label: "Bounced", value: 1 },
+        { label: "Complaints", value: 0 },
+        { label: "Failed, suppressed, or canceled", value: 0 },
+      ],
+      terminalOutcomeCount: 2,
+    });
+    expect(insights.sequenceSummary[0]?.value).toBe("0%");
+  });
+
+  it("does not claim a delivery rate before a terminal provider outcome exists", () => {
+    const insights = buildInsightsMetrics({
+      failedPayments: [],
+      messages: [
+        message({ provider_delivery_status: "sent", status: "sent" }),
+        message({
+          message_key: "email_2",
+          provider_delivery_status: "delivery_delayed",
+          status: "sent",
+          step_number: 2,
+        }),
+      ],
+      sequences: [],
+    });
+
+    expect(insights.deliveryHealth.deliveryRate).toBeNull();
+    expect(insights.deliveryHealth.terminalOutcomeCount).toBe(0);
   });
 });

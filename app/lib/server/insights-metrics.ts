@@ -23,14 +23,26 @@ export type InsightCardMetric = {
 
 export type InsightsMetrics = {
   cards: InsightCardMetric[];
+  deliveryHealth: DeliveryHealthMetric;
   emailRecovery: EmailRecoveryMetric[];
   funnel: InsightFunnelMetric[];
   sequenceSummary: SequenceSummaryMetric[];
 };
 
+export type DeliveryHealthMetric = {
+  deliveryRate: number | null;
+  rows: {
+    label: string;
+    value: number;
+  }[];
+  terminalOutcomeCount: number;
+};
+
 export type RecoveryMessageMetricRow = {
   failed_payment_id: string;
   message_key: string;
+  provider_delivery_occurred_at: string | null;
+  provider_delivery_status: string | null;
   sequence_id: string;
   sent_at: string | null;
   step_number: number;
@@ -178,7 +190,9 @@ async function getRecoveryMessageRows(userId: string) {
 
   const { data, error } = await supabase
     .from(RECOVERY_MESSAGES_TABLE)
-    .select("failed_payment_id, message_key, sequence_id, sent_at, step_number, status")
+    .select(
+      "failed_payment_id, message_key, provider_delivery_occurred_at, provider_delivery_status, sequence_id, sent_at, step_number, status",
+    )
     .eq("user_id", userId)
     .returns<RecoveryMessageMetricRow[]>();
 
@@ -333,6 +347,49 @@ function buildSequenceSummaryMetrics(
   ];
 }
 
+function buildDeliveryHealthMetric(
+  messages: RecoveryMessageMetricRow[],
+): DeliveryHealthMetric {
+  const countProviderStatus = (status: string) =>
+    messages.filter((message) => message.provider_delivery_status === status).length;
+  const deliveredCount = countProviderStatus("delivered");
+  const bouncedCount = countProviderStatus("bounced");
+  const complainedCount = countProviderStatus("complained");
+  const failedCount = countProviderStatus("failed");
+  const suppressedCount = countProviderStatus("suppressed");
+  const canceledCount = countProviderStatus("canceled");
+  const terminalOutcomeCount =
+    deliveredCount +
+    bouncedCount +
+    complainedCount +
+    failedCount +
+    suppressedCount +
+    canceledCount;
+
+  return {
+    deliveryRate:
+      terminalOutcomeCount > 0 ? percent(deliveredCount, terminalOutcomeCount) : null,
+    rows: [
+      {
+        label: "Accepted by email provider",
+        value: messages.filter((message) => message.status === "sent").length,
+      },
+      { label: "Confirmed delivered", value: deliveredCount },
+      {
+        label: "Temporarily delayed",
+        value: countProviderStatus("delivery_delayed"),
+      },
+      { label: "Bounced", value: bouncedCount },
+      { label: "Complaints", value: complainedCount },
+      {
+        label: "Failed, suppressed, or canceled",
+        value: failedCount + suppressedCount + canceledCount,
+      },
+    ],
+    terminalOutcomeCount,
+  };
+}
+
 export function buildInsightsMetrics({
   failedPayments,
   messages,
@@ -354,6 +411,7 @@ export function buildInsightsMetrics({
   const mostSentEmail = getMostSentEmail(messages);
   const emailRecovery = buildEmailRecoveryMetrics(messages, failedPayments);
   const sequenceSummary = buildSequenceSummaryMetrics(sequences, failedPayments);
+  const deliveryHealth = buildDeliveryHealthMetric(messages);
 
   return {
     cards: [
@@ -396,6 +454,7 @@ export function buildInsightsMetrics({
         title: "Recovery Outcomes",
       },
     ],
+    deliveryHealth,
     emailRecovery,
     funnel: [
       {
