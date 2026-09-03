@@ -2,9 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   buildInsightsMetrics,
   type FailedPaymentMetricRow,
+  type RecoveryMessageEventMetricRow,
   type RecoveryMessageMetricRow,
   type RecoverySequenceMetricRow,
 } from "../app/lib/server/insights-metrics";
+
+const event = (
+  overrides: Partial<RecoveryMessageEventMetricRow> = {},
+): RecoveryMessageEventMetricRow => ({
+  event_type: "delivered",
+  recovery_message_id: "message-1",
+  ...overrides,
+});
 
 const failedPayment = (
   overrides: Partial<FailedPaymentMetricRow> = {},
@@ -187,5 +196,50 @@ describe("Insights metrics", () => {
 
     expect(insights.deliveryHealth.deliveryRate).toBeNull();
     expect(insights.deliveryHealth.terminalOutcomeCount).toBe(0);
+  });
+
+  it("counts engagement once per confirmed-delivered recovery message", () => {
+    const insights = buildInsightsMetrics({
+      events: [
+        event(),
+        event({ event_type: "opened" }),
+        event({ event_type: "opened" }),
+        event({ event_type: "clicked" }),
+        event({ event_type: "clicked" }),
+        event({ recovery_message_id: "message-2" }),
+        event({ event_type: "opened", recovery_message_id: "message-2" }),
+      ],
+      failedPayments: [],
+      messages: [],
+      sequences: [],
+    });
+
+    expect(insights.emailEngagement).toEqual({
+      clickedCount: 1,
+      clickRate: 50,
+      deliveredCount: 2,
+      openedCount: 2,
+      openRate: 100,
+    });
+  });
+
+  it("excludes unmatched and unconfirmed engagement from rates", () => {
+    const insights = buildInsightsMetrics({
+      events: [
+        event({ event_type: "opened", recovery_message_id: null }),
+        event({ event_type: "clicked", recovery_message_id: "message-without-delivery" }),
+      ],
+      failedPayments: [],
+      messages: [],
+      sequences: [],
+    });
+
+    expect(insights.emailEngagement).toEqual({
+      clickedCount: 0,
+      clickRate: null,
+      deliveredCount: 0,
+      openedCount: 0,
+      openRate: null,
+    });
   });
 });

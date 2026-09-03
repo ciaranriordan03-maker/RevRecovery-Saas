@@ -24,9 +24,23 @@ export type InsightCardMetric = {
 export type InsightsMetrics = {
   cards: InsightCardMetric[];
   deliveryHealth: DeliveryHealthMetric;
+  emailEngagement: EmailEngagementMetric;
   emailRecovery: EmailRecoveryMetric[];
   funnel: InsightFunnelMetric[];
   sequenceSummary: SequenceSummaryMetric[];
+};
+
+export type EmailEngagementMetric = {
+  clickedCount: number;
+  clickRate: number | null;
+  deliveredCount: number;
+  openedCount: number;
+  openRate: number | null;
+};
+
+export type RecoveryMessageEventMetricRow = {
+  event_type: string;
+  recovery_message_id: string | null;
 };
 
 export type DeliveryHealthMetric = {
@@ -79,6 +93,7 @@ export type SequenceSummaryMetric = {
 };
 
 const FAILED_PAYMENTS_TABLE = "failed_payments";
+const RECOVERY_MESSAGE_EVENTS_TABLE = "recovery_message_events";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 const RECOVERY_SEQUENCES_TABLE = "recovery_sequences";
 
@@ -198,6 +213,28 @@ async function getRecoveryMessageRows(userId: string) {
 
   if (error) {
     throw new Error(`Unable to load insight recovery messages: ${error.message}`);
+  }
+
+  return data ?? [];
+}
+
+async function getRecoveryMessageEventRows(userId: string) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from(RECOVERY_MESSAGE_EVENTS_TABLE)
+    .select("event_type, recovery_message_id")
+    .eq("user_id", userId)
+    .in("event_type", ["delivered", "opened", "clicked"])
+    .not("recovery_message_id", "is", null)
+    .returns<RecoveryMessageEventMetricRow[]>();
+
+  if (error) {
+    throw new Error(`Unable to load insight recovery message events: ${error.message}`);
   }
 
   return data ?? [];
@@ -390,11 +427,45 @@ function buildDeliveryHealthMetric(
   };
 }
 
+function buildEmailEngagementMetric(
+  events: RecoveryMessageEventMetricRow[],
+): EmailEngagementMetric {
+  const messageIdsByEvent = (eventType: string) =>
+    new Set(
+      events
+        .filter(
+          (event) =>
+            event.event_type === eventType && Boolean(event.recovery_message_id),
+        )
+        .map((event) => event.recovery_message_id as string),
+    );
+  const deliveredMessageIds = messageIdsByEvent("delivered");
+  const openedMessageIds = messageIdsByEvent("opened");
+  const clickedMessageIds = messageIdsByEvent("clicked");
+  const openedCount = Array.from(openedMessageIds).filter((messageId) =>
+    deliveredMessageIds.has(messageId),
+  ).length;
+  const clickedCount = Array.from(clickedMessageIds).filter((messageId) =>
+    deliveredMessageIds.has(messageId),
+  ).length;
+  const deliveredCount = deliveredMessageIds.size;
+
+  return {
+    clickedCount,
+    clickRate: deliveredCount > 0 ? percent(clickedCount, deliveredCount) : null,
+    deliveredCount,
+    openedCount,
+    openRate: deliveredCount > 0 ? percent(openedCount, deliveredCount) : null,
+  };
+}
+
 export function buildInsightsMetrics({
+  events = [],
   failedPayments,
   messages,
   sequences,
 }: {
+  events?: RecoveryMessageEventMetricRow[];
   failedPayments: FailedPaymentMetricRow[];
   messages: RecoveryMessageMetricRow[];
   sequences: RecoverySequenceMetricRow[];
@@ -412,6 +483,7 @@ export function buildInsightsMetrics({
   const emailRecovery = buildEmailRecoveryMetrics(messages, failedPayments);
   const sequenceSummary = buildSequenceSummaryMetrics(sequences, failedPayments);
   const deliveryHealth = buildDeliveryHealthMetric(messages);
+  const emailEngagement = buildEmailEngagementMetric(events);
 
   return {
     cards: [
@@ -455,6 +527,7 @@ export function buildInsightsMetrics({
       },
     ],
     deliveryHealth,
+    emailEngagement,
     emailRecovery,
     funnel: [
       {
@@ -487,11 +560,12 @@ export function buildInsightsMetrics({
 }
 
 export async function getInsightsMetrics(userId: string): Promise<InsightsMetrics> {
-  const [messages, failedPayments, sequences] = await Promise.all([
+  const [messages, events, failedPayments, sequences] = await Promise.all([
     getRecoveryMessageRows(userId),
+    getRecoveryMessageEventRows(userId),
     getFailedPaymentRows(userId),
     getRecoverySequenceRows(userId),
   ]);
 
-  return buildInsightsMetrics({ failedPayments, messages, sequences });
+  return buildInsightsMetrics({ events, failedPayments, messages, sequences });
 }

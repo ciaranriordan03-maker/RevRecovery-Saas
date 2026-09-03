@@ -2,11 +2,54 @@ import { Icon } from "../ui-icon";
 import type {
   EmailRecoveryMetric,
   DeliveryHealthMetric,
+  EmailEngagementMetric,
   InsightCardMetric,
   InsightFunnelMetric,
   InsightsMetrics,
   SequenceSummaryMetric,
 } from "../../lib/server/insights-metrics";
+
+function EmailEngagementCard({ metric }: { metric: EmailEngagementMetric }) {
+  const formatRate = (rate: number | null) => rate === null ? "Awaiting data" : `${rate}%`;
+
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+      <div>
+        <h2 className="text-sm font-medium text-[var(--foreground)]">
+          Email Engagement
+        </h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Unique-message engagement among emails confirmed delivered by Resend.
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] px-4 py-3">
+          <p className="text-xs text-[var(--muted)]">Confirmed delivered</p>
+          <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+            {metric.deliveredCount}
+          </p>
+        </div>
+        <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] px-4 py-3">
+          <p className="text-xs text-[var(--muted)]">Unique opens</p>
+          <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+            {metric.openedCount} · {formatRate(metric.openRate)}
+          </p>
+        </div>
+        <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] px-4 py-3">
+          <p className="text-xs text-[var(--muted)]">Unique clicks</p>
+          <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+            {metric.clickedCount} · {formatRate(metric.clickRate)}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
+        Opens are directional because privacy protections and automated image loading can affect them. Clicks are a stronger engagement signal, but neither proves that RevRecovery caused a payment recovery.
+      </p>
+    </section>
+  );
+}
 
 type InsightCardProps = {
   icon: string;
@@ -194,6 +237,8 @@ export function InsightsContent({ insights }: { insights: InsightsMetrics }) {
         <SequenceSummaryCard metrics={insights.sequenceSummary} />
 
         <DeliveryHealthCard metric={insights.deliveryHealth} />
+
+        <EmailEngagementCard metric={insights.emailEngagement} />
 
         <EmailRecoveryTable rows={insights.emailRecovery} />
 
