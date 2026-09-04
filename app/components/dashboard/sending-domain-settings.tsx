@@ -44,7 +44,13 @@ export function SendingDomainSettings() {
       const payload = await response.json() as { error?: string; sendingDomain?: SendingDomain };
       if (!response.ok || !payload.sendingDomain) throw new Error(message(payload, "Unable to update sending domain."));
       setCurrent(payload.sendingDomain);
-      setStatus(payload.sendingDomain.status === "verified" ? "Domain verified." : "Domain status refreshed. DNS changes can take time to propagate.");
+      setStatus(
+        payload.sendingDomain.status === "verified"
+          ? "Domain verified and active."
+          : payload.sendingDomain.status === "disabled"
+            ? "Branded sending disabled. Recovery emails will use the RevRecovery platform sender."
+            : "Domain status refreshed. DNS changes can take time to propagate.",
+      );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Unable to update sending domain.");
     } finally { setBusy(false); }
@@ -53,6 +59,11 @@ export function SendingDomainSettings() {
   function register(event: FormEvent) {
     event.preventDefault();
     void request("/api/recovery/sending-domain", { domain });
+  }
+
+  function disable() {
+    if (!window.confirm(`Stop sending recovery emails from recoveries@${current?.domain}? RevRecovery will use its platform sender instead.`)) return;
+    void request("/api/recovery/sending-domain/disable");
   }
 
   return (
@@ -85,8 +96,15 @@ export function SendingDomainSettings() {
             </table>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button disabled={busy || current.status === "verified"} onClick={() => void request("/api/recovery/sending-domain/verify")} type="button">Verify domain</Button>
-            <Button disabled={busy} onClick={() => void request("/api/recovery/sending-domain/status")} type="button" variant="secondary">Check status</Button>
+            {current.status === "disabled" ? (
+              <Button disabled={busy} onClick={() => void request("/api/recovery/sending-domain/verify")} type="button">Resume verification</Button>
+            ) : (
+              <>
+                <Button disabled={busy || current.status === "verified"} onClick={() => void request("/api/recovery/sending-domain/verify")} type="button">Verify domain</Button>
+                <Button disabled={busy} onClick={() => void request("/api/recovery/sending-domain/status")} type="button" variant="secondary">Check status</Button>
+                <Button disabled={busy} onClick={disable} type="button" variant="secondary">Stop using this domain</Button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -94,7 +112,9 @@ export function SendingDomainSettings() {
       <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs leading-5 text-[var(--muted)]">
         {current?.status === "verified"
           ? `Recovery emails will use recoveries@${current.domain}. Customer replies will continue going to your saved reply-to address.`
-          : "RevRecovery will keep using its platform sender until this domain is verified. Customer replies will continue going to your saved reply-to address."}
+          : current?.status === "disabled"
+            ? "This branded domain is disabled. Recovery emails use the RevRecovery platform sender until you resume and complete verification."
+            : "RevRecovery will keep using its platform sender until this domain is verified. Customer replies will continue going to your saved reply-to address."}
       </p>
     </section>
   );

@@ -126,6 +126,31 @@ export async function getVerifiedSendingDomainForDelivery(userId: string) {
   }
 }
 
+export async function disableSendingDomainForUser(userId: string) {
+  const row = await getRow(userId);
+  if (!row) throw new SendingDomainSettingsError("Register a sending domain first.", 404);
+  if (row.status === "disabled") return toSettings(row);
+  if (!canTransitionSendingDomainStatus(row.status, "disabled")) {
+    throw new SendingDomainSettingsError("The sending domain cannot be disabled from its current state.", 409);
+  }
+
+  const now = new Date().toISOString();
+  const { data, error } = await requireAdmin()
+    .from(TABLE)
+    .update({
+      disabled_at: now,
+      failure_reason: null,
+      status: "disabled",
+      updated_at: now,
+    })
+    .eq("id", row.id)
+    .eq("user_id", userId)
+    .select("id, domain, provider_domain_id, status, dns_records, failure_reason, verified_at")
+    .single<SendingDomainRow>();
+  if (error || !data) throw new SendingDomainSettingsError("Unable to disable the sending domain.", 500);
+  return toSettings(data);
+}
+
 export async function registerSendingDomainForUser(userId: string, input: unknown) {
   if (typeof input !== "string") throw new SendingDomainSettingsError("Sending domain is required.", 400);
   const domain = normalizeSendingDomain(input);
@@ -169,7 +194,7 @@ export async function verifySendingDomainForUser(userId: string) {
     throw error;
   }
   const pendingRow = { ...row, status: "pending" as const };
-  const { error } = await requireAdmin().from(TABLE).update({ failure_reason: null, status: "pending", updated_at: new Date().toISOString() }).eq("id", row.id).eq("user_id", userId);
+  const { error } = await requireAdmin().from(TABLE).update({ disabled_at: null, failure_reason: null, status: "pending", updated_at: new Date().toISOString() }).eq("id", row.id).eq("user_id", userId);
   if (error) throw new SendingDomainSettingsError("Verification started, but its local status could not be saved.", 500);
   return updateFromProvider(userId, pendingRow);
 }

@@ -31,6 +31,8 @@ describe("sending-domain policy", () => {
     expect(canTransitionSendingDomainStatus("failed", "verified")).toBe(false);
     expect(canTransitionSendingDomainStatus("failed", "pending")).toBe(true);
     expect(canTransitionSendingDomainStatus("disabled", "pending")).toBe(true);
+    expect(canTransitionSendingDomainStatus("verified", "disabled")).toBe(true);
+    expect(canTransitionSendingDomainStatus("disabled", "verified")).toBe(false);
   });
 
   it("allows delivery only through a verified provider-backed domain", () => {
@@ -48,6 +50,13 @@ describe("sending-domain policy", () => {
         domain,
         providerDomainId: "domain_123",
         status: "pending",
+      }),
+    ).toBe(false);
+    expect(
+      isSendingDomainEligibleForDelivery({
+        domain,
+        providerDomainId: "domain_123",
+        status: "disabled",
       }),
     ).toBe(false);
     expect(
