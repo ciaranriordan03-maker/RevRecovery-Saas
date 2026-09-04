@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Button } from "../button";
+import { SendingDomainSettings } from "./sending-domain-settings";
 import {
   RECOVERY_MODES,
   type RecoveryMode,
@@ -419,6 +420,7 @@ export function RecoverySettingsForm({
           </Button>
         </div>
       </form>
+      <SendingDomainSettings />
     </div>
   );
 }
