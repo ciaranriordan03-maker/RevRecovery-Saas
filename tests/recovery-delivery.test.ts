@@ -5,6 +5,7 @@ import {
   buildRecoveryEmailVariables,
   getHostedInvoiceUrl,
   getRecoveryEmailFrom,
+  getRecoveryEmailSender,
 } from "../app/lib/server/recovery-delivery";
 
 function invoice(overrides: Partial<Stripe.Invoice> = {}) {
@@ -94,5 +95,40 @@ describe("recovery email delivery", () => {
     expect(getRecoveryEmailFrom()).toBe(
       "RevRecovery <recoveries@revrecovery.io>",
     );
+  });
+
+  it("uses the merchant sender name and verified sending domain", () => {
+    expect(
+      getRecoveryEmailSender({
+        senderName: "Acme Billing",
+        sendingDomain: "updates.acme.com",
+        supportEmail: "support@acme.com",
+      }),
+    ).toBe("Acme Billing <recoveries@updates.acme.com>");
+  });
+
+  it("uses the platform sender when no verified sending domain is available", () => {
+    vi.stubEnv(
+      "RECOVERY_EMAIL_FROM",
+      "RevRecovery <recoveries@revrecovery.io>",
+    );
+
+    expect(
+      getRecoveryEmailSender({
+        senderName: "Acme Billing",
+        sendingDomain: null,
+        supportEmail: "support@acme.com",
+      }),
+    ).toBe("RevRecovery <recoveries@revrecovery.io>");
+  });
+
+  it("removes header newlines from a merchant sender name", () => {
+    expect(
+      getRecoveryEmailSender({
+        senderName: "Acme\r\nBilling",
+        sendingDomain: "updates.acme.com",
+        supportEmail: "support@acme.com",
+      }),
+    ).toBe("Acme Billing <recoveries@updates.acme.com>");
   });
 });

@@ -92,7 +92,9 @@ export function SendingDomainSettings() {
       )}
       <p aria-live="polite" className="mt-4 text-sm text-[var(--muted-strong)]">{status}</p>
       <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs leading-5 text-[var(--muted)]">
-        This does not change live delivery yet. RevRecovery will keep using its current platform sender until a verified domain is enabled in a separately reviewed release.
+        {current?.status === "verified"
+          ? `Recovery emails will use recoveries@${current.domain}. Customer replies will continue going to your saved reply-to address.`
+          : "RevRecovery will keep using its platform sender until this domain is verified. Customer replies will continue going to your saved reply-to address."}
       </p>
     </section>
   );

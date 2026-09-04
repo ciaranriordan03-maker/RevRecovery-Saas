@@ -3,6 +3,7 @@ import "server-only";
 import {
   canTransitionSendingDomainStatus,
   getSendingDomainValidationError,
+  isSendingDomainEligibleForDelivery,
   normalizeSendingDomain,
   type SendingDomainStatus,
 } from "../email/sending-domain";
@@ -101,6 +102,28 @@ async function updateFromProvider(userId: string, row: SendingDomainRow) {
 export async function getSendingDomainForUser(userId: string) {
   const row = await getRow(userId);
   return row ? toSettings(row) : null;
+}
+
+export async function getVerifiedSendingDomainForDelivery(userId: string) {
+  try {
+    const row = await getRow(userId);
+
+    if (
+      !row ||
+      !isSendingDomainEligibleForDelivery({
+        domain: row.domain,
+        providerDomainId: row.provider_domain_id,
+        status: row.status,
+      })
+    ) {
+      return null;
+    }
+
+    return row.domain;
+  } catch {
+    // Domain configuration must never interrupt otherwise valid recovery mail.
+    return null;
+  }
 }
 
 export async function registerSendingDomainForUser(userId: string, input: unknown) {

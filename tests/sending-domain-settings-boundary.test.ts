@@ -34,9 +34,12 @@ describe("merchant sending-domain settings boundary", () => {
     expect(panel).toContain("record.value");
   });
 
-  it("does not switch the recovery sender in this batch", () => {
+  it("uses only an eligible verified merchant domain with a platform fallback", () => {
     expect(delivery).toContain("RECOVERY_EMAIL_FROM");
-    expect(delivery).not.toContain("recovery_sending_domains");
-    expect(panel).toContain("This does not change live delivery yet.");
+    expect(delivery).toContain("getVerifiedSendingDomainForDelivery");
+    expect(service).toContain("isSendingDomainEligibleForDelivery");
+    expect(service).toContain("catch {");
+    expect(panel).toContain("Recovery emails will use recoveries@");
+    expect(panel).toContain("platform sender until this domain is verified");
   });
 });

@@ -18,6 +18,7 @@ import { createStripePlatformClient } from "../stripe/server";
 import { getUserSettings } from "./settings-store";
 import { getRecoveryAccountRuntimeSettings } from "./recovery-account-settings";
 import { getRecoveryRecipientSuppression } from "./recovery-recipient-suppressions";
+import { getVerifiedSendingDomainForDelivery } from "./recovery-sending-domains";
 import { resolveRecoverySequenceForFailedPayment } from "./recovery-sequences";
 import { getStripeCustomerState } from "./stripe-customer-states";
 
@@ -151,6 +152,27 @@ export function getRecoveryEmailFrom() {
 
 function normalizeLegacySenderName(from: string) {
   return from.replace(/^(RecoverFlow(?: Team)?)(?=\s*<)/i, "RevRecovery");
+}
+
+export function getRecoveryEmailSender({
+  senderName,
+  sendingDomain,
+  supportEmail,
+}: {
+  senderName: string;
+  sendingDomain: string | null;
+  supportEmail: string;
+}) {
+  const normalizedSenderName = senderName.replace(/[\r\n]+/g, " ").trim();
+
+  if (normalizedSenderName && sendingDomain) {
+    return `${normalizedSenderName} <recoveries@${sendingDomain}>`;
+  }
+
+  return (
+    getRecoveryEmailFrom() ??
+    `${normalizedSenderName || "RevRecovery"} <${supportEmail}>`
+  );
 }
 
 export function getHostedInvoiceUrl(invoice: Stripe.Invoice | null) {
@@ -844,6 +866,9 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
 
       const settingsRecord = await getUserSettings(message.user_id);
       const emailSettings = settingsRecord.settings.email;
+      const sendingDomain = await getVerifiedSendingDomainForDelivery(
+        message.user_id,
+      );
       const variables = buildRecoveryEmailVariables({
         amountDue: failedPayment.amount_due,
         currency: failedPayment.currency,
@@ -859,9 +884,11 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
           : undefined,
       );
 
-      const from =
-        getRecoveryEmailFrom() ??
-        `${emailSettings.senderName} <${emailSettings.supportEmail}>`;
+      const from = getRecoveryEmailSender({
+        senderName: emailSettings.senderName,
+        sendingDomain,
+        supportEmail: emailSettings.supportEmail,
+      });
 
       const providerMessageId = await sendWithResend({
         from,
