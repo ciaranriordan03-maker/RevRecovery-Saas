@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "../supabase/admin";
+import { aggregateCurrencyAmounts, formatCurrencyAmounts } from "../currency";
 
 export type InsightFunnelMetric = {
   barClass: string;
@@ -28,6 +29,21 @@ export type InsightsMetrics = {
   emailRecovery: EmailRecoveryMetric[];
   funnel: InsightFunnelMetric[];
   sequenceSummary: SequenceSummaryMetric[];
+  segmentBreakdown: SegmentMetric[];
+};
+
+export type SegmentMetric = {
+  averageRecoveryTime: string;
+  clickRate: number | null;
+  deliveryRate: number | null;
+  label: string;
+  openCount: number;
+  openRate: number | null;
+  recoveredCount: number;
+  recoveredRevenue: string;
+  recoveryRate: number;
+  sentCount: number;
+  totalCount: number;
 };
 
 export type EmailEngagementMetric = {
@@ -43,6 +59,12 @@ export type RecoveryMessageEventMetricRow = {
   recovery_message_id: string | null;
 };
 
+export const INSIGHT_PERIODS = ["30d", "90d", "all"] as const;
+export const INSIGHT_SEGMENTS = ["all", "subscription", "standalone", "unknown"] as const;
+export type InsightPeriod = (typeof INSIGHT_PERIODS)[number];
+export type InsightSegment = (typeof INSIGHT_SEGMENTS)[number];
+export type InsightsFilter = { period: InsightPeriod; segment: InsightSegment };
+
 export type DeliveryHealthMetric = {
   deliveryRate: number | null;
   rows: {
@@ -53,6 +75,7 @@ export type DeliveryHealthMetric = {
 };
 
 export type RecoveryMessageMetricRow = {
+  id?: string;
   failed_payment_id: string;
   message_key: string;
   provider_delivery_occurred_at: string | null;
@@ -64,7 +87,10 @@ export type RecoveryMessageMetricRow = {
 };
 
 export type FailedPaymentMetricRow = {
+  amount_due?: number;
+  audience_segment?: string;
   created_at: string;
+  currency?: string | null;
   id: string;
   last_event_type: string;
   recovered_at: string | null;
@@ -74,6 +100,7 @@ export type FailedPaymentMetricRow = {
 export type RecoverySequenceMetricRow = {
   completed_at: string | null;
   id: string;
+  failed_payment_id?: string;
   started_at: string;
   status: string;
 };
@@ -206,7 +233,7 @@ async function getRecoveryMessageRows(userId: string) {
   const { data, error } = await supabase
     .from(RECOVERY_MESSAGES_TABLE)
     .select(
-      "failed_payment_id, message_key, provider_delivery_occurred_at, provider_delivery_status, sequence_id, sent_at, step_number, status",
+      "id, failed_payment_id, message_key, provider_delivery_occurred_at, provider_delivery_status, sequence_id, sent_at, step_number, status",
     )
     .eq("user_id", userId)
     .returns<RecoveryMessageMetricRow[]>();
@@ -249,7 +276,7 @@ async function getFailedPaymentRows(userId: string) {
 
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
-    .select("created_at, id, last_event_type, recovered_at, status")
+    .select("amount_due, audience_segment, created_at, currency, id, last_event_type, recovered_at, status")
     .eq("user_id", userId)
     .returns<FailedPaymentMetricRow[]>();
 
@@ -269,7 +296,7 @@ async function getRecoverySequenceRows(userId: string) {
 
   const { data, error } = await supabase
     .from(RECOVERY_SEQUENCES_TABLE)
-    .select("completed_at, id, started_at, status")
+    .select("completed_at, failed_payment_id, id, started_at, status")
     .eq("user_id", userId)
     .returns<RecoverySequenceMetricRow[]>();
 
@@ -459,6 +486,52 @@ function buildEmailEngagementMetric(
   };
 }
 
+function buildSegmentMetrics(
+  rows: FailedPaymentMetricRow[],
+  messages: RecoveryMessageMetricRow[],
+  events: RecoveryMessageEventMetricRow[],
+): SegmentMetric[] {
+  const labels: Record<string, string> = {
+    standalone: "Standalone invoices",
+    subscription: "Recurring subscriptions",
+    unknown: "Unknown invoice type",
+  };
+
+  return ["subscription", "standalone", "unknown"].map((segment) => {
+    const segmentRows = rows.filter((row) => (row.audience_segment ?? "unknown") === segment);
+    const paymentIds = new Set(segmentRows.map((row) => row.id));
+    const segmentMessages = messages.filter((message) => paymentIds.has(message.failed_payment_id));
+    const messageIds = new Set(segmentMessages.map((message) => message.id).filter(Boolean));
+    const segmentEvents = events.filter((event) => messageIds.has(event.recovery_message_id ?? ""));
+    const recoveredCount = segmentRows.filter((row) => row.status === "recovered").length;
+    const engagement = buildEmailEngagementMetric(segmentEvents);
+    const delivery = buildDeliveryHealthMetric(segmentMessages);
+    const recoveryHours = segmentRows
+      .map((row) => row.recovered_at ? hoursBetween(row.created_at, row.recovered_at) : null)
+      .filter((value): value is number => value !== null);
+    const averageHours = recoveryHours.length
+      ? recoveryHours.reduce((total, value) => total + value, 0) / recoveryHours.length
+      : null;
+    return {
+      averageRecoveryTime: formatRecoveryTime(averageHours),
+      clickRate: engagement.clickRate,
+      deliveryRate: delivery.deliveryRate,
+      label: labels[segment],
+      openCount: segmentRows.length - recoveredCount,
+      openRate: engagement.openRate,
+      recoveredCount,
+      recoveredRevenue: formatCurrencyAmounts(aggregateCurrencyAmounts(
+        segmentRows
+          .filter((row) => row.status === "recovered")
+          .map((row) => ({ amount: row.amount_due ?? 0, currency: row.currency ?? null })),
+      )),
+      recoveryRate: percent(recoveredCount, segmentRows.length),
+      sentCount: segmentMessages.filter((message) => message.status === "sent").length,
+      totalCount: segmentRows.length,
+    };
+  });
+}
+
 export function buildInsightsMetrics({
   events = [],
   failedPayments,
@@ -484,6 +557,7 @@ export function buildInsightsMetrics({
   const sequenceSummary = buildSequenceSummaryMetrics(sequences, failedPayments);
   const deliveryHealth = buildDeliveryHealthMetric(messages);
   const emailEngagement = buildEmailEngagementMetric(events);
+  const segmentBreakdown = buildSegmentMetrics(failedPayments, messages, events);
 
   return {
     cards: [
@@ -556,10 +630,60 @@ export function buildInsightsMetrics({
       },
     ],
     sequenceSummary,
+    segmentBreakdown,
   };
 }
 
-export async function getInsightsMetrics(userId: string): Promise<InsightsMetrics> {
+export function normalizeInsightsFilter(input?: {
+  period?: string | string[];
+  segment?: string | string[];
+}): InsightsFilter {
+  const rawPeriod = Array.isArray(input?.period) ? input?.period[0] : input?.period;
+  const rawSegment = Array.isArray(input?.segment) ? input?.segment[0] : input?.segment;
+  return {
+    period: INSIGHT_PERIODS.includes(rawPeriod as InsightPeriod) ? rawPeriod as InsightPeriod : "30d",
+    segment: INSIGHT_SEGMENTS.includes(rawSegment as InsightSegment) ? rawSegment as InsightSegment : "all",
+  };
+}
+
+export function filterInsightsRows({
+  events,
+  filter,
+  failedPayments,
+  messages,
+  now = new Date(),
+  sequences,
+}: {
+  events: RecoveryMessageEventMetricRow[];
+  filter: InsightsFilter;
+  failedPayments: FailedPaymentMetricRow[];
+  messages: RecoveryMessageMetricRow[];
+  now?: Date;
+  sequences: RecoverySequenceMetricRow[];
+}) {
+  const cutoff = filter.period === "all"
+    ? null
+    : now.getTime() - Number.parseInt(filter.period, 10) * 24 * 60 * 60 * 1000;
+  const selectedPayments = failedPayments.filter((payment) => {
+    const inPeriod = cutoff === null || new Date(payment.created_at).getTime() >= cutoff;
+    const inSegment = filter.segment === "all" || (payment.audience_segment ?? "unknown") === filter.segment;
+    return inPeriod && inSegment;
+  });
+  const paymentIds = new Set(selectedPayments.map((payment) => payment.id));
+  const selectedMessages = messages.filter((message) => paymentIds.has(message.failed_payment_id));
+  const messageIds = new Set(selectedMessages.map((message) => message.id).filter(Boolean));
+  return {
+    events: events.filter((event) => Boolean(event.recovery_message_id) && messageIds.has(event.recovery_message_id ?? "")),
+    failedPayments: selectedPayments,
+    messages: selectedMessages,
+    sequences: sequences.filter((sequence) => Boolean(sequence.failed_payment_id) && paymentIds.has(sequence.failed_payment_id ?? "")),
+  };
+}
+
+export async function getInsightsMetrics(
+  userId: string,
+  filter: InsightsFilter = { period: "30d", segment: "all" },
+): Promise<InsightsMetrics> {
   const [messages, events, failedPayments, sequences] = await Promise.all([
     getRecoveryMessageRows(userId),
     getRecoveryMessageEventRows(userId),
@@ -567,5 +691,5 @@ export async function getInsightsMetrics(userId: string): Promise<InsightsMetric
     getRecoverySequenceRows(userId),
   ]);
 
-  return buildInsightsMetrics({ events, failedPayments, messages, sequences });
+  return buildInsightsMetrics(filterInsightsRows({ events, failedPayments, filter, messages, sequences }));
 }

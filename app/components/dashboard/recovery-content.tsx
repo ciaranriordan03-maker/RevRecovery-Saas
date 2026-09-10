@@ -79,7 +79,7 @@ function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: R
       <div className="mx-auto flex max-w-[896px] flex-col gap-7">
         <section className="rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-6">
           <h2 className="text-sm font-medium text-[var(--foreground)]">Saved recovery configuration</h2>
-          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">The editable controls below save directly to the settings used by the recovery pipeline. Message copy can be edited here; audience segmentation is not available yet.</p>
+          <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">The editable controls below save directly to the recovery pipeline. Message copy can be edited here. New cases are assigned to a persisted invoice audience, and each audience can use its own schedule.</p>
         </section>
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Detail label="Recovery mode" value={modeLabels[recoveryView.mode]} />

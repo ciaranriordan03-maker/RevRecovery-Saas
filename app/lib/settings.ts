@@ -3,6 +3,11 @@ import {
   normalizeRecoveryMessageTemplates,
   type RecoveryMessageTemplate,
 } from "./recovery/message-templates";
+import {
+  defaultRecoverySegmentationSettings,
+  normalizeRecoverySegmentationSettings,
+  type RecoverySegmentationSettings,
+} from "./recovery/segmentation-policy";
 
 export type TeamRole = "Owner" | "Admin" | "Member";
 
@@ -34,6 +39,7 @@ export type UserSettings = {
     paymentRetryAttempts: string;
     prioritizeHighValueCustomers: boolean;
     sendingSchedule: string;
+    segmentation: RecoverySegmentationSettings;
   };
   stripe: {
     accountDisplayName: string | null;
@@ -83,6 +89,7 @@ export const defaultUserSettings: UserSettings = {
     paymentRetryAttempts: "3 retries",
     prioritizeHighValueCustomers: true,
     sendingSchedule: "Immediate, Day 3, Day 7",
+    segmentation: { ...defaultRecoverySegmentationSettings },
   },
   stripe: {
     accountDisplayName: null,
@@ -129,6 +136,9 @@ export function mergeUserSettings(
       ...source.recovery,
       messageTemplates: normalizeRecoveryMessageTemplates(
         source.recovery?.messageTemplates,
+      ),
+      segmentation: normalizeRecoverySegmentationSettings(
+        source.recovery?.segmentation,
       ),
     },
     stripe: {

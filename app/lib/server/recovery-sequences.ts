@@ -14,6 +14,10 @@ import {
   type RecoveryMessageTemplate,
 } from "../recovery/message-templates";
 import { getUserSettings } from "./settings-store";
+import {
+  getRecoveryAudienceSegment,
+  getSegmentSchedule,
+} from "../recovery/segmentation-policy";
 
 export type RecoverySequenceRecord = {
   completed_at: string | null;
@@ -28,6 +32,7 @@ export type RecoverySequenceRecord = {
     lastEventType: string;
   };
   configuration_snapshot: RecoveryScheduleSnapshot;
+  audience_segment: string;
   policy_version_id: string | null;
   started_at: string;
   status: string;
@@ -106,7 +111,7 @@ export async function ensureRecoverySequenceForFailedPayment(
   }
 
   const sequenceSelect =
-    "id, user_id, failed_payment_id, stripe_account_id, stripe_customer_id, stripe_invoice_id, status, current_step, started_at, completed_at, metadata, policy_version_id, configuration_snapshot, created_at, updated_at";
+    "id, user_id, failed_payment_id, stripe_account_id, stripe_customer_id, stripe_invoice_id, status, current_step, started_at, completed_at, metadata, policy_version_id, configuration_snapshot, audience_segment, created_at, updated_at";
   const { data: existingSequence, error: existingSequenceError } = await supabase
     .from(RECOVERY_SEQUENCES_TABLE)
     .select(sequenceSelect)
@@ -120,10 +125,23 @@ export async function ensureRecoverySequenceForFailedPayment(
   let sequence = existingSequence;
 
   if (!sequence) {
+    const settingsRecord = await getUserSettings(failedPayment.user_id);
+    const audienceSegment = getRecoveryAudienceSegment(failedPayment.invoice_kind);
+    const schedule = getSegmentSchedule({
+      fallback: accountSettings.schedule,
+      segment: audienceSegment,
+      settings: settingsRecord.settings.recovery.segmentation,
+    });
     const { error: snapshotError } = await supabase
       .from("failed_payments")
       .update({
-        policy_snapshot: accountSettings.schedule,
+        audience_segment: audienceSegment,
+        policy_snapshot: schedule,
+        segment_snapshot: {
+          enabled: settingsRecord.settings.recovery.segmentation.enabled,
+          invoiceKind: failedPayment.invoice_kind,
+          segment: audienceSegment,
+        },
       })
       .eq("id", failedPayment.id);
 
@@ -134,7 +152,8 @@ export async function ensureRecoverySequenceForFailedPayment(
     const { data: insertedSequence, error: sequenceError } = await supabase
       .from(RECOVERY_SEQUENCES_TABLE)
       .insert({
-        configuration_snapshot: accountSettings.schedule,
+        audience_segment: audienceSegment,
+        configuration_snapshot: schedule,
         current_step: Math.max(failedPayment.attempt_count, 1),
         failed_payment_id: failedPayment.id,
         metadata: {
@@ -143,7 +162,10 @@ export async function ensureRecoverySequenceForFailedPayment(
           currency: failedPayment.currency,
           lastEventType: failedPayment.last_event_type,
         },
-        policy_version_id: accountSettings.policyVersionId,
+        policy_version_id:
+          schedule.scheduleId === accountSettings.schedule.scheduleId
+            ? accountSettings.policyVersionId
+            : null,
         started_at: failedPayment.created_at,
         status: failedPayment.status === "recovered" ? "recovered" : "active",
         stripe_account_id: failedPayment.stripe_account_id,

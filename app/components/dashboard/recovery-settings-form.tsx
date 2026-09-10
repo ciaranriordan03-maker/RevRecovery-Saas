@@ -277,6 +277,68 @@ export function RecoverySettingsForm({
           Set the sender customers see, reply addresses, and recovery message wording.
         </p>
 
+        <fieldset className="mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4" disabled={savingEmail}>
+          <legend className="px-1 text-sm font-medium text-[var(--foreground)]">
+            Audience segmentation
+          </legend>
+          <label className="mt-2 flex items-start gap-3 text-sm text-[var(--foreground)]">
+            <input
+              checked={settings.recovery.segmentation.enabled}
+              className="mt-1"
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  recovery: {
+                    ...current.recovery,
+                    segmentation: {
+                      ...current.recovery.segmentation,
+                      enabled: event.target.checked,
+                    },
+                  },
+                }))
+              }
+              type="checkbox"
+            />
+            <span>
+              Use different recovery schedules for subscription renewals, standalone invoices,
+              and invoices Stripe cannot classify.
+            </span>
+          </label>
+          {settings.recovery.segmentation.enabled ? (
+            <div className="mt-4 grid gap-4">
+              {([
+                ["subscriptionScheduleId", "Recurring subscriptions"],
+                ["standaloneScheduleId", "Standalone invoices"],
+                ["unknownScheduleId", "Unknown invoice type"],
+              ] as const).map(([key, label]) => (
+                <label className="text-xs font-medium text-[var(--foreground)]" key={key}>
+                  {label}
+                  <select
+                    className={`${fieldClassName} mt-2`}
+                    onChange={(event) =>
+                      setSettings((current) => ({
+                        ...current,
+                        recovery: {
+                          ...current.recovery,
+                          segmentation: {
+                            ...current.recovery.segmentation,
+                            [key]: event.target.value,
+                          },
+                        },
+                      }))
+                    }
+                    value={settings.recovery.segmentation[key]}
+                  >
+                    {RECOVERY_SCHEDULES.map((schedule) => (
+                      <option key={schedule.id} value={schedule.id}>{schedule.label}</option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </fieldset>
+
         <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
           Email tone
           <select
@@ -416,7 +478,7 @@ export function RecoverySettingsForm({
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p aria-live="polite" className="text-sm text-[var(--muted-strong)]">{emailStatus}</p>
           <Button disabled={!emailChanged || savingEmail} type="submit">
-            {savingEmail ? "Saving…" : "Save email settings"}
+            {savingEmail ? "Saving…" : "Save recovery content"}
           </Button>
         </div>
       </form>

@@ -9,7 +9,7 @@ const source = readFileSync(
 describe("recovery content truthfulness", () => {
   it("describes message editing and active-sequence snapshots accurately", () => {
     expect(source).toContain("Message copy can be edited here");
-    expect(source).toContain("audience segmentation is not available yet");
+    expect(source).toContain("assigned to a persisted invoice audience");
     expect(source).toContain("Saved message preview");
     expect(source).toContain("currently saved for new recovery cases");
     expect(source).toContain(

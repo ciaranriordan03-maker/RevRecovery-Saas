@@ -46,6 +46,13 @@ To persist recovery flow records and queued recovery emails, also run `supabase/
 For delivery status and retry tracking, also run `supabase/sql/005_add_recovery_message_delivery_fields.sql`.
 For onboarding completion state and route gating, also run `supabase/sql/006_init_user_profiles.sql`.
 For connected Stripe customer/subscription state tracking, also run `supabase/sql/007_init_stripe_customer_states.sql`.
+For Phase 3 audience assignment and segment-aware analytics, apply the migrations through `supabase/migrations/20260910000100_phase3_recovery_segmentation.sql` (preferred) or run `supabase/sql/011_phase3_recovery_segmentation.sql` in the Supabase SQL editor before deploying the matching application code.
+
+## Phase 3 analytics
+
+New failed-payment cases are classified as recurring subscription, standalone invoice, or unknown invoice type. Merchants can optionally assign a different recovery schedule to each audience under Recovery settings. The selected audience and policy are snapshotted when a sequence starts, so later settings changes do not rewrite active cases.
+
+Insights supports 30-day, 90-day, and all-time cohorts plus audience filtering. Every filter is applied from the failed-payment cohort through related sequences, messages, and engagement events. Audience comparisons include case and recovery counts, recovered revenue by currency, average recovery time, messages sent, delivery rate, and open/click rates.
 
 The Connect webhook endpoint in this app is:
 

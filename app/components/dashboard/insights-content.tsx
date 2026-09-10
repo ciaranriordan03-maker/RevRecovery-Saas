@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Icon } from "../ui-icon";
 import type {
   EmailRecoveryMetric,
@@ -6,8 +7,50 @@ import type {
   InsightCardMetric,
   InsightFunnelMetric,
   InsightsMetrics,
+  InsightsFilter,
   SequenceSummaryMetric,
+  SegmentMetric,
 } from "../../lib/server/insights-metrics";
+
+function InsightFilters({ filter }: { filter: InsightsFilter }) {
+  const periods = [["30d", "30 days"], ["90d", "90 days"], ["all", "All time"]] as const;
+  const segments = [["all", "All audiences"], ["subscription", "Subscriptions"], ["standalone", "Standalone"], ["unknown", "Unknown"]] as const;
+  return (
+    <section className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap gap-2" aria-label="Date range">
+        {periods.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.period === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?period=${value}&segment=${filter.segment}`} key={value}>{label}</Link>)}
+      </div>
+      <div className="flex flex-wrap gap-2" aria-label="Audience cohort">
+        {segments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.segment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?period=${filter.period}&segment=${value}`} key={value}>{label}</Link>)}
+      </div>
+    </section>
+  );
+}
+
+function SegmentBreakdown({ rows }: { rows: SegmentMetric[] }) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+      <h2 className="text-sm font-medium text-[var(--foreground)]">Recovery by audience</h2>
+      <p className="mt-1 text-sm text-[var(--muted)]">Compare recurring subscription renewals with other invoice types.</p>
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        {rows.map((row) => (
+          <article className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4" key={row.label}>
+            <h3 className="text-sm font-medium text-[var(--foreground)]">{row.label}</h3>
+            <p className="mt-2 text-2xl font-semibold text-[var(--success)]">{row.recoveredRevenue}</p>
+            <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+              <div><dt className="text-[var(--muted)]">Cases</dt><dd className="mt-1 font-medium">{row.totalCount}</dd></div>
+              <div><dt className="text-[var(--muted)]">Recovery rate</dt><dd className="mt-1 font-medium">{row.recoveryRate}%</dd></div>
+              <div><dt className="text-[var(--muted)]">Average recovery</dt><dd className="mt-1 font-medium">{row.averageRecoveryTime}</dd></div>
+              <div><dt className="text-[var(--muted)]">Emails sent</dt><dd className="mt-1 font-medium">{row.sentCount}</dd></div>
+              <div><dt className="text-[var(--muted)]">Delivery rate</dt><dd className="mt-1 font-medium">{row.deliveryRate === null ? "Awaiting data" : `${row.deliveryRate}%`}</dd></div>
+              <div><dt className="text-[var(--muted)]">Open / click</dt><dd className="mt-1 font-medium">{row.openRate ?? 0}% / {row.clickRate ?? 0}%</dd></div>
+            </dl>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function EmailEngagementCard({ metric }: { metric: EmailEngagementMetric }) {
   const formatRate = (rate: number | null) => rate === null ? "Awaiting data" : `${rate}%`;
@@ -230,11 +273,14 @@ function EmailRecoveryTable({ rows }: { rows: EmailRecoveryMetric[] }) {
   );
 }
 
-export function InsightsContent({ insights }: { insights: InsightsMetrics }) {
+export function InsightsContent({ filter, insights }: { filter: InsightsFilter; insights: InsightsMetrics }) {
   return (
     <div className="px-5 py-8 sm:px-8">
       <div className="mx-auto flex max-w-[1024px] flex-col gap-7">
+        <InsightFilters filter={filter} />
         <SequenceSummaryCard metrics={insights.sequenceSummary} />
+
+        <SegmentBreakdown rows={insights.segmentBreakdown} />
 
         <DeliveryHealthCard metric={insights.deliveryHealth} />
 

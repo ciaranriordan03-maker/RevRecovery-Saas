@@ -18,13 +18,14 @@ describe("recovery settings form", () => {
   it("preserves the full user settings object when saving email identity", () => {
     expect(source).toContain('fetch("/api/settings"');
     expect(source).toContain("JSON.stringify({ settings })");
-    expect(source).toContain("Save email settings");
+    expect(source).toContain("Save recovery content");
     expect(source).toContain("router.refresh()");
   });
 
-  it("keeps unsupported controls out of the editable form", () => {
-    expect(source).not.toContain("Audience segment");
-    expect(source).not.toContain("Message body");
-    expect(source).not.toContain("Subject line");
+  it("configures deterministic invoice audiences", () => {
+    expect(source).toContain("Audience segmentation");
+    expect(source).toContain("Recurring subscriptions");
+    expect(source).toContain("Standalone invoices");
+    expect(source).toContain("Unknown invoice type");
   });
 });
