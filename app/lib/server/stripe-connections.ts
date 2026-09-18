@@ -8,6 +8,7 @@ import {
   isEncryptedStripeToken,
 } from "./stripe-token-vault";
 import { ensureRecoveryAccountSettings } from "./recovery-account-settings";
+import { ensureRetentionAccountSettings } from "./retention-settings";
 
 export type StripeSyncSummary = {
   activeSubscriptionsCount: number;
@@ -221,6 +222,11 @@ export async function upsertStripeConnection(connection: StripeConnectionUpsert)
   await ensureRecoveryAccountSettings({
     livemode: data.livemode ?? false,
     stripeAccountId: data.stripe_account_id,
+    stripeConnectionId: data.id,
+    userId: data.user_id,
+  });
+
+  await ensureRetentionAccountSettings({
     stripeConnectionId: data.id,
     userId: data.user_id,
   });

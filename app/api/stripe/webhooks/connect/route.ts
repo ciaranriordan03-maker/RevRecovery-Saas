@@ -11,6 +11,7 @@ import {
   recordPaymentMethodUpdated,
   recordSubscriptionState,
 } from "../../../../lib/server/stripe-customer-states";
+import { recordRetentionSubscriptionEvent } from "../../../../lib/server/retention-cases";
 import {
   claimWebhookEvent,
   completeWebhookEvent,
@@ -228,15 +229,28 @@ export async function POST(request: Request) {
           );
           break;
         case "customer.subscription.deleted":
-        case "customer.subscription.updated":
+        case "customer.subscription.updated": {
+          const subscription = event.data.object as Stripe.Subscription;
+          const eventCreatedAt = toIsoTimestamp(event.created) ?? new Date().toISOString();
+
+          await recordRetentionSubscriptionEvent({
+            eventCreatedAt,
+            eventType: event.type,
+            livemode: event.livemode,
+            stripeAccountId,
+            stripeEventId: event.id,
+            subscription,
+            userId,
+          });
           await recordSubscriptionState({
             eventType: event.type,
             livemode: event.livemode,
             stripeAccountId,
-            subscription: event.data.object as Stripe.Subscription,
+            subscription,
             userId,
           });
           break;
+        }
         case "payment_method.updated": {
           const paymentMethod = event.data.object as Stripe.PaymentMethod;
           await recordPaymentMethodUpdated({

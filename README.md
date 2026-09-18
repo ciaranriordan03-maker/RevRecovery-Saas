@@ -36,6 +36,7 @@ RESEND_API_KEY=your_resend_api_key
 RECOVERY_EMAIL_FROM="RevRecovery <recoveries@revrecovery.io>"
 RECOVERY_EMAIL_CRON_SECRET=your_recovery_processing_secret
 CRON_SECRET=the_same_secret_for_vercel_cron
+RETENTION_LINK_SECRET=a_separate_random_secret_for_time_limited_customer_retention_links
 ```
 
 Use the publishable key in browser-safe contexts and the secret key only in server-only code. The project includes a starter SQL file at `supabase/sql/001_init_user_settings.sql` for the `user_settings` table used by the Settings page.
@@ -47,12 +48,21 @@ For delivery status and retry tracking, also run `supabase/sql/005_add_recovery_
 For onboarding completion state and route gating, also run `supabase/sql/006_init_user_profiles.sql`.
 For connected Stripe customer/subscription state tracking, also run `supabase/sql/007_init_stripe_customer_states.sql`.
 For Phase 3 audience assignment and segment-aware analytics, apply the migrations through `supabase/migrations/20260910000100_phase3_recovery_segmentation.sql` (preferred) or run `supabase/sql/011_phase3_recovery_segmentation.sql` in the Supabase SQL editor before deploying the matching application code.
+For Phase 4 observation-only voluntary-churn tracking, apply `supabase/migrations/20260911000100_phase4_retention_observation.sql` and `supabase/migrations/20260911000200_phase4_reason_and_action_foundation.sql` before deploying matching Phase 4 code. The foundations record scheduled cancellations, terminal cancellations, reversals, duplicate and stale events, structured cancellation reasons, merchant action availability, and distinct action lifecycle events. They do not send retention emails, modify Stripe subscriptions, apply discounts, or contact customers.
 
 ## Phase 3 analytics
 
 New failed-payment cases are classified as recurring subscription, standalone invoice, or unknown invoice type. Merchants can optionally assign a different recovery schedule to each audience under Recovery settings. The selected audience and policy are snapshotted when a sequence starts, so later settings changes do not rewrite active cases.
 
 Insights supports 30-day, 90-day, and all-time cohorts plus audience filtering. Every filter is applied from the failed-payment cohort through related sequences, messages, and engagement events. Audience comparisons include case and recovery counts, recovered revenue by currency, average recovery time, messages sent, delivery rate, and open/click rates.
+
+## Phase 4 retention observation
+
+Subscription update and deletion webhooks are classified separately from failed-payment recovery. Payment-failure and dispute cancellations are excluded from voluntary-churn observation. A cancellation episode is stored as one retention case with append-only lifecycle events. Replayed Stripe events are idempotent, and older events are retained as stale observations without rolling the current case backward.
+
+An observed reversal is marked `closed_without_intervention` until a future, separately approved delivery phase records a real intervention. The schema supports a future `saved` status, but this milestone does not claim that RevRecovery caused a subscription save.
+
+Cancellation reasons use a fixed, validated taxonomy. Deterministic recommendations can include support, pause, or an eligible downgrade only when that action is configured and available. `continue_canceling` is always included. Presented, accepted, execution-requested, failed, and verified outcomes remain separate so an interaction is never reported as a confirmed save.
 
 The Connect webhook endpoint in this app is:
 
