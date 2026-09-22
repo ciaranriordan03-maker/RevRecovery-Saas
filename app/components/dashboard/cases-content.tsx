@@ -134,7 +134,7 @@ function CasesTable({ cases }: { cases: RecoveryCaseListItem[] }) {
             {cases.map((item) => (
               <tr key={item.id}>
                 <td className="px-5 py-4 align-top">
-                  <p className="max-w-[210px] truncate text-sm font-medium text-[var(--foreground)]">{getCustomerLabel(item)}</p>
+                  <Link className="block max-w-[210px] truncate text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)]" href={`/dashboard/cases/${item.id}`}>{getCustomerLabel(item)}</Link>
                   <p className="mt-1 max-w-[210px] truncate text-xs text-[var(--muted)]">{item.invoiceId}</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">{getEnvironmentLabel(item.livemode)}</p>
                 </td>

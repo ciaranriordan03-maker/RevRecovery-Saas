@@ -47,6 +47,7 @@ export type RecoveryCaseListItem = {
   attemptCount: number;
   audienceSegment: RecoveryCaseAudienceSegment;
   caseStatus: string;
+  createdAt: string;
   currency: string | null;
   customerEmail: string | null;
   customerId: string | null;
@@ -76,6 +77,7 @@ type FailedPaymentRow = {
   attempt_count: number;
   audience_segment: string | null;
   case_status: string | null;
+  created_at: string;
   currency: string | null;
   decline_code: string | null;
   failure_code: string | null;
@@ -101,6 +103,8 @@ type RecoveryMessageRow = {
 const FAILED_PAYMENTS_TABLE = "failed_payments";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 const PAGE_SIZE = 50;
+const RECOVERY_CASE_SELECT =
+  "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, case_status, recovery_stage, attempt_count, next_payment_attempt_at, invoice_status, failure_code, decline_code, failure_message, audience_segment, livemode, recovered_at, latest_payload, created_at, updated_at";
 const OPEN_CASE_STATUSES = [
   "detected",
   "active",
@@ -207,10 +211,7 @@ export async function getRecoveryCasesPage(
 
   let query = supabase
     .from(FAILED_PAYMENTS_TABLE)
-    .select(
-      "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, case_status, recovery_stage, attempt_count, next_payment_attempt_at, invoice_status, failure_code, decline_code, failure_message, audience_segment, livemode, recovered_at, latest_payload, updated_at",
-      { count: "exact" },
-    )
+    .select(RECOVERY_CASE_SELECT, { count: "exact" })
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
@@ -249,37 +250,72 @@ export async function getRecoveryCasesPage(
   const totalCount = count ?? 0;
 
   return {
-    cases: rows.map((row) => {
-      const diagnostic = getRecoveryDeclineDiagnostic({
-        declineCode: row.decline_code,
-        failureCode: row.failure_code,
-        failureMessage: row.failure_message,
-      });
-
-      return {
-        amountDue: row.amount_due,
-        attemptCount: row.attempt_count,
-        audienceSegment: getAudienceSegment(row.audience_segment),
-        caseStatus: getEffectiveRecoveryCaseStatus(row.case_status, row.status),
-        currency: row.currency,
-        customerEmail: getCustomerEmail(row.latest_payload),
-        customerId: row.stripe_customer_id,
-        failureExplanation: diagnostic.explanation,
-        failureTitle: diagnostic.title,
-        id: row.id,
-        invoiceId: row.stripe_invoice_id,
-        invoiceStatus: row.invoice_status,
-        livemode: row.livemode,
-        nextEmailAt: nextMessageByCase.get(row.id) ?? null,
-        nextPaymentAttemptAt: row.next_payment_attempt_at,
-        recoveredAt: row.recovered_at,
-        recoveryStage: row.recovery_stage,
-        updatedAt: row.updated_at,
-      };
-    }),
+    cases: rows.map((row) => mapRecoveryCase(row, nextMessageByCase)),
     filters,
     pageCount: Math.ceil(totalCount / PAGE_SIZE),
     pageSize: PAGE_SIZE,
     totalCount,
   };
+}
+
+function mapRecoveryCase(
+  row: FailedPaymentRow,
+  nextMessageByCase: Map<string, string>,
+): RecoveryCaseListItem {
+  const diagnostic = getRecoveryDeclineDiagnostic({
+    declineCode: row.decline_code,
+    failureCode: row.failure_code,
+    failureMessage: row.failure_message,
+  });
+
+  return {
+    amountDue: row.amount_due,
+    attemptCount: row.attempt_count,
+    audienceSegment: getAudienceSegment(row.audience_segment),
+    caseStatus: getEffectiveRecoveryCaseStatus(row.case_status, row.status),
+    createdAt: row.created_at,
+    currency: row.currency,
+    customerEmail: getCustomerEmail(row.latest_payload),
+    customerId: row.stripe_customer_id,
+    failureExplanation: diagnostic.explanation,
+    failureTitle: diagnostic.title,
+    id: row.id,
+    invoiceId: row.stripe_invoice_id,
+    invoiceStatus: row.invoice_status,
+    livemode: row.livemode,
+    nextEmailAt: nextMessageByCase.get(row.id) ?? null,
+    nextPaymentAttemptAt: row.next_payment_attempt_at,
+    recoveredAt: row.recovered_at,
+    recoveryStage: row.recovery_stage,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function getRecoveryCaseById(
+  userId: string,
+  failedPaymentId: string,
+): Promise<RecoveryCaseListItem | null> {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(FAILED_PAYMENTS_TABLE)
+    .select(RECOVERY_CASE_SELECT)
+    .eq("user_id", userId)
+    .eq("id", failedPaymentId)
+    .maybeSingle<FailedPaymentRow>();
+
+  if (error) {
+    throw new Error(`Unable to load recovery case: ${error.message}`);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const nextMessageByCase = await getNextMessages(userId, [data.id]);
+  return mapRecoveryCase(data, nextMessageByCase);
 }

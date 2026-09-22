@@ -47,7 +47,7 @@ describe("recovery cases workspace", () => {
     );
 
     expect(source).toContain('.eq("user_id", userId)');
-    expect(source.match(/\.eq\("user_id", userId\)/g)).toHaveLength(2);
+    expect(source.match(/\.eq\("user_id", userId\)/g)).toHaveLength(3);
     expect(source).toContain(".range(offset, offset + PAGE_SIZE - 1)");
     expect(source).toContain('{ count: "exact" }');
   });
