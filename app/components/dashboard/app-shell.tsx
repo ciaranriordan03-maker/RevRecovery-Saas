@@ -9,6 +9,7 @@ import { getOrCreateUserOnboardingProfile } from "../../lib/server/onboarding-st
 const navHref: Record<DashboardNavItem, string> = {
   Setup: "/onboarding",
   Dashboard: "/dashboard",
+  Cases: "/dashboard/cases",
   Recovery: "/dashboard/recovery",
   Insights: "/dashboard/insights",
   Optimize: "/dashboard/optimize",
@@ -18,6 +19,7 @@ const navHref: Record<DashboardNavItem, string> = {
 const navIcon: Record<DashboardNavItem, string> = {
   Setup: "card",
   Dashboard: "grid",
+  Cases: "users",
   Recovery: "refresh",
   Insights: "chart",
   Optimize: "target",

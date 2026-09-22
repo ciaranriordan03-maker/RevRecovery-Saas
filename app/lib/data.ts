@@ -12,6 +12,7 @@ export type OnboardingStep = (typeof onboardingSteps)[number];
 export const dashboardNavItems = [
   "Setup",
   "Dashboard",
+  "Cases",
   "Recovery",
   "Insights",
   "Optimize",
