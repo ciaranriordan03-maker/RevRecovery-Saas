@@ -86,12 +86,13 @@ export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-[900px] w-full border-collapse text-left">
+          <table className="min-w-[1080px] w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-[var(--border)] text-xs font-medium text-[var(--muted)]">
                 <th className="px-6 py-3">Customer</th>
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Invoice</th>
+                <th className="px-4 py-3">Failure Reason</th>
                 <th className="px-4 py-3">Recovery Stage</th>
                 <th className="px-4 py-3">Next Email</th>
                 <th className="px-6 py-3">Status</th>
@@ -117,6 +118,14 @@ export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
                       {formatLabel(customer.invoiceStatus)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4">
+                    <p className="max-w-[200px] text-sm font-medium text-[var(--foreground)]">
+                      {customer.failureDiagnostic.title}
+                    </p>
+                    <p className="mt-1 max-w-[240px] text-xs leading-4 text-[var(--muted)]">
+                      {customer.failureDiagnostic.explanation}
                     </p>
                   </td>
                   <td className="px-4 py-4">

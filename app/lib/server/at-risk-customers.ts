@@ -2,6 +2,10 @@ import "server-only";
 
 import { createSupabaseAdminClient } from "../supabase/admin";
 import {
+  getRecoveryDeclineDiagnostic,
+  type RecoveryDeclineDiagnostic,
+} from "../recovery/decline-diagnostics";
+import {
   getEffectiveRecoveryCaseStatus,
   isOpenRecoveryCase,
 } from "../stripe/recovery-state";
@@ -13,6 +17,7 @@ export type AtRiskCustomer = {
   customerEmail: string | null;
   customerId: string | null;
   failedPaymentId: string;
+  failureDiagnostic: RecoveryDeclineDiagnostic;
   invoiceId: string;
   invoiceStatus: string;
   nextEmailAt: string | null;
@@ -27,6 +32,9 @@ type FailedPaymentRow = {
   amount_due: number;
   case_status: string | null;
   currency: string | null;
+  decline_code: string | null;
+  failure_code: string | null;
+  failure_message: string | null;
   id: string;
   latest_payload: Record<string, unknown>;
   recovery_stage: string;
@@ -78,7 +86,7 @@ async function getFailedPaymentRows(userId: string) {
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
     .select(
-      "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, case_status, recovery_stage, latest_payload, updated_at",
+      "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, case_status, recovery_stage, failure_code, decline_code, failure_message, latest_payload, updated_at",
     )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false })
@@ -175,6 +183,11 @@ export async function getAtRiskCustomers(userId: string): Promise<AtRiskCustomer
       customerEmail: getCustomerEmail(payment.latest_payload),
       customerId: payment.stripe_customer_id,
       failedPaymentId: payment.id,
+      failureDiagnostic: getRecoveryDeclineDiagnostic({
+        declineCode: payment.decline_code,
+        failureCode: payment.failure_code,
+        failureMessage: payment.failure_message,
+      }),
       invoiceId: payment.stripe_invoice_id,
       invoiceStatus: getInvoiceStatus(payment),
       nextEmailAt: nextMessage?.scheduled_for ?? null,
