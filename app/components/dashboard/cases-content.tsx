@@ -184,7 +184,7 @@ function CasesTable({
                   <p className="mt-1 text-xs text-[var(--muted)]">Stripe retry: {formatDate(item.nextPaymentAttemptAt)}</p>
                 </td>
                 <td className="px-4 py-4 align-top">
-                  <p className="text-sm text-[var(--foreground)]">{formatLabel(item.recoveryStage)}</p>
+                  <p className="text-sm text-[var(--foreground)]">{item.manuallyPausedAt ? "Manually paused" : formatLabel(item.recoveryStage)}</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Email: {formatDate(item.nextEmailAt)}</p>
                 </td>
                 <td className="px-4 py-4 align-top text-sm text-[var(--muted-strong)]">{formatLabel(item.audienceSegment)}</td>

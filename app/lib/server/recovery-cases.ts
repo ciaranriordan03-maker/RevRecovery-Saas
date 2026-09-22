@@ -69,6 +69,7 @@ export type RecoveryCaseListItem = {
   invoiceId: string;
   invoiceStatus: string | null;
   livemode: boolean | null;
+  manuallyPausedAt: string | null;
   nextEmailAt: string | null;
   nextPaymentAttemptAt: string | null;
   recoveredAt: string | null;
@@ -98,6 +99,7 @@ type FailedPaymentRow = {
   invoice_status: string | null;
   latest_payload: Record<string, unknown>;
   livemode: boolean | null;
+  manual_outreach_paused_at: string | null;
   next_payment_attempt_at: string | null;
   recovered_at: string | null;
   recovery_stage: string;
@@ -123,7 +125,7 @@ const FAILED_PAYMENTS_TABLE = "failed_payments";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 const PAGE_SIZE = 50;
 const RECOVERY_CASE_SELECT =
-  "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, case_status, recovery_stage, attempt_count, next_payment_attempt_at, invoice_status, failure_code, decline_code, failure_message, audience_segment, livemode, recovered_at, latest_payload, created_at, updated_at";
+  "id, stripe_customer_id, stripe_invoice_id, amount_due, currency, status, case_status, recovery_stage, attempt_count, next_payment_attempt_at, invoice_status, failure_code, decline_code, failure_message, audience_segment, livemode, manual_outreach_paused_at, recovered_at, latest_payload, created_at, updated_at";
 const OPEN_CASE_STATUSES = [
   "detected",
   "active",
@@ -420,6 +422,7 @@ function mapRecoveryCase(
     invoiceId: row.stripe_invoice_id,
     invoiceStatus: row.invoice_status,
     livemode: row.livemode,
+    manuallyPausedAt: row.manual_outreach_paused_at,
     nextEmailAt: messageFacts.nextMessageByCase.get(row.id) ?? null,
     nextPaymentAttemptAt: row.next_payment_attempt_at,
     recoveredAt: row.recovered_at,

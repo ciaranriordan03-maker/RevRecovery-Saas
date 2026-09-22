@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { RecoveryCaseListItem } from "../../lib/server/recovery-cases";
 import type { RecoveryCaseTimelineEvent } from "../../lib/server/recovery-case-events";
 import { buildRecoveryCaseTimelineView } from "../../lib/recovery/case-timeline-view";
+import { CaseManualActions } from "./case-manual-actions";
 
 function formatCurrency(amount: number, currency: string | null) {
   if (!currency) return `${(amount / 100).toLocaleString()} (currency unknown)`;
@@ -55,6 +56,12 @@ export function CaseDetailContent({
   timeline: RecoveryCaseTimelineEvent[];
 }) {
   const customer = recoveryCase.customerEmail ?? recoveryCase.customerId ?? "Unknown customer";
+  const canControlEmails = ![
+    "canceled_by_merchant",
+    "exhausted",
+    "no_longer_applicable",
+    "recovered",
+  ].includes(recoveryCase.caseStatus);
 
   return (
     <div className="px-5 py-8 sm:px-8">
@@ -90,6 +97,13 @@ export function CaseDetailContent({
               </div>
             ))}
           </section>
+        ) : null}
+
+        {canControlEmails ? (
+          <CaseManualActions
+            failedPaymentId={recoveryCase.id}
+            manuallyPausedAt={recoveryCase.manuallyPausedAt}
+          />
         ) : null}
 
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
