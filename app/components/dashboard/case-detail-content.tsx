@@ -31,6 +31,12 @@ function toneClass(tone: "danger" | "neutral" | "success" | "warning") {
   return "border-[var(--border-strong)] bg-[var(--surface-muted)]";
 }
 
+function attentionClass(level: "critical" | "warning") {
+  return level === "critical"
+    ? "border-[var(--danger)] bg-[var(--danger-soft)]"
+    : "border-[var(--warning-text)] bg-[var(--warning-soft)]";
+}
+
 function SummaryCard({ label, value, detail }: { detail?: string; label: string; value: string }) {
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
@@ -70,6 +76,21 @@ export function CaseDetailContent({
           <SummaryCard label="Stripe retry" value={formatDate(recoveryCase.nextPaymentAttemptAt)} detail={`${recoveryCase.attemptCount} payment ${recoveryCase.attemptCount === 1 ? "attempt" : "attempts"} recorded`} />
           <SummaryCard label="Next RevRecovery email" value={formatDate(recoveryCase.nextEmailAt)} detail={`Current stage: ${formatLabel(recoveryCase.recoveryStage)}`} />
         </section>
+
+        {recoveryCase.attentionFlags.length > 0 ? (
+          <section aria-labelledby="attention-heading" className="space-y-3">
+            <div>
+              <h2 className="text-base font-medium text-[var(--foreground)]" id="attention-heading">Needs attention</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">Explainable flags based only on the case and delivery facts recorded below.</p>
+            </div>
+            {recoveryCase.attentionFlags.map((flag) => (
+              <div className={`rounded-[var(--radius-card)] border-l-4 p-4 ${attentionClass(flag.level)}`} key={flag.code}>
+                <p className="text-sm font-medium text-[var(--foreground)]">{flag.title}</p>
+                <p className="mt-1 text-sm leading-5 text-[var(--muted-strong)]">{flag.explanation}</p>
+              </div>
+            ))}
+          </section>
+        ) : null}
 
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
           <h2 className="text-base font-medium text-[var(--foreground)]">Case facts</h2>

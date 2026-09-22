@@ -1,6 +1,12 @@
 import "server-only";
 
 import { getRecoveryDeclineDiagnostic } from "../recovery/decline-diagnostics";
+import {
+  getHighestRecoveryAttentionLevel,
+  getRecoveryAttentionFlags,
+  type RecoveryAttentionFlag,
+  type RecoveryAttentionLevel,
+} from "../recovery/attention-rules";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { getEffectiveRecoveryCaseStatus } from "../stripe/recovery-state";
 
@@ -44,6 +50,8 @@ export type RecoveryCaseFilters = {
 
 export type RecoveryCaseListItem = {
   amountDue: number;
+  attentionFlags: RecoveryAttentionFlag[];
+  attentionLevel: RecoveryAttentionLevel | null;
   attemptCount: number;
   audienceSegment: RecoveryCaseAudienceSegment;
   caseStatus: string;
@@ -97,7 +105,14 @@ type FailedPaymentRow = {
 
 type RecoveryMessageRow = {
   failed_payment_id: string;
+  provider_delivery_status: string | null;
   scheduled_for: string;
+  status: string;
+};
+
+type RecoveryCaseMessageFacts = {
+  nextMessageByCase: Map<string, string>;
+  providerDeliveryStatusesByCase: Map<string, string[]>;
 };
 
 const FAILED_PAYMENTS_TABLE = "failed_payments";
@@ -164,39 +179,56 @@ function getAudienceSegment(value: string | null): RecoveryCaseAudienceSegment {
   return value === "subscription" || value === "standalone" ? value : "unknown";
 }
 
-async function getNextMessages(userId: string, failedPaymentIds: string[]) {
+async function getCaseMessageFacts(
+  userId: string,
+  failedPaymentIds: string[],
+): Promise<RecoveryCaseMessageFacts> {
+  const emptyFacts = {
+    nextMessageByCase: new Map<string, string>(),
+    providerDeliveryStatusesByCase: new Map<string, string[]>(),
+  };
+
   if (failedPaymentIds.length === 0) {
-    return new Map<string, string>();
+    return emptyFacts;
   }
 
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
-    return new Map<string, string>();
+    return emptyFacts;
   }
 
   const { data, error } = await supabase
     .from(RECOVERY_MESSAGES_TABLE)
-    .select("failed_payment_id, scheduled_for")
+    .select("failed_payment_id, provider_delivery_status, scheduled_for, status")
     .eq("user_id", userId)
     .in("failed_payment_id", failedPaymentIds)
-    .in("status", ["pending", "scheduled"])
     .order("scheduled_for", { ascending: true })
     .returns<RecoveryMessageRow[]>();
 
   if (error) {
-    throw new Error(`Unable to load next recovery case actions: ${error.message}`);
+    throw new Error(`Unable to load recovery case message facts: ${error.message}`);
   }
 
   const nextMessageByCase = new Map<string, string>();
+  const providerDeliveryStatusesByCase = new Map<string, string[]>();
 
   for (const message of data ?? []) {
-    if (!nextMessageByCase.has(message.failed_payment_id)) {
+    if (
+      (message.status === "pending" || message.status === "scheduled") &&
+      !nextMessageByCase.has(message.failed_payment_id)
+    ) {
       nextMessageByCase.set(message.failed_payment_id, message.scheduled_for);
+    }
+
+    if (message.provider_delivery_status) {
+      const statuses = providerDeliveryStatusesByCase.get(message.failed_payment_id) ?? [];
+      statuses.push(message.provider_delivery_status);
+      providerDeliveryStatusesByCase.set(message.failed_payment_id, statuses);
     }
   }
 
-  return nextMessageByCase;
+  return { nextMessageByCase, providerDeliveryStatusesByCase };
 }
 
 export async function getRecoveryCasesPage(
@@ -243,14 +275,14 @@ export async function getRecoveryCasesPage(
   }
 
   const rows = data ?? [];
-  const nextMessageByCase = await getNextMessages(
+  const messageFacts = await getCaseMessageFacts(
     userId,
     rows.map((row) => row.id),
   );
   const totalCount = count ?? 0;
 
   return {
-    cases: rows.map((row) => mapRecoveryCase(row, nextMessageByCase)),
+    cases: rows.map((row) => mapRecoveryCase(row, messageFacts)),
     filters,
     pageCount: Math.ceil(totalCount / PAGE_SIZE),
     pageSize: PAGE_SIZE,
@@ -260,7 +292,7 @@ export async function getRecoveryCasesPage(
 
 function mapRecoveryCase(
   row: FailedPaymentRow,
-  nextMessageByCase: Map<string, string>,
+  messageFacts: RecoveryCaseMessageFacts,
 ): RecoveryCaseListItem {
   const diagnostic = getRecoveryDeclineDiagnostic({
     declineCode: row.decline_code,
@@ -268,11 +300,20 @@ function mapRecoveryCase(
     failureMessage: row.failure_message,
   });
 
+  const caseStatus = getEffectiveRecoveryCaseStatus(row.case_status, row.status);
+  const attentionFlags = getRecoveryAttentionFlags({
+    caseStatus,
+    providerDeliveryStatuses:
+      messageFacts.providerDeliveryStatusesByCase.get(row.id) ?? [],
+  });
+
   return {
     amountDue: row.amount_due,
+    attentionFlags,
+    attentionLevel: getHighestRecoveryAttentionLevel(attentionFlags),
     attemptCount: row.attempt_count,
     audienceSegment: getAudienceSegment(row.audience_segment),
-    caseStatus: getEffectiveRecoveryCaseStatus(row.case_status, row.status),
+    caseStatus,
     createdAt: row.created_at,
     currency: row.currency,
     customerEmail: getCustomerEmail(row.latest_payload),
@@ -283,7 +324,7 @@ function mapRecoveryCase(
     invoiceId: row.stripe_invoice_id,
     invoiceStatus: row.invoice_status,
     livemode: row.livemode,
-    nextEmailAt: nextMessageByCase.get(row.id) ?? null,
+    nextEmailAt: messageFacts.nextMessageByCase.get(row.id) ?? null,
     nextPaymentAttemptAt: row.next_payment_attempt_at,
     recoveredAt: row.recovered_at,
     recoveryStage: row.recovery_stage,
@@ -316,6 +357,6 @@ export async function getRecoveryCaseById(
     return null;
   }
 
-  const nextMessageByCase = await getNextMessages(userId, [data.id]);
-  return mapRecoveryCase(data, nextMessageByCase);
+  const messageFacts = await getCaseMessageFacts(userId, [data.id]);
+  return mapRecoveryCase(data, messageFacts);
 }

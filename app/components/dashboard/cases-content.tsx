@@ -54,6 +54,12 @@ function getEnvironmentLabel(livemode: boolean | null) {
   return livemode ? "Live" : "Test";
 }
 
+function getAttentionClass(level: RecoveryCaseListItem["attentionLevel"]) {
+  return level === "critical"
+    ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+    : "bg-[var(--warning-soft)] text-[var(--warning-text)]";
+}
+
 function filterHref(filters: RecoveryCaseFilters, page: number) {
   const params = new URLSearchParams({
     environment: filters.environment,
@@ -118,12 +124,13 @@ function CasesTable({ cases }: { cases: RecoveryCaseListItem[] }) {
   return (
     <section className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1180px] border-collapse text-left">
+        <table className="w-full min-w-[1320px] border-collapse text-left">
           <thead>
             <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
               <th className="px-5 py-3">Customer</th>
               <th className="px-4 py-3">Amount</th>
               <th className="px-4 py-3">Failure</th>
+              <th className="px-4 py-3">Attention</th>
               <th className="px-4 py-3">Attempts</th>
               <th className="px-4 py-3">Next action</th>
               <th className="px-4 py-3">Audience</th>
@@ -142,6 +149,14 @@ function CasesTable({ cases }: { cases: RecoveryCaseListItem[] }) {
                 <td className="px-4 py-4 align-top">
                   <p className="max-w-[220px] text-sm font-medium text-[var(--foreground)]">{item.failureTitle}</p>
                   <p className="mt-1 max-w-[260px] text-xs leading-4 text-[var(--muted)]">{item.failureExplanation}</p>
+                </td>
+                <td className="px-4 py-4 align-top">
+                  {item.attentionFlags.length > 0 ? (
+                    <div>
+                      <span className={`inline-flex rounded px-2 py-1 text-xs font-medium ${getAttentionClass(item.attentionLevel)}`}>{item.attentionFlags[0].title}</span>
+                      {item.attentionFlags.length > 1 ? <p className="mt-1 text-xs text-[var(--muted)]">+{item.attentionFlags.length - 1} more {item.attentionFlags.length === 2 ? "flag" : "flags"}</p> : null}
+                    </div>
+                  ) : <span className="text-xs text-[var(--muted)]">No attention flag</span>}
                 </td>
                 <td className="px-4 py-4 align-top">
                   <p className="text-sm text-[var(--foreground)]">{item.attemptCount}</p>
