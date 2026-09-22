@@ -14,7 +14,9 @@ export const metadata: Metadata = {
 
 type CasesPageProps = {
   searchParams?: Promise<{
+    currency?: string | string[];
     environment?: string | string[];
+    minimumAmount?: string | string[];
     page?: string | string[];
     segment?: string | string[];
     status?: string | string[];

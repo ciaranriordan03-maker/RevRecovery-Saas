@@ -13,6 +13,7 @@ import { getEffectiveRecoveryCaseStatus } from "../stripe/recovery-state";
 export const RECOVERY_CASE_STATUS_FILTERS = [
   "all",
   "open",
+  "attention",
   "recovered",
   "exhausted",
   "failed_operationally",
@@ -42,7 +43,10 @@ export type RecoveryCaseAudienceSegment = Exclude<
 >;
 
 export type RecoveryCaseFilters = {
+  currency: string | null;
   environment: RecoveryCaseEnvironmentFilter;
+  minimumAmountCents: number | null;
+  minimumAmountInput: string;
   page: number;
   segment: RecoveryCaseSegmentFilter;
   status: RecoveryCaseStatusFilter;
@@ -128,6 +132,13 @@ const OPEN_CASE_STATUSES = [
   "exhausted",
   "failed_operationally",
 ];
+const ATTENTION_CASE_STATUSES = ["exhausted", "failed_operationally"];
+const ATTENTION_DELIVERY_STATUSES = [
+  "bounced",
+  "complained",
+  "failed",
+  "suppressed",
+];
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -142,19 +153,31 @@ function getEnumValue<T extends readonly string[]>(
 }
 
 export function normalizeRecoveryCaseFilters(input?: {
+  currency?: string | string[];
   environment?: string | string[];
+  minimumAmount?: string | string[];
   page?: string | string[];
   segment?: string | string[];
   status?: string | string[];
 }): RecoveryCaseFilters {
   const parsedPage = Number.parseInt(firstValue(input?.page) ?? "1", 10);
+  const currencyInput = firstValue(input?.currency)?.trim().toLowerCase() ?? "";
+  const currency = /^[a-z]{3}$/.test(currencyInput) ? currencyInput : null;
+  const minimumAmountInput = firstValue(input?.minimumAmount)?.trim() ?? "";
+  const minimumAmountCents = currency
+    ? parseCurrencyAmountToCents(minimumAmountInput)
+    : null;
 
   return {
+    currency,
     environment: getEnumValue(
       RECOVERY_CASE_ENVIRONMENT_FILTERS,
       firstValue(input?.environment),
       "all",
     ),
+    minimumAmountCents,
+    minimumAmountInput:
+      minimumAmountCents === null ? "" : minimumAmountInput,
     page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
     segment: getEnumValue(
       RECOVERY_CASE_SEGMENT_FILTERS,
@@ -167,6 +190,17 @@ export function normalizeRecoveryCaseFilters(input?: {
       "open",
     ),
   };
+}
+
+function parseCurrencyAmountToCents(value: string) {
+  if (!/^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(value)) {
+    return null;
+  }
+
+  const [whole, fraction = ""] = value.split(".");
+  const cents = Number.parseInt(whole, 10) * 100 +
+    Number.parseInt(fraction.padEnd(2, "0") || "0", 10);
+  return Number.isSafeInteger(cents) && cents > 0 ? cents : null;
 }
 
 function getCustomerEmail(payload: Record<string, unknown>) {
@@ -222,13 +256,48 @@ async function getCaseMessageFacts(
     }
 
     if (message.provider_delivery_status) {
-      const statuses = providerDeliveryStatusesByCase.get(message.failed_payment_id) ?? [];
-      statuses.push(message.provider_delivery_status);
-      providerDeliveryStatusesByCase.set(message.failed_payment_id, statuses);
+      providerDeliveryStatusesByCase.set(message.failed_payment_id, [
+        message.provider_delivery_status,
+      ]);
     }
   }
 
   return { nextMessageByCase, providerDeliveryStatusesByCase };
+}
+
+async function getAttentionMessageCaseIds(userId: string) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from(RECOVERY_MESSAGES_TABLE)
+    .select("failed_payment_id, provider_delivery_status, scheduled_for")
+    .eq("user_id", userId)
+    .not("provider_delivery_status", "is", null)
+    .order("scheduled_for", { ascending: true })
+    .returns<Array<{
+      failed_payment_id: string;
+      provider_delivery_status: string | null;
+      scheduled_for: string;
+    }>>();
+
+  if (error) {
+    throw new Error(`Unable to load attention queue delivery facts: ${error.message}`);
+  }
+
+  const latestStatusByCase = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (row.provider_delivery_status) {
+      latestStatusByCase.set(row.failed_payment_id, row.provider_delivery_status);
+    }
+  }
+
+  return [...latestStatusByCase.entries()]
+    .filter(([, status]) => ATTENTION_DELIVERY_STATUSES.includes(status))
+    .map(([failedPaymentId]) => failedPaymentId);
 }
 
 export async function getRecoveryCasesPage(
@@ -241,13 +310,24 @@ export async function getRecoveryCasesPage(
     return { cases: [], filters, pageCount: 0, pageSize: PAGE_SIZE, totalCount: 0 };
   }
 
+  const attentionMessageCaseIds = filters.status === "attention"
+    ? await getAttentionMessageCaseIds(userId)
+    : [];
+
   let query = supabase
     .from(FAILED_PAYMENTS_TABLE)
     .select(RECOVERY_CASE_SELECT, { count: "exact" })
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+    .eq("user_id", userId);
 
-  if (filters.status === "open") {
+  if (filters.status === "attention") {
+    query = query
+      .in("case_status", OPEN_CASE_STATUSES)
+      .or(
+        attentionMessageCaseIds.length > 0
+          ? `case_status.in.(${ATTENTION_CASE_STATUSES.join(",")}),id.in.(${attentionMessageCaseIds.join(",")})`
+          : `case_status.in.(${ATTENTION_CASE_STATUSES.join(",")})`,
+      );
+  } else if (filters.status === "open") {
     query = query.in("case_status", OPEN_CASE_STATUSES);
   } else if (filters.status !== "all") {
     query = query.eq("case_status", filters.status);
@@ -257,12 +337,28 @@ export async function getRecoveryCasesPage(
     query = query.eq("audience_segment", filters.segment);
   }
 
+  if (filters.currency) {
+    query = query.eq("currency", filters.currency);
+  }
+
+  if (filters.minimumAmountCents !== null) {
+    query = query.gte("amount_due", filters.minimumAmountCents);
+  }
+
   if (filters.environment === "live") {
     query = query.eq("livemode", true);
   } else if (filters.environment === "test") {
     query = query.eq("livemode", false);
   } else if (filters.environment === "unknown") {
     query = query.is("livemode", null);
+  }
+
+  if (filters.minimumAmountCents !== null) {
+    query = query
+      .order("amount_due", { ascending: false })
+      .order("updated_at", { ascending: false });
+  } else {
+    query = query.order("updated_at", { ascending: false });
   }
 
   const offset = (filters.page - 1) * PAGE_SIZE;
