@@ -101,11 +101,11 @@ export function buildRecoveryCaseTimelineView(
   }
 
   const messageEvents: Record<string, { action: string; title: string; tone: RecoveryCaseTimelineView["tone"] }> = {
-    recovery_message_canceled: { action: "was canceled.", title: "Recovery email canceled", tone: "neutral" },
-    recovery_message_failed_terminal: { action: "could not be sent after the allowed attempts.", title: "Recovery email failed", tone: "warning" },
-    recovery_message_paused: { action: "was paused.", title: "Recovery email paused", tone: "warning" },
-    recovery_message_scheduled: { action: "was added to the schedule.", title: "Recovery email scheduled", tone: "neutral" },
-    recovery_message_sent: { action: "was sent to the email provider.", title: "Recovery email sent", tone: "neutral" },
+    recovery_message_canceled: { action: "was canceled", title: "Recovery email canceled", tone: "neutral" },
+    recovery_message_failed_terminal: { action: "could not be sent after the allowed attempts", title: "Recovery email failed", tone: "warning" },
+    recovery_message_paused: { action: "was paused", title: "Recovery email paused", tone: "warning" },
+    recovery_message_scheduled: { action: "was added to the schedule", title: "Recovery email scheduled", tone: "neutral" },
+    recovery_message_sent: { action: "was sent to the email provider", title: "Recovery email sent", tone: "neutral" },
   };
   const messageEvent = messageEvents[event.eventType];
   if (messageEvent) {

@@ -41,6 +41,21 @@ describe("recovery case timeline read model", () => {
     ])[0].metadata).toEqual({});
   });
 
+  it("orders same-time recovery message events by step number", () => {
+    const rows = [3, 1, 2].map((step) => ({
+      event_type: "recovery_message_scheduled",
+      id: `event-${step}`,
+      livemode: false,
+      metadata: { step_number: step },
+      occurred_at: "2026-09-22T10:00:00.000Z",
+      recorded_at: "2026-09-22T10:00:01.000Z",
+      source: "recovery_message_schedule" as const,
+    }));
+
+    expect(buildRecoveryCaseTimeline(rows).map((event) => event.metadata.step_number))
+      .toEqual([1, 2, 3]);
+  });
+
   it("scopes timeline reads by both tenant and failed-payment case", () => {
     const source = readFileSync(
       new URL("../app/lib/server/recovery-case-events.ts", import.meta.url),

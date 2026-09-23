@@ -28,4 +28,14 @@ describe("recovery case detail route", () => {
     );
     expect(source).toContain("`/dashboard/cases/${item.id}`");
   });
+
+  it("describes the email stage as manually paused when the case is paused", () => {
+    const source = readFileSync(
+      new URL("../app/components/dashboard/case-detail-content.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("recoveryCase.manuallyPausedAt");
+    expect(source).toContain("Recovery emails manually paused");
+  });
 });

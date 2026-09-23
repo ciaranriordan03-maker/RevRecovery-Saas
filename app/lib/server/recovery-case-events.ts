@@ -35,10 +35,30 @@ type RecoveryCaseEventRow = {
 
 const RECOVERY_CASE_EVENTS_TABLE = "recovery_case_events";
 
+function timelineStep(row: RecoveryCaseEventRow) {
+  const step = row.metadata?.step_number;
+  return typeof step === "number" && Number.isFinite(step)
+    ? step
+    : Number.POSITIVE_INFINITY;
+}
+
+function compareTimelineRows(left: RecoveryCaseEventRow, right: RecoveryCaseEventRow) {
+  const occurredAtDifference = left.occurred_at.localeCompare(right.occurred_at);
+  if (occurredAtDifference !== 0) return occurredAtDifference;
+
+  const recordedAtDifference = left.recorded_at.localeCompare(right.recorded_at);
+  if (recordedAtDifference !== 0) return recordedAtDifference;
+
+  const stepDifference = timelineStep(left) - timelineStep(right);
+  if (stepDifference !== 0) return stepDifference;
+
+  return left.id.localeCompare(right.id);
+}
+
 export function buildRecoveryCaseTimeline(
   rows: RecoveryCaseEventRow[],
 ): RecoveryCaseTimelineEvent[] {
-  return rows.map((row) => ({
+  return [...rows].sort(compareTimelineRows).map((row) => ({
     eventType: row.event_type,
     id: row.id,
     livemode: row.livemode,

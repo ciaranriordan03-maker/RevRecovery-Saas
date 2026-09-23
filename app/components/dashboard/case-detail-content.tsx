@@ -81,7 +81,15 @@ export function CaseDetailContent({
           <SummaryCard label="Amount at risk" value={formatCurrency(recoveryCase.amountDue, recoveryCase.currency)} />
           <SummaryCard label="Failure reported" value={recoveryCase.failureTitle} detail={recoveryCase.failureExplanation} />
           <SummaryCard label="Stripe retry" value={formatDate(recoveryCase.nextPaymentAttemptAt)} detail={`${recoveryCase.attemptCount} payment ${recoveryCase.attemptCount === 1 ? "attempt" : "attempts"} recorded`} />
-          <SummaryCard label="Next RevRecovery email" value={formatDate(recoveryCase.nextEmailAt)} detail={`Current stage: ${formatLabel(recoveryCase.recoveryStage)}`} />
+          <SummaryCard
+            label="Next RevRecovery email"
+            value={formatDate(recoveryCase.nextEmailAt)}
+            detail={
+              recoveryCase.manuallyPausedAt
+                ? "Recovery emails manually paused"
+                : `Current stage: ${formatLabel(recoveryCase.recoveryStage)}`
+            }
+          />
         </section>
 
         {recoveryCase.attentionFlags.length > 0 ? (

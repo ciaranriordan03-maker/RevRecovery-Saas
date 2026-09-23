@@ -44,6 +44,20 @@ describe("recovery case timeline presentation", () => {
     expect(view.detail).not.toMatch(/caused|proved/i);
   });
 
+  it("uses exactly one sentence-ending period for recovery message events", () => {
+    expect(buildRecoveryCaseTimelineView(event({
+      eventType: "recovery_message_scheduled",
+      metadata: { step_number: 1 },
+      source: "recovery_message_schedule",
+    })).detail).toBe("Recovery email 1 was added to the schedule.");
+
+    expect(buildRecoveryCaseTimelineView(event({
+      eventType: "recovery_message_paused",
+      metadata: { step_number: 2 },
+      source: "recovery_message_status",
+    })).detail).toBe("Recovery email 2 was paused.");
+  });
+
   it("falls back safely for future event types", () => {
     expect(buildRecoveryCaseTimelineView(event({ eventType: "invoice.future_event" }))).toMatchObject({
       detail: "Stripe recorded this event.",
