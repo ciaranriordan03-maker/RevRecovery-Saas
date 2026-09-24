@@ -6,6 +6,7 @@ import { getAtRiskCustomers } from "../../lib/server/at-risk-customers";
 import { getRecoveryModeSettingsForUser } from "../../lib/server/recovery-account-settings";
 import { getUserSettings } from "../../lib/server/settings-store";
 import { buildRecoveryFlowView } from "../../lib/recovery/recovery-view";
+import { getActivationReadinessForUser, getControlledTestEligibility } from "../../lib/server/activation-readiness";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
@@ -51,6 +52,15 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
     settingsRecord.settings,
     recoverySettings,
   );
+  const activationReadiness = await getActivationReadinessForUser({
+    recoverySettings,
+    userId: claims.sub,
+    userSettings: settingsRecord.settings,
+  });
+  const controlledTestEligibility = getControlledTestEligibility({
+    recoverySettings,
+    userSettings: settingsRecord.settings,
+  });
 
   return (
     <AppShell
@@ -59,6 +69,8 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       title={pageCopy[mode].title}
     >
       <RecoveryContent
+        activationReadiness={activationReadiness}
+        controlledTestEligibility={controlledTestEligibility}
         atRiskCustomers={atRiskCustomers}
         mode={mode}
         recoveryView={recoveryView}

@@ -38,4 +38,14 @@ describe("recovery case detail route", () => {
     expect(source).toContain("recoveryCase.manuallyPausedAt");
     expect(source).toContain("Recovery emails manually paused");
   });
+
+  it("does not imply an unscheduled detected case has email controls or a pending message", () => {
+    const source = readFileSync(
+      new URL("../app/components/dashboard/case-detail-content.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain('recoveryCase.caseStatus !== "detected"');
+    expect(source).toContain("No recovery email has been scheduled");
+  });
 });
