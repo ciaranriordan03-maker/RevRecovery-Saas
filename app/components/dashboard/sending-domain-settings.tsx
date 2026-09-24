@@ -67,7 +67,7 @@ export function SendingDomainSettings() {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+    <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)] lg:col-span-2" id="sending-domain">
       <h2 className="text-base font-medium text-[var(--foreground)]">Customer-facing sending domain</h2>
       <p className="mt-2 max-w-3xl text-sm leading-5 text-[var(--muted-strong)]">
         Verify a domain so future recovery emails can be sent using your brand. We recommend a dedicated subdomain such as updates.yourcompany.com.

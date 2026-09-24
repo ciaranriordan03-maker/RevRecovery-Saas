@@ -372,6 +372,7 @@ export function SettingsContent({
           </div>
         </SettingsSection>
 
+        <div id="stripe-integration">
         <SettingsSection icon="card" title="Integrations">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-4 rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -416,6 +417,7 @@ export function SettingsContent({
             </div>
           </div>
         </SettingsSection>
+        </div>
 
         <SettingsSection icon="refresh" title="Recovery Configuration">
           {isLoadingRecoveryMode ? (
