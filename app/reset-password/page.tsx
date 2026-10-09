@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { AuthMarketingPanel } from "../components/auth/auth-marketing-panel";
 import { Button } from "../components/button";
 import { Icon } from "../components/ui-icon";
-import { updatePassword } from "../login/actions";
 
 export const metadata: Metadata = {
   title: "Choose New Password | RevRecovery",
@@ -24,7 +23,11 @@ export default function ResetPasswordPage() {
               Choose a secure password to finish resetting your account.
             </p>
 
-            <form className="mt-8">
+            <form
+              action="/api/auth/update-password"
+              className="mt-8"
+              method="post"
+            >
               <label className="block">
                 <span className="mb-2.5 block text-sm font-medium text-[var(--auth-label)]">
                   New password
@@ -67,7 +70,6 @@ export default function ResetPasswordPage() {
 
               <Button
                 className="mt-5 h-[46px] w-full gap-2 rounded-[14px] text-sm font-semibold shadow-sm"
-                formAction={updatePassword}
                 type="submit"
               >
                 Update password

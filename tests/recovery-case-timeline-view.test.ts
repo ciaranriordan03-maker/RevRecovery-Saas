@@ -16,6 +16,22 @@ function event(overrides: Partial<RecoveryCaseTimelineEvent>): RecoveryCaseTimel
 }
 
 describe("recovery case timeline presentation", () => {
+  it("labels guided synthetic failures without claiming Stripe attempted payment", () => {
+    const view = buildRecoveryCaseTimelineView({
+      eventType: "invoice.payment_failed",
+      id: "event-test",
+      livemode: false,
+      metadata: { attempt_count: 1 },
+      occurredAt: "2026-09-24T09:00:00.000Z",
+      recordedAt: "2026-09-24T09:00:00.000Z",
+      source: "stripe",
+      sourceEventId: "rr_test_evt_rr_guided_123",
+    });
+
+    expect(view.sourceLabel).toBe("RevRecovery test");
+    expect(view.title).toBe("Synthetic payment failure created");
+    expect(view.detail).toContain("No Stripe payment was attempted");
+  });
   it("describes Stripe failures using only persisted facts", () => {
     expect(buildRecoveryCaseTimelineView(event({
       metadata: { attempt_count: 2, decline_code: "insufficient_funds" },

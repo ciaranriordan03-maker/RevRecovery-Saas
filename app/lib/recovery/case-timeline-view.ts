@@ -43,6 +43,10 @@ function sourceLabel(source: RecoveryCaseEventSource) {
   return labels[source];
 }
 
+function isSyntheticTestEvent(event: RecoveryCaseTimelineEvent) {
+  return event.sourceEventId?.startsWith("rr_test_evt_") ?? false;
+}
+
 function stepDetail(metadata: Record<string, unknown>, action: string) {
   const step = numberValue(metadata, "step_number");
   return step === null ? action : `Recovery email ${step} ${action}.`;
@@ -55,10 +59,20 @@ export function buildRecoveryCaseTimelineView(
     eventType: event.eventType,
     id: event.id,
     occurredAt: event.occurredAt,
-    sourceLabel: sourceLabel(event.source),
+    sourceLabel: isSyntheticTestEvent(event)
+      ? "RevRecovery test"
+      : sourceLabel(event.source),
   };
 
   if (event.eventType === "invoice.payment_failed") {
+    if (isSyntheticTestEvent(event)) {
+      return {
+        ...base,
+        detail: "RevRecovery created a synthetic sandbox failure. No Stripe payment was attempted.",
+        title: "Synthetic payment failure created",
+        tone: "warning",
+      };
+    }
     const attempt = numberValue(event.metadata, "attempt_count");
     const decline = stringValue(event.metadata, "decline_code");
     return {

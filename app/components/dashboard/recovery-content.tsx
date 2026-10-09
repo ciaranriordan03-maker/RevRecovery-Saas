@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { Icon } from "../ui-icon";
 import { AtRiskCustomersTable } from "./at-risk-customers-table";
+import { ActivationReadinessChecklist } from "./activation-readiness-checklist";
+import { ControlledTestPlan } from "./controlled-test-plan";
 import { RecoverySettingsForm } from "./recovery-settings-form";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
 import type { UserSettings } from "../../lib/settings";
+import type { ActivationReadiness } from "../../lib/recovery/activation-readiness";
+import type { ControlledTestEligibility } from "../../lib/recovery/controlled-test-plan";
 
 type RecoveryContentProps = {
   atRiskCustomers?: AtRiskCustomer[];
+  activationReadiness: ActivationReadiness;
+  controlledTestEligibility: ControlledTestEligibility;
   mode?: "sequence" | "customize" | "review";
   recoveryView: RecoveryFlowView;
   userSettings: UserSettings;
@@ -52,10 +58,11 @@ function MessageCards({ recoveryView }: { recoveryView: RecoveryFlowView }) {
   );
 }
 
-function RecoverySequence({ atRiskCustomers, recoveryView }: { atRiskCustomers: AtRiskCustomer[]; recoveryView: RecoveryFlowView }) {
+function RecoverySequence({ activationReadiness, atRiskCustomers, recoveryView }: { activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; recoveryView: RecoveryFlowView }) {
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-[143px]">
       <div className="mx-auto flex max-w-[896px] flex-col gap-8">
+        <ActivationReadinessChecklist readiness={activationReadiness} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <p className="text-sm leading-5 text-[var(--muted-strong)]">
             This account is in <strong>{modeLabels[recoveryView.mode]} mode</strong> and uses the {recoveryView.scheduleLabel.toLowerCase()} in {recoveryView.timezone}. The messages below are the templates currently used by the delivery worker.
@@ -72,7 +79,7 @@ function RecoverySequence({ atRiskCustomers, recoveryView }: { atRiskCustomers: 
   );
 }
 
-function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: RecoveryFlowView; userSettings: UserSettings }) {
+function CustomizeRecoveryStep({ controlledTestEligibility, recoveryView, userSettings }: { controlledTestEligibility: ControlledTestEligibility; recoveryView: RecoveryFlowView; userSettings: UserSettings }) {
   const recipient = recoveryView.approvedTestRecipient ?? "Not configured";
   return (
     <div className="px-5 py-7 sm:px-8 xl:px-[143px]">
@@ -103,6 +110,7 @@ function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: R
           }}
           initialUserSettings={userSettings}
         />
+        <ControlledTestPlan eligibility={controlledTestEligibility} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <h2 className="text-base font-medium text-[var(--foreground)]">Saved message preview</h2>
           <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">These previews show the message copy currently saved for new recovery cases. Existing active sequences keep the configuration snapshot they started with.</p>
@@ -152,8 +160,8 @@ function ReviewRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowView }
   );
 }
 
-export function RecoveryContent({ atRiskCustomers = [], mode = "sequence", recoveryView, userSettings }: RecoveryContentProps) {
+export function RecoveryContent({ activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", recoveryView, userSettings }: RecoveryContentProps) {
   if (mode === "review") return <ReviewRecoveryStep recoveryView={recoveryView} />;
-  if (mode === "customize") return <CustomizeRecoveryStep recoveryView={recoveryView} userSettings={userSettings} />;
-  return <RecoverySequence atRiskCustomers={atRiskCustomers} recoveryView={recoveryView} />;
+  if (mode === "customize") return <CustomizeRecoveryStep controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
+  return <RecoverySequence activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} recoveryView={recoveryView} />;
 }

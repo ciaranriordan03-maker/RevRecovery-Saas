@@ -61,7 +61,12 @@ export function CaseDetailContent({
     "exhausted",
     "no_longer_applicable",
     "recovered",
-  ].includes(recoveryCase.caseStatus);
+  ].includes(recoveryCase.caseStatus) && recoveryCase.caseStatus !== "detected";
+  const emailStageDetail = recoveryCase.manuallyPausedAt
+    ? "Recovery emails manually paused"
+    : recoveryCase.nextEmailAt === null && recoveryCase.caseStatus === "detected"
+      ? "No recovery email has been scheduled"
+      : `Current stage: ${formatLabel(recoveryCase.recoveryStage)}`;
 
   return (
     <div className="px-5 py-8 sm:px-8">
@@ -84,11 +89,7 @@ export function CaseDetailContent({
           <SummaryCard
             label="Next RevRecovery email"
             value={formatDate(recoveryCase.nextEmailAt)}
-            detail={
-              recoveryCase.manuallyPausedAt
-                ? "Recovery emails manually paused"
-                : `Current stage: ${formatLabel(recoveryCase.recoveryStage)}`
-            }
+            detail={emailStageDetail}
           />
         </section>
 

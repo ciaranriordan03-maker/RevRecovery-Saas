@@ -164,6 +164,7 @@ export function RecoverySettingsForm({
     <div className="grid gap-5 lg:grid-cols-2">
       <form
         className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+        id="recovery-delivery"
         onSubmit={saveRecovery}
       >
         <h2 className="text-base font-medium text-[var(--foreground)]">Recovery delivery</h2>
@@ -270,6 +271,7 @@ export function RecoverySettingsForm({
 
       <form
         className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+        id="email-identity"
         onSubmit={saveEmailSettings}
       >
         <h2 className="text-base font-medium text-[var(--foreground)]">Email identity and messages</h2>
@@ -482,6 +484,17 @@ export function RecoverySettingsForm({
           </Button>
         </div>
       </form>
+      <section
+        className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)] lg:col-span-2"
+        id="stripe-overlap-guidance"
+      >
+        <h2 className="text-base font-medium text-[var(--foreground)]">
+          Stripe communication overlap
+        </h2>
+        <p className="mt-2 max-w-3xl text-sm leading-5 text-[var(--muted-strong)]">
+          Before going live, review the failed-payment emails enabled in Stripe Billing. Avoid sending materially identical reminders from Stripe and RevRecovery at the same time. Stripe retry settings remain authoritative and RevRecovery does not change them.
+        </p>
+      </section>
       <SendingDomainSettings />
     </div>
   );
