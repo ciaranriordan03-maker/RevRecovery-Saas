@@ -15,6 +15,7 @@ describe("Supabase auth callback", () => {
       "createAuthCallbackClient(request, successResponse)",
     );
     expect(routeSource).toContain("response.cookies.set(name, value, options)");
+    expect(routeSource).toContain("response.headers.set(name, value)");
     expect(routeSource.match(/return successResponse/g)).toHaveLength(2);
   });
 });
