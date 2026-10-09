@@ -77,5 +77,15 @@ export async function POST(request: NextRequest) {
     return loginRedirect(request, message, "error");
   }
 
+  const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+
+  if (signOutError) {
+    return loginRedirect(
+      request,
+      "Your password was updated, but the reset session could not be closed. Please close this browser tab before signing in again.",
+      "error",
+    );
+  }
+
   return successResponse;
 }

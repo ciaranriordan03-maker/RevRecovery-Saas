@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const updateUser = vi.fn();
+const signOut = vi.fn();
 let cookieAdapter:
   | {
       getAll(): Array<{ name: string; value: string }>;
@@ -24,7 +25,7 @@ vi.mock("@supabase/ssr", () => ({
       options: { cookies: typeof cookieAdapter },
     ) => {
       cookieAdapter = options.cookies;
-      return { auth: { updateUser } };
+      return { auth: { signOut, updateUser } };
     },
   ),
 }));
@@ -59,6 +60,8 @@ function passwordRequest({
 describe("password update route behavior", () => {
   beforeEach(() => {
     cookieAdapter = undefined;
+    signOut.mockReset();
+    signOut.mockResolvedValue({ error: null });
     updateUser.mockReset();
   });
 
@@ -74,6 +77,7 @@ describe("password update route behavior", () => {
     const response = await POST(passwordRequest());
 
     expect(updateUser).toHaveBeenCalledOnce();
+    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(response.status).toBe(303);
     const location = response.headers.get("location") ?? "";
     expect(location).toContain("/login?");

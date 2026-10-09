@@ -17,6 +17,7 @@ describe("password reset submission", () => {
     expect(pageSource).toContain('method="post"');
     expect(routeSource).toContain("return request.cookies.getAll()");
     expect(routeSource).toContain("supabase.auth.updateUser({ password })");
+    expect(routeSource).toContain('supabase.auth.signOut({ scope: "local" })');
   });
 
   it("validates the request and forwards refreshed auth cookies", () => {
