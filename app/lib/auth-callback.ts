@@ -5,6 +5,7 @@ type AuthCallbackParams = {
 };
 
 export function buildPasswordRecoveryCallbackPath(params: AuthCallbackParams) {
+  // Route recovery codes through the handler that can persist Supabase session cookies.
   const searchParams = new URLSearchParams();
 
   if (params.code) {
