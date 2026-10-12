@@ -3,6 +3,7 @@ import { Icon } from "../ui-icon";
 import { AtRiskCustomersTable } from "./at-risk-customers-table";
 import { ActivationReadinessChecklist } from "./activation-readiness-checklist";
 import { ControlledTestPlan } from "./controlled-test-plan";
+import { RecoveryOpportunityReportCard } from "./recovery-opportunity-report";
 import { RecoverySettingsForm } from "./recovery-settings-form";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
@@ -10,12 +11,14 @@ import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
 import type { UserSettings } from "../../lib/settings";
 import type { ActivationReadiness } from "../../lib/recovery/activation-readiness";
 import type { ControlledTestEligibility } from "../../lib/recovery/controlled-test-plan";
+import type { RecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
 
 type RecoveryContentProps = {
   atRiskCustomers?: AtRiskCustomer[];
   activationReadiness: ActivationReadiness;
   controlledTestEligibility: ControlledTestEligibility;
   mode?: "sequence" | "customize" | "review";
+  opportunityReport: RecoveryOpportunityReport;
   recoveryView: RecoveryFlowView;
   userSettings: UserSettings;
 };
@@ -58,10 +61,11 @@ function MessageCards({ recoveryView }: { recoveryView: RecoveryFlowView }) {
   );
 }
 
-function RecoverySequence({ activationReadiness, atRiskCustomers, recoveryView }: { activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; recoveryView: RecoveryFlowView }) {
+function RecoverySequence({ activationReadiness, atRiskCustomers, opportunityReport, recoveryView }: { activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView }) {
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-[143px]">
       <div className="mx-auto flex max-w-[896px] flex-col gap-8">
+        <RecoveryOpportunityReportCard report={opportunityReport} />
         <ActivationReadinessChecklist readiness={activationReadiness} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <p className="text-sm leading-5 text-[var(--muted-strong)]">
@@ -160,8 +164,8 @@ function ReviewRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowView }
   );
 }
 
-export function RecoveryContent({ activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", recoveryView, userSettings }: RecoveryContentProps) {
+export function RecoveryContent({ activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", opportunityReport, recoveryView, userSettings }: RecoveryContentProps) {
   if (mode === "review") return <ReviewRecoveryStep recoveryView={recoveryView} />;
   if (mode === "customize") return <CustomizeRecoveryStep controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
-  return <RecoverySequence activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} recoveryView={recoveryView} />;
+  return <RecoverySequence activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} opportunityReport={opportunityReport} recoveryView={recoveryView} />;
 }
