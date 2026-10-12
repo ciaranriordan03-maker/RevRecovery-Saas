@@ -63,6 +63,7 @@ export type RecoveryCaseListItem = {
   currency: string | null;
   customerEmail: string | null;
   customerId: string | null;
+  customerAction: string;
   failureExplanation: string;
   failureTitle: string;
   id: string;
@@ -70,10 +71,12 @@ export type RecoveryCaseListItem = {
   invoiceStatus: string | null;
   livemode: boolean | null;
   manuallyPausedAt: string | null;
+  merchantAction: string;
   nextEmailAt: string | null;
   nextPaymentAttemptAt: string | null;
   recoveredAt: string | null;
   recoveryStage: string;
+  retryGuidance: string;
   updatedAt: string;
 };
 
@@ -416,6 +419,7 @@ function mapRecoveryCase(
     currency: row.currency,
     customerEmail: getCustomerEmail(row.latest_payload),
     customerId: row.stripe_customer_id,
+    customerAction: diagnostic.customerAction,
     failureExplanation: diagnostic.explanation,
     failureTitle: diagnostic.title,
     id: row.id,
@@ -423,10 +427,12 @@ function mapRecoveryCase(
     invoiceStatus: row.invoice_status,
     livemode: row.livemode,
     manuallyPausedAt: row.manual_outreach_paused_at,
+    merchantAction: diagnostic.merchantAction,
     nextEmailAt: messageFacts.nextMessageByCase.get(row.id) ?? null,
     nextPaymentAttemptAt: row.next_payment_attempt_at,
     recoveredAt: row.recovered_at,
     recoveryStage: row.recovery_stage,
+    retryGuidance: diagnostic.retryGuidance,
     updatedAt: row.updated_at,
   };
 }

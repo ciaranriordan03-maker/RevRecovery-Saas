@@ -48,4 +48,17 @@ describe("recovery case detail route", () => {
     expect(source).toContain('recoveryCase.caseStatus !== "detected"');
     expect(source).toContain("No recovery email has been scheduled");
   });
+
+  it("shows failure-specific communication guidance without claiming automation", () => {
+    const source = readFileSync(
+      new URL("../app/components/dashboard/case-detail-content.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("Communication guidance");
+    expect(source).toContain("recoveryCase.customerAction");
+    expect(source).toContain("recoveryCase.merchantAction");
+    expect(source).toContain("recoveryCase.retryGuidance");
+    expect(source).toContain("Advisory only");
+  });
 });

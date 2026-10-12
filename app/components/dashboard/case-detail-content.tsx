@@ -108,6 +108,29 @@ export function CaseDetailContent({
           </section>
         ) : null}
 
+        <section className="rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-5" aria-labelledby="communication-guidance-heading">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--primary-text)]">Recover</p>
+            <h2 className="mt-2 text-base font-medium text-[var(--foreground)]" id="communication-guidance-heading">Communication guidance</h2>
+            <p className="mt-1 text-sm leading-5 text-[var(--muted-strong)]">Use Stripe&apos;s reported failure reason to communicate clearly without guessing or overpromising.</p>
+          </div>
+          <dl className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-[var(--radius-control)] border border-[var(--primary-border)] bg-[var(--surface)] p-4">
+              <dt className="text-xs font-medium text-[var(--muted)]">What the customer should do</dt>
+              <dd className="mt-2 text-sm leading-5 text-[var(--foreground)]">{recoveryCase.customerAction}</dd>
+            </div>
+            <div className="rounded-[var(--radius-control)] border border-[var(--primary-border)] bg-[var(--surface)] p-4">
+              <dt className="text-xs font-medium text-[var(--muted)]">What your team should do</dt>
+              <dd className="mt-2 text-sm leading-5 text-[var(--foreground)]">{recoveryCase.merchantAction}</dd>
+            </div>
+            <div className="rounded-[var(--radius-control)] border border-[var(--primary-border)] bg-[var(--surface)] p-4">
+              <dt className="text-xs font-medium text-[var(--muted)]">How to describe the retry</dt>
+              <dd className="mt-2 text-sm leading-5 text-[var(--foreground)]">{recoveryCase.retryGuidance}</dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-xs leading-5 text-[var(--muted)]">Advisory only. RevRecovery has not changed this case&apos;s saved message copy or Stripe retry schedule.</p>
+        </section>
+
         {canControlEmails ? (
           <CaseManualActions
             failedPaymentId={recoveryCase.id}
