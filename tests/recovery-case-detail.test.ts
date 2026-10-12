@@ -61,4 +61,16 @@ describe("recovery case detail route", () => {
     expect(source).toContain("recoveryCase.retryGuidance");
     expect(source).toContain("Advisory only");
   });
+
+  it("shows a failure-specific email preview without saving it", () => {
+    const source = readFileSync(
+      new URL("../app/components/dashboard/case-detail-content.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("Suggested first-email treatment");
+    expect(source).toContain("buildFailureSpecificEmailPreview");
+    expect(source).toContain("Not saved");
+    expect(source).toContain("does not modify the account template");
+  });
 });

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getRecoveryDeclineDiagnostic } from "../recovery/decline-diagnostics";
+import type { RecoveryFailureCategory } from "../recovery/decline-diagnostics";
 import {
   getHighestRecoveryAttentionLevel,
   getRecoveryAttentionFlags,
@@ -64,6 +65,7 @@ export type RecoveryCaseListItem = {
   customerEmail: string | null;
   customerId: string | null;
   customerAction: string;
+  failureCategory: RecoveryFailureCategory;
   failureExplanation: string;
   failureTitle: string;
   id: string;
@@ -420,6 +422,7 @@ function mapRecoveryCase(
     customerEmail: getCustomerEmail(row.latest_payload),
     customerId: row.stripe_customer_id,
     customerAction: diagnostic.customerAction,
+    failureCategory: diagnostic.category,
     failureExplanation: diagnostic.explanation,
     failureTitle: diagnostic.title,
     id: row.id,
