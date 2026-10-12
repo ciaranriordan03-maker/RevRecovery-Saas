@@ -58,8 +58,8 @@ const PREVIEW_COPY: Record<RecoveryFailureCategory, PreviewCopy> = {
     actionLine: "Please make funds available or open the secure Stripe invoice to use another payment method.",
     contextLine: "Your card issuer reported that there were not enough available funds or credit for this payment.",
     rationale: "Explains the specific issue and offers both practical recovery paths without promising success.",
-    retryWithDate: "Stripe currently shows another attempt on {date}, but RevRecovery cannot guarantee that it will succeed.",
-    retryWithoutDate: "A later attempt may succeed, but RevRecovery cannot guarantee that it will.",
+    retryWithDate: "Stripe currently shows another attempt on {date}, but a successful payment is not guaranteed.",
+    retryWithoutDate: "A later attempt may succeed, but a successful payment is not guaranteed.",
     subject: "Payment could not be completed",
   },
   not_permitted: {

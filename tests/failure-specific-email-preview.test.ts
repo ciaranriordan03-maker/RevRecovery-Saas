@@ -23,7 +23,8 @@ describe("failure-specific email preview", () => {
     });
 
     expect(preview.retryLine).toContain("Oct 14, 2026, 10:00 AM");
-    expect(preview.retryLine).toContain("cannot guarantee");
+    expect(preview.retryLine).toContain("not guaranteed");
+    expect(preview.retryLine).not.toContain("RevRecovery");
   });
 
   it("does not tell a security-decline customer that fraud occurred", () => {
