@@ -3,6 +3,7 @@ import type { RecoveryCaseListItem } from "../../lib/server/recovery-cases";
 import type { RecoveryCaseTimelineEvent } from "../../lib/server/recovery-case-events";
 import { buildRecoveryCaseTimelineView } from "../../lib/recovery/case-timeline-view";
 import { buildFailureSpecificEmailPreview } from "../../lib/recovery/failure-specific-email-preview";
+import { evaluateRetryEmailOverlap } from "../../lib/recovery/retry-email-overlap";
 import { CaseManualActions } from "./case-manual-actions";
 
 function formatCurrency(amount: number, currency: string | null) {
@@ -74,6 +75,10 @@ export function CaseDetailContent({
       ? formatDate(recoveryCase.nextPaymentAttemptAt)
       : null,
   });
+  const retryEmailOverlap = evaluateRetryEmailOverlap({
+    nextEmailAt: recoveryCase.nextEmailAt,
+    nextPaymentAttemptAt: recoveryCase.nextPaymentAttemptAt,
+  });
 
   return (
     <div className="px-5 py-8 sm:px-8">
@@ -98,6 +103,18 @@ export function CaseDetailContent({
             value={formatDate(recoveryCase.nextEmailAt)}
             detail={emailStageDetail}
           />
+        </section>
+
+        <section className={`rounded-[var(--radius-card)] border-l-4 p-5 ${retryEmailOverlap.status === "review" ? "border-[var(--warning-text)] bg-[var(--warning-soft)]" : retryEmailOverlap.status === "clear" ? "border-[var(--success)] bg-[var(--success-soft)]" : "border-[var(--border-strong)] bg-[var(--surface)] shadow-[var(--shadow-card)]"}`} aria-labelledby="retry-coordination-heading">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Stripe coordination</p>
+              <h2 className="mt-2 text-base font-medium text-[var(--foreground)]" id="retry-coordination-heading">{retryEmailOverlap.title}</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-5 text-[var(--muted-strong)]">{retryEmailOverlap.detail}</p>
+            </div>
+            <span className="w-fit rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Read only</span>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-[var(--muted)]">RevRecovery has not changed the email schedule or Stripe&apos;s retry configuration.</p>
         </section>
 
         {recoveryCase.attentionFlags.length > 0 ? (

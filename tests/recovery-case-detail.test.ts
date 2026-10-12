@@ -73,4 +73,16 @@ describe("recovery case detail route", () => {
     expect(source).toContain("Not saved");
     expect(source).toContain("does not modify the account template");
   });
+
+  it("shows a read-only Stripe retry and email timing evaluation", () => {
+    const source = readFileSync(
+      new URL("../app/components/dashboard/case-detail-content.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("evaluateRetryEmailOverlap");
+    expect(source).toContain("Stripe coordination");
+    expect(source).toContain("Read only");
+    expect(source).toContain("has not changed the email schedule");
+  });
 });
