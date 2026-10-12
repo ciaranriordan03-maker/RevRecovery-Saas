@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildRecoveryScheduleSnapshot,
   getRecoverySchedule,
+  getRecoveryScheduleWindowDays,
   isRecoveryScheduleId,
   isValidTimezone,
   scheduleFromOffset,
@@ -11,6 +12,13 @@ describe("recovery schedule policy", () => {
   it("defines canonical elapsed-minute offsets", () => {
     expect(getRecoverySchedule("legacy_24_72").offsetsMinutes).toEqual([0, 1440, 4320]);
     expect(getRecoverySchedule("day_3_7").offsetsMinutes).toEqual([0, 4320, 10080]);
+  });
+
+  it("reports the configured recovery window from the final message offset", () => {
+    expect(getRecoveryScheduleWindowDays("legacy_24_72")).toBe(3);
+    expect(getRecoveryScheduleWindowDays("day_3_7")).toBe(7);
+    expect(getRecoveryScheduleWindowDays("day_2_5")).toBe(5);
+    expect(getRecoveryScheduleWindowDays("day_5_10")).toBe(10);
   });
 
   it("validates schedule identifiers and IANA timezones", () => {
