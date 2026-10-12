@@ -79,6 +79,8 @@ export function CaseDetailContent({
     nextEmailAt: recoveryCase.nextEmailAt,
     nextPaymentAttemptAt: recoveryCase.nextPaymentAttemptAt,
   });
+  const hasRecoverySequence = recoveryCase.scheduledMessageCount > 0;
+  const isRecoverySequenceExhausted = recoveryCase.caseStatus === "exhausted";
 
   return (
     <div className="px-5 py-8 sm:px-8">
@@ -115,6 +117,31 @@ export function CaseDetailContent({
             <span className="w-fit rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Read only</span>
           </div>
           <p className="mt-4 text-xs leading-5 text-[var(--muted)]">RevRecovery has not changed the email schedule or Stripe&apos;s retry configuration.</p>
+        </section>
+
+        <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]" aria-labelledby="recovery-window-heading">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Recovery window</p>
+              <h2 className="mt-2 text-base font-medium text-[var(--foreground)]" id="recovery-window-heading">
+                {hasRecoverySequence
+                  ? `${recoveryCase.remainingMessageCount} of ${recoveryCase.scheduledMessageCount} messages remaining`
+                  : "No recovery sequence scheduled"}
+              </h2>
+              <p className="mt-1 text-sm leading-5 text-[var(--muted-strong)]">
+                {hasRecoverySequence
+                  ? `The configured sequence window ends ${formatDate(recoveryCase.recoveryWindowEndsAt)}.`
+                  : "This case has no recorded recovery messages, so there is no sequence window to measure."}
+              </p>
+            </div>
+            <span className="w-fit rounded bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Read only</span>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
+            {isRecoverySequenceExhausted
+              ? "The case is marked exhausted after its recorded recovery sequence completed."
+              : "The case is not marked exhausted."}
+            {" "}RevRecovery has not changed this case&apos;s schedule or status.
+          </p>
         </section>
 
         {recoveryCase.attentionFlags.length > 0 ? (

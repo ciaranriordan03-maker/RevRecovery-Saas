@@ -85,4 +85,18 @@ describe("recovery case detail route", () => {
     expect(source).toContain("Read only");
     expect(source).toContain("has not changed the email schedule");
   });
+
+  it("shows recovery-window and sequence-exhaustion facts without controls", () => {
+    const source = readFileSync(
+      new URL("../app/components/dashboard/case-detail-content.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("Recovery window");
+    expect(source).toContain("recoveryCase.remainingMessageCount");
+    expect(source).toContain("recoveryCase.scheduledMessageCount");
+    expect(source).toContain("recoveryCase.recoveryWindowEndsAt");
+    expect(source).toContain("The case is not marked exhausted.");
+    expect(source).toContain("has not changed this case&apos;s schedule or status");
+  });
 });
