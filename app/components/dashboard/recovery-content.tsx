@@ -6,6 +6,7 @@ import { ControlledTestPlan } from "./controlled-test-plan";
 import { RecoveryOpportunityReportCard } from "./recovery-opportunity-report";
 import { RecoverySettingsForm } from "./recovery-settings-form";
 import { RecoveryHealthBanner } from "./recovery-health-banner";
+import { EssentialNotificationPreview } from "./essential-notification-preview";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
@@ -16,6 +17,7 @@ import type { RecoveryOpportunityReport } from "../../lib/recovery/opportunity-r
 import { buildRecoveryHealthSummary } from "../../lib/recovery/recovery-health";
 
 type RecoveryContentProps = {
+  accountEmail: string;
   atRiskCustomers?: AtRiskCustomer[];
   activationReadiness: ActivationReadiness;
   controlledTestEligibility: ControlledTestEligibility;
@@ -63,7 +65,7 @@ function MessageCards({ recoveryView }: { recoveryView: RecoveryFlowView }) {
   );
 }
 
-function RecoverySequence({ activationReadiness, atRiskCustomers, opportunityReport, recoveryView }: { activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView }) {
+function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, opportunityReport, recoveryView }: { accountEmail: string; activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView }) {
   const recoveryHealth = buildRecoveryHealthSummary(
     activationReadiness,
     recoveryView.mode,
@@ -74,6 +76,7 @@ function RecoverySequence({ activationReadiness, atRiskCustomers, opportunityRep
       <div className="mx-auto flex max-w-[896px] flex-col gap-8">
         <RecoveryOpportunityReportCard report={opportunityReport} />
         <RecoveryHealthBanner health={recoveryHealth} />
+        <EssentialNotificationPreview accountEmail={accountEmail} />
         <ActivationReadinessChecklist readiness={activationReadiness} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <p className="text-sm leading-5 text-[var(--muted-strong)]">
@@ -172,8 +175,8 @@ function ReviewRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowView }
   );
 }
 
-export function RecoveryContent({ activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", opportunityReport, recoveryView, userSettings }: RecoveryContentProps) {
+export function RecoveryContent({ accountEmail, activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", opportunityReport, recoveryView, userSettings }: RecoveryContentProps) {
   if (mode === "review") return <ReviewRecoveryStep recoveryView={recoveryView} />;
   if (mode === "customize") return <CustomizeRecoveryStep controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
-  return <RecoverySequence activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} opportunityReport={opportunityReport} recoveryView={recoveryView} />;
+  return <RecoverySequence accountEmail={accountEmail} activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} opportunityReport={opportunityReport} recoveryView={recoveryView} />;
 }

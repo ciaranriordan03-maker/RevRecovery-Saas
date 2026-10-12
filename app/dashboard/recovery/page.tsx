@@ -72,6 +72,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       title={pageCopy[mode].title}
     >
       <RecoveryContent
+        accountEmail={typeof claims.email === "string" ? claims.email : "Account owner email unavailable"}
         activationReadiness={activationReadiness}
         controlledTestEligibility={controlledTestEligibility}
         atRiskCustomers={atRiskCustomers}
