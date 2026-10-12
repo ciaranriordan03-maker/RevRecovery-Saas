@@ -5,6 +5,7 @@ import { ActivationReadinessChecklist } from "./activation-readiness-checklist";
 import { ControlledTestPlan } from "./controlled-test-plan";
 import { RecoveryOpportunityReportCard } from "./recovery-opportunity-report";
 import { RecoverySettingsForm } from "./recovery-settings-form";
+import { RecoveryHealthBanner } from "./recovery-health-banner";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
@@ -12,6 +13,7 @@ import type { UserSettings } from "../../lib/settings";
 import type { ActivationReadiness } from "../../lib/recovery/activation-readiness";
 import type { ControlledTestEligibility } from "../../lib/recovery/controlled-test-plan";
 import type { RecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
+import { buildRecoveryHealthSummary } from "../../lib/recovery/recovery-health";
 
 type RecoveryContentProps = {
   atRiskCustomers?: AtRiskCustomer[];
@@ -62,10 +64,16 @@ function MessageCards({ recoveryView }: { recoveryView: RecoveryFlowView }) {
 }
 
 function RecoverySequence({ activationReadiness, atRiskCustomers, opportunityReport, recoveryView }: { activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView }) {
+  const recoveryHealth = buildRecoveryHealthSummary(
+    activationReadiness,
+    recoveryView.mode,
+  );
+
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-[143px]">
       <div className="mx-auto flex max-w-[896px] flex-col gap-8">
         <RecoveryOpportunityReportCard report={opportunityReport} />
+        <RecoveryHealthBanner health={recoveryHealth} />
         <ActivationReadinessChecklist readiness={activationReadiness} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <p className="text-sm leading-5 text-[var(--muted-strong)]">
