@@ -1,6 +1,11 @@
 import "server-only";
 
 import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "../recovery/essential-notification-policy";
+import {
+  mapPreviewNotificationEvent,
+  type PreviewNotificationHistory,
+  type RecoveryNotificationEventRow,
+} from "../recovery/notification-event-history";
 import { buildRecoveryNotificationEventDraft } from "../recovery/notification-event-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
@@ -17,6 +22,29 @@ export type PreviewNotificationRecordResult =
   | "failed"
   | "recorded"
   | "skipped";
+
+export async function getPreviewRecoveryNotificationHistory(
+  userId: string,
+): Promise<PreviewNotificationHistory> {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return { events: [], state: "unavailable" };
+
+  const { data, error } = await supabase
+    .from(NOTIFICATION_EVENTS_TABLE)
+    .select("id, rule_id, severity, status, recipient_email, occurred_at, cooldown_until, payload")
+    .eq("user_id", userId)
+    .eq("status", "recorded")
+    .order("occurred_at", { ascending: false })
+    .limit(10)
+    .returns<RecoveryNotificationEventRow[]>();
+
+  if (error) return { events: [], state: "unavailable" };
+
+  return {
+    events: (data ?? []).map(mapPreviewNotificationEvent).filter((event) => event !== null),
+    state: "ready",
+  };
+}
 
 function getRule(ruleId: EssentialNotificationRule["id"]) {
   const rule = ESSENTIAL_NOTIFICATION_RULES.find((candidate) => candidate.id === ruleId);

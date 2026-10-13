@@ -12,5 +12,9 @@ describe("essential notification preview", () => {
     expect(source).toContain("Preview only");
     expect(source).toContain("Noise protection");
     expect(source).toContain("No notifications are enabled or sent");
+    expect(source).toContain("Recorded preview events");
+    expect(source).toContain("Preview only — nothing sent");
+    expect(source).toContain("No preview events recorded yet");
+    expect(source).toContain("Duplicates ignored until");
   });
 });

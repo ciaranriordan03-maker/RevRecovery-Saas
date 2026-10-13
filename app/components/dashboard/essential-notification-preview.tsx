@@ -1,6 +1,21 @@
 import { buildEssentialNotificationPreview } from "../../lib/recovery/essential-notification-policy";
+import type { PreviewNotificationHistory } from "../../lib/recovery/notification-event-history";
 
-export function EssentialNotificationPreview({ accountEmail }: { accountEmail: string }) {
+function formatTimestamp(value: string) {
+  return new Intl.DateTimeFormat("en-IE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
+export function EssentialNotificationPreview({
+  accountEmail,
+  history,
+}: {
+  accountEmail: string;
+  history: PreviewNotificationHistory;
+}) {
   const preview = buildEssentialNotificationPreview(accountEmail);
 
   return (
@@ -40,6 +55,46 @@ export function EssentialNotificationPreview({ accountEmail }: { accountEmail: s
         <ul className="mt-2 space-y-1 text-xs leading-5 text-[var(--muted-strong)]">
           {preview.exclusions.map((item) => <li key={item}>• {item}</li>)}
         </ul>
+      </div>
+
+      <div className="mt-5 border-t border-[var(--border)] pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-medium text-[var(--foreground)]">Recorded preview events</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">The latest real conditions that matched this proposed policy.</p>
+          </div>
+          <span className="rounded bg-[var(--primary-soft)] px-2 py-1 text-xs font-medium text-[var(--primary)]">Preview only — nothing sent</span>
+        </div>
+
+        {history.state === "unavailable" ? (
+          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--warning)] bg-[var(--warning-soft)] p-4 text-sm text-[var(--warning-text)]">
+            Preview event history is temporarily unavailable. Notification delivery remains disabled.
+          </div>
+        ) : history.events.length === 0 ? (
+          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
+            <p className="text-sm font-medium text-[var(--foreground)]">No preview events recorded yet</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">This is expected until a genuine webhook, sending-domain, or needs-attention condition matches the policy.</p>
+          </div>
+        ) : (
+          <ol className="mt-4 space-y-3">
+            {history.events.map((event) => (
+              <li className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4" key={event.id}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)]">{event.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{event.reason}</p>
+                  </div>
+                  <span className={`rounded px-2 py-1 text-xs font-medium ${event.severity === "critical" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-[var(--warning-soft)] text-[var(--warning-text)]"}`}>{event.severity === "critical" ? "Immediate" : "Digest"}</span>
+                </div>
+                <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+                  <div><dt className="text-[var(--muted)]">Recorded</dt><dd className="mt-1 text-[var(--foreground)]"><time dateTime={event.occurredAt}>{formatTimestamp(event.occurredAt)} UTC</time></dd></div>
+                  <div><dt className="text-[var(--muted)]">Would notify</dt><dd className="mt-1 break-all text-[var(--foreground)]">{event.recipientEmail}</dd></div>
+                  <div><dt className="text-[var(--muted)]">Duplicate protection</dt><dd className="mt-1 text-[var(--foreground)]">Duplicates ignored until {formatTimestamp(event.cooldownUntil)} UTC</dd></div>
+                </dl>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       <p className="mt-4 text-xs leading-5 text-[var(--muted)]">No notifications are enabled or sent by this preview.</p>

@@ -9,6 +9,7 @@ import { buildRecoveryFlowView } from "../../lib/recovery/recovery-view";
 import { getActivationReadinessForUser, getControlledTestEligibility } from "../../lib/server/activation-readiness";
 import { getStripeConnectionSummary } from "../../lib/server/stripe-connections";
 import { buildRecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
+import { getPreviewRecoveryNotificationHistory } from "../../lib/server/recovery-notification-events";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
@@ -45,11 +46,14 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       : params?.step === "customize"
         ? "customize"
         : "sequence";
-  const [settingsRecord, recoverySettings, atRiskCustomers, stripeConnection] = await Promise.all([
+  const [settingsRecord, recoverySettings, atRiskCustomers, stripeConnection, notificationHistory] = await Promise.all([
     getUserSettings(claims.sub),
     getRecoveryModeSettingsForUser(claims.sub),
     mode === "sequence" ? getAtRiskCustomers(claims.sub) : Promise.resolve([]),
     getStripeConnectionSummary(claims.sub),
+    mode === "sequence"
+      ? getPreviewRecoveryNotificationHistory(claims.sub)
+      : Promise.resolve({ events: [], state: "ready" as const }),
   ]);
   const recoveryView = buildRecoveryFlowView(
     settingsRecord.settings,
@@ -77,6 +81,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
         controlledTestEligibility={controlledTestEligibility}
         atRiskCustomers={atRiskCustomers}
         mode={mode}
+        notificationHistory={notificationHistory}
         opportunityReport={buildRecoveryOpportunityReport(stripeConnection)}
         recoveryView={recoveryView}
         userSettings={settingsRecord.settings}
