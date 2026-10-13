@@ -1,0 +1,96 @@
+import "server-only";
+
+import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "../recovery/essential-notification-policy";
+import { buildRecoveryNotificationEventDraft } from "../recovery/notification-event-policy";
+import { createSupabaseAdminClient } from "../supabase/admin";
+
+const ACCOUNT_SETTINGS_TABLE = "recovery_account_settings";
+const NOTIFICATION_EVENTS_TABLE = "recovery_notification_events";
+
+type AccountSettingsRow = {
+  id: string;
+  user_id: string;
+};
+
+export type PreviewNotificationRecordResult =
+  | "duplicate"
+  | "failed"
+  | "recorded"
+  | "skipped";
+
+function getRule(ruleId: EssentialNotificationRule["id"]) {
+  const rule = ESSENTIAL_NOTIFICATION_RULES.find((candidate) => candidate.id === ruleId);
+  if (!rule) throw new Error("Essential notification rule is not configured.");
+  return rule;
+}
+
+export async function tryRecordPreviewRecoveryNotificationEvent({
+  fingerprint,
+  occurredAt = new Date().toISOString(),
+  payload = {},
+  ruleId,
+  stripeAccountId,
+  userId,
+}: {
+  fingerprint: string;
+  occurredAt?: string;
+  payload?: Record<string, boolean | number | string | null>;
+  ruleId: EssentialNotificationRule["id"];
+  stripeAccountId?: string;
+  userId: string;
+}): Promise<PreviewNotificationRecordResult> {
+  try {
+    const supabase = createSupabaseAdminClient();
+    if (!supabase) return "skipped";
+
+    let settingsQuery = supabase
+      .from(ACCOUNT_SETTINGS_TABLE)
+      .select("id, user_id")
+      .eq("user_id", userId);
+
+    if (stripeAccountId) {
+      settingsQuery = settingsQuery.eq("stripe_account_id", stripeAccountId);
+    }
+
+    const { data: settings, error: settingsError } = await settingsQuery
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle<AccountSettingsRow>();
+
+    if (settingsError) return "failed";
+    if (!settings) return "skipped";
+
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    const recipientEmail = userData.user?.email?.trim().toLowerCase();
+    if (userError || !recipientEmail) return "skipped";
+
+    const draft = buildRecoveryNotificationEventDraft({
+      fingerprint,
+      occurredAt,
+      recipientEmail,
+      ruleId,
+    });
+    const rule = getRule(ruleId);
+    const { error } = await supabase.from(NOTIFICATION_EVENTS_TABLE).insert({
+      account_settings_id: settings.id,
+      cooldown_until: draft.cooldownUntil,
+      deduplication_key: draft.deduplicationKey,
+      delivery_enabled_snapshot: false,
+      fingerprint: draft.fingerprint,
+      occurred_at: draft.occurredAt,
+      payload: { ...payload, previewOnly: true },
+      recipient_email: draft.recipientEmail,
+      rule_id: draft.ruleId,
+      severity: rule.severity,
+      status: "recorded",
+      user_id: settings.user_id,
+    });
+
+    if (!error) return "recorded";
+    if (error.code === "23505") return "duplicate";
+    return "failed";
+  } catch {
+    // Preview recording must never interrupt Stripe, domain, or email processing.
+    return "failed";
+  }
+}
