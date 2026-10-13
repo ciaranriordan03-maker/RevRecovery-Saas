@@ -7,6 +7,7 @@ import { RecoveryOpportunityReportCard } from "./recovery-opportunity-report";
 import { RecoverySettingsForm } from "./recovery-settings-form";
 import { RecoveryHealthBanner } from "./recovery-health-banner";
 import { EssentialNotificationPreview } from "./essential-notification-preview";
+import { NotificationTestRecipientSettings } from "./notification-test-recipient-settings";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
@@ -129,6 +130,7 @@ function CustomizeRecoveryStep({ controlledTestEligibility, recoveryView, userSe
           }}
           initialUserSettings={userSettings}
         />
+        <NotificationTestRecipientSettings />
         <ControlledTestPlan eligibility={controlledTestEligibility} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <h2 className="text-base font-medium text-[var(--foreground)]">Saved message preview</h2>
