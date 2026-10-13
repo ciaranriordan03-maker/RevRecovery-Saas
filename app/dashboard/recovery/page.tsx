@@ -11,6 +11,8 @@ import { getStripeConnectionSummary } from "../../lib/server/stripe-connections"
 import { buildRecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
 import { getPreviewRecoveryNotificationHistory } from "../../lib/server/recovery-notification-events";
 import { evaluateNotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
+import { unavailableNotificationActivationReview } from "../../lib/recovery/notification-activation-review";
+import { getNotificationActivationReviewForUser } from "../../lib/server/notification-activation-review";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
@@ -36,7 +38,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       : params?.step === "customize"
         ? "customize"
         : "sequence";
-  const [settingsRecord, recoverySettings, atRiskCustomers, stripeConnection, notificationHistory] = await Promise.all([
+  const [settingsRecord, recoverySettings, atRiskCustomers, stripeConnection, notificationHistory, notificationActivationReview] = await Promise.all([
     getUserSettings(claims.sub),
     getRecoveryModeSettingsForUser(claims.sub),
     mode === "sequence" ? getAtRiskCustomers(claims.sub) : Promise.resolve([]),
@@ -44,6 +46,9 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
     mode === "sequence"
       ? getPreviewRecoveryNotificationHistory(claims.sub)
       : Promise.resolve({ events: [], state: "ready" as const }),
+    mode === "sequence"
+      ? getNotificationActivationReviewForUser(claims.sub)
+      : Promise.resolve(unavailableNotificationActivationReview()),
   ]);
   const recoveryView = buildRecoveryFlowView(
     settingsRecord.settings,
@@ -78,6 +83,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
         atRiskCustomers={atRiskCustomers}
         mode={mode}
         notificationHistory={notificationHistory}
+        notificationActivationReview={notificationActivationReview}
         notificationReadiness={notificationReadiness}
         opportunityReport={buildRecoveryOpportunityReport(stripeConnection)}
         recoveryView={recoveryView}

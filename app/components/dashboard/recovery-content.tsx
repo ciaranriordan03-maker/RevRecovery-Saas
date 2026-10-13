@@ -18,6 +18,8 @@ import type { RecoveryOpportunityReport } from "../../lib/recovery/opportunity-r
 import { buildRecoveryHealthSummary } from "../../lib/recovery/recovery-health";
 import type { PreviewNotificationHistory } from "../../lib/recovery/notification-event-history";
 import type { NotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
+import type { NotificationActivationReview as NotificationActivationReviewModel } from "../../lib/recovery/notification-activation-review";
+import { NotificationActivationReview } from "./notification-activation-review";
 
 type RecoveryContentProps = {
   accountEmail: string;
@@ -27,6 +29,7 @@ type RecoveryContentProps = {
   mode?: "sequence" | "customize" | "review";
   opportunityReport: RecoveryOpportunityReport;
   notificationHistory: PreviewNotificationHistory;
+  notificationActivationReview: NotificationActivationReviewModel;
   notificationReadiness: NotificationActivationReadiness;
   recoveryView: RecoveryFlowView;
   userSettings: UserSettings;
@@ -70,7 +73,7 @@ function MessageCards({ recoveryView }: { recoveryView: RecoveryFlowView }) {
   );
 }
 
-function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, notificationHistory, notificationReadiness, opportunityReport, recoveryView }: { accountEmail: string; activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; notificationHistory: PreviewNotificationHistory; notificationReadiness: NotificationActivationReadiness; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView }) {
+function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView }: { accountEmail: string; activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; notificationActivationReview: NotificationActivationReviewModel; notificationHistory: PreviewNotificationHistory; notificationReadiness: NotificationActivationReadiness; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView }) {
   const recoveryHealth = buildRecoveryHealthSummary(
     activationReadiness,
     recoveryView.mode,
@@ -82,6 +85,7 @@ function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, 
         <RecoveryOpportunityReportCard report={opportunityReport} />
         <RecoveryHealthBanner health={recoveryHealth} />
         <EssentialNotificationPreview accountEmail={accountEmail} history={notificationHistory} readiness={notificationReadiness} />
+        <NotificationActivationReview review={notificationActivationReview} />
         <ActivationReadinessChecklist readiness={activationReadiness} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <p className="text-sm leading-5 text-[var(--muted-strong)]">
@@ -181,8 +185,8 @@ function ReviewRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowView }
   );
 }
 
-export function RecoveryContent({ accountEmail, activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", notificationHistory, notificationReadiness, opportunityReport, recoveryView, userSettings }: RecoveryContentProps) {
+export function RecoveryContent({ accountEmail, activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView, userSettings }: RecoveryContentProps) {
   if (mode === "review") return <ReviewRecoveryStep recoveryView={recoveryView} />;
   if (mode === "customize") return <CustomizeRecoveryStep controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
-  return <RecoverySequence accountEmail={accountEmail} activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} notificationHistory={notificationHistory} notificationReadiness={notificationReadiness} opportunityReport={opportunityReport} recoveryView={recoveryView} />;
+  return <RecoverySequence accountEmail={accountEmail} activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} notificationActivationReview={notificationActivationReview} notificationHistory={notificationHistory} notificationReadiness={notificationReadiness} opportunityReport={opportunityReport} recoveryView={recoveryView} />;
 }
