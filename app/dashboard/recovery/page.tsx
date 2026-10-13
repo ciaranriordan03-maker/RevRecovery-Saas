@@ -10,6 +10,7 @@ import { getActivationReadinessForUser, getControlledTestEligibility } from "../
 import { getStripeConnectionSummary } from "../../lib/server/stripe-connections";
 import { buildRecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
 import { getPreviewRecoveryNotificationHistory } from "../../lib/server/recovery-notification-events";
+import { evaluateNotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
@@ -17,24 +18,13 @@ export const metadata: Metadata = {
 };
 
 type RecoveryPageProps = {
-  searchParams?: Promise<{
-    step?: string;
-  }>;
+  searchParams?: Promise<{ step?: string }>;
 };
 
 const pageCopy = {
-  review: {
-    subtitle: "Confirm how automated recovery operates",
-    title: "Review Recovery Flow",
-  },
-  customize: {
-    subtitle: "Review the settings currently used for recovery",
-    title: "Recovery Settings",
-  },
-  sequence: {
-    subtitle: "Automated email sequence for failed payments",
-    title: "Recovery Flow",
-  },
+  review: { subtitle: "Confirm how automated recovery operates", title: "Review Recovery Flow" },
+  customize: { subtitle: "Review the settings currently used for recovery", title: "Recovery Settings" },
+  sequence: { subtitle: "Automated email sequence for failed payments", title: "Recovery Flow" },
 } as const;
 
 export default async function RecoveryPage({ searchParams }: RecoveryPageProps) {
@@ -68,6 +58,12 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
     recoverySettings,
     userSettings: settingsRecord.settings,
   });
+  const accountEmail = typeof claims.email === "string" ? claims.email : "Account owner email unavailable";
+  const notificationReadiness = evaluateNotificationActivationReadiness({
+    accountEmail,
+    activationReadiness,
+    notificationHistory,
+  });
 
   return (
     <AppShell
@@ -76,12 +72,13 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       title={pageCopy[mode].title}
     >
       <RecoveryContent
-        accountEmail={typeof claims.email === "string" ? claims.email : "Account owner email unavailable"}
+        accountEmail={accountEmail}
         activationReadiness={activationReadiness}
         controlledTestEligibility={controlledTestEligibility}
         atRiskCustomers={atRiskCustomers}
         mode={mode}
         notificationHistory={notificationHistory}
+        notificationReadiness={notificationReadiness}
         opportunityReport={buildRecoveryOpportunityReport(stripeConnection)}
         recoveryView={recoveryView}
         userSettings={settingsRecord.settings}

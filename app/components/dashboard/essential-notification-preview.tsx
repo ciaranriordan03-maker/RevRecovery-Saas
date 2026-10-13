@@ -1,5 +1,7 @@
 import { buildEssentialNotificationPreview } from "../../lib/recovery/essential-notification-policy";
 import type { PreviewNotificationHistory } from "../../lib/recovery/notification-event-history";
+import type { NotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
+import { NotificationActivationChecklist } from "./notification-activation-checklist";
 
 function formatTimestamp(value: string) {
   return new Intl.DateTimeFormat("en-IE", {
@@ -12,9 +14,11 @@ function formatTimestamp(value: string) {
 export function EssentialNotificationPreview({
   accountEmail,
   history,
+  readiness,
 }: {
   accountEmail: string;
   history: PreviewNotificationHistory;
+  readiness: NotificationActivationReadiness;
 }) {
   const preview = buildEssentialNotificationPreview(accountEmail);
 
@@ -96,6 +100,8 @@ export function EssentialNotificationPreview({
           </ol>
         )}
       </div>
+
+      <NotificationActivationChecklist readiness={readiness} />
 
       <p className="mt-4 text-xs leading-5 text-[var(--muted)]">No notifications are enabled or sent by this preview.</p>
     </section>
