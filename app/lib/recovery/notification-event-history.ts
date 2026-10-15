@@ -18,11 +18,38 @@ export type PreviewNotificationHistory = {
 
 export type NotificationDeliveryReconciliation = {
   detail: string;
+  evidence: NotificationReconciliationEvidence;
+  evidenceState: "ready" | "unavailable";
   id: string;
   occurredAt: string;
   recipientEmail: string;
   state: "attention_required" | "finalized" | "in_progress";
   statusLabel: string;
+};
+
+export type NotificationReconciliationEvidence = {
+  attempts: Array<{
+    occurredAt: string;
+    outcome: string;
+    reason: string;
+  }>;
+  authorization: null | {
+    approvedAt: string | null;
+    consumedAt: string | null;
+    expiresAt: string;
+    requestedAt: string;
+    status: string;
+  };
+  reservation: {
+    claimedAt: string | null;
+    claimRecorded: boolean;
+  };
+};
+
+export const EMPTY_RECONCILIATION_EVIDENCE: NotificationReconciliationEvidence = {
+  attempts: [],
+  authorization: null,
+  reservation: { claimedAt: null, claimRecorded: false },
 };
 
 export type RecoveryNotificationEventRow = {
@@ -104,6 +131,8 @@ export function mapNotificationDeliveryReconciliation(
   if (row.status === "sent") {
     return {
       detail: "Provider acceptance and database finalization are both recorded. No further delivery action is needed.",
+      evidence: EMPTY_RECONCILIATION_EVIDENCE,
+      evidenceState: "unavailable",
       id: row.id,
       occurredAt: row.sent_at ?? row.provider_accepted_at ?? row.occurred_at,
       recipientEmail: row.recipient_email,
@@ -115,6 +144,8 @@ export function mapNotificationDeliveryReconciliation(
   if (row.status === "accepted") {
     return {
       detail: "The provider accepted this message, but database finalization is still pending. Do not resend it.",
+      evidence: EMPTY_RECONCILIATION_EVIDENCE,
+      evidenceState: "unavailable",
       id: row.id,
       occurredAt: row.provider_accepted_at ?? row.occurred_at,
       recipientEmail: row.recipient_email,
@@ -126,6 +157,8 @@ export function mapNotificationDeliveryReconciliation(
   if (row.status === "failed") {
     return {
       detail: row.last_error?.trim() || "The delivery attempt needs review before any new authorization is considered.",
+      evidence: EMPTY_RECONCILIATION_EVIDENCE,
+      evidenceState: "unavailable",
       id: row.id,
       occurredAt: row.occurred_at,
       recipientEmail: row.recipient_email,
@@ -141,6 +174,8 @@ export function mapNotificationDeliveryReconciliation(
   if (reservationIsStale) {
     return {
       detail: "This single-use reservation is older than its 15-minute authorization window. Review the audit trail; do not resend it.",
+      evidence: EMPTY_RECONCILIATION_EVIDENCE,
+      evidenceState: "unavailable",
       id: row.id,
       occurredAt: row.claimed_at ?? row.occurred_at,
       recipientEmail: row.recipient_email,
@@ -151,6 +186,8 @@ export function mapNotificationDeliveryReconciliation(
 
   return {
     detail: "A single-use reservation exists. Delivery state must be confirmed before any further action.",
+    evidence: EMPTY_RECONCILIATION_EVIDENCE,
+    evidenceState: "unavailable",
     id: row.id,
     occurredAt: row.occurred_at,
     recipientEmail: row.recipient_email,

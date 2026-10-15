@@ -132,6 +132,36 @@ export function EssentialNotificationPreview({
                   <div><dt className="text-[var(--muted)]">Recorded</dt><dd className="mt-1 text-[var(--foreground)]"><time dateTime={delivery.occurredAt}>{formatTimestamp(delivery.occurredAt)} UTC</time></dd></div>
                   <div><dt className="text-[var(--muted)]">Test recipient</dt><dd className="mt-1 break-all text-[var(--foreground)]">{delivery.recipientEmail}</dd></div>
                 </dl>
+                {delivery.state === "attention_required" ? (
+                  <details className="mt-4 border-t border-[var(--border)] pt-3">
+                    <summary className="cursor-pointer text-xs font-medium text-[var(--primary)]">View audit evidence</summary>
+                    {delivery.evidenceState === "unavailable" ? (
+                      <p className="mt-3 text-xs leading-5 text-[var(--warning-text)]">Audit evidence is temporarily unavailable. Do not retry or change this delivery.</p>
+                    ) : (
+                      <div className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
+                        <div>
+                          <p className="font-medium text-[var(--foreground)]">Reservation</p>
+                          <p className="mt-1 leading-5 text-[var(--muted-strong)]">{delivery.evidence.reservation.claimRecorded && delivery.evidence.reservation.claimedAt ? `Claim recorded ${formatTimestamp(delivery.evidence.reservation.claimedAt)} UTC.` : "No claim timestamp is recorded."}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium text-[var(--foreground)]">Authorization</p>
+                          {delivery.evidence.authorization ? (
+                            <p className="mt-1 leading-5 text-[var(--muted-strong)]">Status: {delivery.evidence.authorization.status}. Expires {formatTimestamp(delivery.evidence.authorization.expiresAt)} UTC.{delivery.evidence.authorization.consumedAt ? ` Consumed ${formatTimestamp(delivery.evidence.authorization.consumedAt)} UTC.` : ""}</p>
+                          ) : <p className="mt-1 leading-5 text-[var(--muted-strong)]">No linked authorization record.</p>}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[var(--foreground)]">Delivery attempts</p>
+                          {delivery.evidence.attempts.length > 0 ? (
+                            <ol className="mt-1 space-y-1 text-[var(--muted-strong)]">
+                              {delivery.evidence.attempts.map((attempt, index) => <li key={`${attempt.occurredAt}-${index}`}>{attempt.outcome}: {attempt.reason} · {formatTimestamp(attempt.occurredAt)} UTC</li>)}
+                            </ol>
+                          ) : <p className="mt-1 leading-5 text-[var(--muted-strong)]">No attempt ledger entries.</p>}
+                        </div>
+                      </div>
+                    )}
+                    <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Evidence only. No resolution, retry, or provider action is available here.</p>
+                  </details>
+                ) : null}
               </li>
             ))}
           </ol>

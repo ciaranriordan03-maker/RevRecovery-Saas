@@ -19,5 +19,7 @@ describe("essential notification preview", () => {
     expect(source).toContain("Delivery reconciliation");
     expect(source).toContain("No retry actions");
     expect(source).toContain("This view never retries a message or contacts the email provider.");
+    expect(source).toContain("View audit evidence");
+    expect(source).toContain("Evidence only. No resolution, retry, or provider action is available here.");
   });
 });

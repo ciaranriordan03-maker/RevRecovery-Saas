@@ -4,6 +4,7 @@ import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "..
 import {
   mapPreviewNotificationEvent,
   mapNotificationDeliveryReconciliation,
+  type NotificationReconciliationEvidence,
   type PreviewNotificationHistory,
   type RecoveryNotificationEventRow,
 } from "../recovery/notification-event-history";
@@ -12,10 +13,29 @@ import { createSupabaseAdminClient } from "../supabase/admin";
 
 const ACCOUNT_SETTINGS_TABLE = "recovery_account_settings";
 const NOTIFICATION_EVENTS_TABLE = "recovery_notification_events";
+const DELIVERY_ATTEMPTS_TABLE = "recovery_notification_delivery_attempts";
+const TEST_AUTHORIZATIONS_TABLE = "recovery_notification_test_authorizations";
 
 type AccountSettingsRow = {
   id: string;
   user_id: string;
+};
+
+type DeliveryAttemptRow = {
+  authorization_id: string | null;
+  created_at: string;
+  event_id: string;
+  outcome: string;
+  reason_code: string;
+};
+
+type TestAuthorizationRow = {
+  approved_at: string | null;
+  consumed_at: string | null;
+  expires_at: string;
+  id: string;
+  requested_at: string;
+  status: string;
 };
 
 export type PreviewNotificationRecordResult =
@@ -40,8 +60,76 @@ export async function getPreviewRecoveryNotificationHistory(
 
   if (error) return { deliveries: [], events: [], state: "unavailable" };
 
+  const rows = data ?? [];
+  const deliveries = rows.map((row) => mapNotificationDeliveryReconciliation(row)).filter((event) => event !== null);
+  const deliveryIds = deliveries.map((delivery) => delivery.id);
+  const evidenceByEvent = new Map<string, NotificationReconciliationEvidence>();
+  let evidenceAvailable = true;
+
+  if (deliveryIds.length > 0) {
+    const { data: attempts, error: attemptsError } = await supabase
+      .from(DELIVERY_ATTEMPTS_TABLE)
+      .select("event_id, authorization_id, outcome, reason_code, created_at")
+      .eq("user_id", userId)
+      .in("event_id", deliveryIds)
+      .order("created_at", { ascending: true })
+      .returns<DeliveryAttemptRow[]>();
+
+    if (attemptsError) {
+      evidenceAvailable = false;
+    } else {
+      const authorizationIds = [...new Set((attempts ?? []).flatMap((attempt) => attempt.authorization_id ? [attempt.authorization_id] : []))];
+      let authorizationById = new Map<string, TestAuthorizationRow>();
+
+      if (authorizationIds.length > 0) {
+        const { data: authorizations, error: authorizationError } = await supabase
+          .from(TEST_AUTHORIZATIONS_TABLE)
+          .select("id, status, requested_at, approved_at, expires_at, consumed_at")
+          .eq("user_id", userId)
+          .in("id", authorizationIds)
+          .returns<TestAuthorizationRow[]>();
+        if (authorizationError) {
+          evidenceAvailable = false;
+        } else {
+          authorizationById = new Map((authorizations ?? []).map((authorization) => [authorization.id, authorization]));
+        }
+      }
+
+      if (evidenceAvailable) {
+        for (const delivery of deliveries) {
+          const eventAttempts = (attempts ?? []).filter((attempt) => attempt.event_id === delivery.id);
+          const authorizationId = eventAttempts.find((attempt) => attempt.authorization_id)?.authorization_id;
+          const authorization = authorizationId ? authorizationById.get(authorizationId) : null;
+          const sourceRow = rows.find((row) => row.id === delivery.id);
+          evidenceByEvent.set(delivery.id, {
+            attempts: eventAttempts.map((attempt) => ({
+              occurredAt: attempt.created_at,
+              outcome: attempt.outcome,
+              reason: attempt.reason_code.replaceAll("_", " "),
+            })),
+            authorization: authorization ? {
+              approvedAt: authorization.approved_at,
+              consumedAt: authorization.consumed_at,
+              expiresAt: authorization.expires_at,
+              requestedAt: authorization.requested_at,
+              status: authorization.status,
+            } : null,
+            reservation: {
+              claimedAt: sourceRow?.claimed_at ?? null,
+              claimRecorded: Boolean(sourceRow?.claimed_at),
+            },
+          });
+        }
+      }
+    }
+  }
+
   return {
-    deliveries: (data ?? []).map((row) => mapNotificationDeliveryReconciliation(row)).filter((event) => event !== null),
+    deliveries: deliveries.map((delivery) => ({
+      ...delivery,
+      evidence: evidenceByEvent.get(delivery.id) ?? delivery.evidence,
+      evidenceState: evidenceAvailable ? "ready" as const : "unavailable" as const,
+    })),
     events: (data ?? []).map(mapPreviewNotificationEvent).filter((event) => event !== null),
     state: "ready",
   };
