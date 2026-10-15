@@ -53,7 +53,7 @@ async function recordAttempt({
   providerMessageId = null,
 }: {
   event: DeliveryEventRow;
-  outcome: "blocked" | "claimed" | "failed" | "sent";
+  outcome: "accepted" | "blocked" | "claimed" | "failed" | "sent";
   reasonCode: string;
   recipientEmail: string;
   providerMessageId?: string | null;
@@ -107,8 +107,8 @@ async function sendTestNotification({
   });
 
   if (!response.ok) throw new Error(`resend_http_${response.status}`);
-  const body = (await response.json()) as { id?: string };
-  return body.id ?? null;
+  const body = await response.json().catch(() => null) as { id?: string } | null;
+  return body?.id ?? null;
 }
 
 export async function deliverQueuedTestNotification(
@@ -181,49 +181,65 @@ export async function deliverReservedTestNotification(
 
   if (!domain) return { outcome: "blocked", reason: "domain_unverified" };
 
+  let providerMessageId: string | null;
   try {
-    const providerMessageId = await sendTestNotification({
+    providerMessageId = await sendTestNotification({
       domain: domain.domain,
       event,
       recipient: decision.recipient,
     });
-    const { data: completed, error } = await supabase
-      .from(EVENTS_TABLE)
-      .update({
-        claimed_at: null,
-        claim_token: null,
-        last_error: null,
-        provider_message_id: providerMessageId,
-        sent_at: new Date().toISOString(),
-        status: "sent",
-      })
-      .eq("id", event.id)
-      .eq("claim_token", claimToken)
-      .select("id")
-      .maybeSingle<{ id: string }>();
-    if (error || !completed) throw new Error("delivery_completion_failed");
-
-    await recordAttempt({
-      event,
-      outcome: "sent",
-      providerMessageId,
-      reasonCode: "authorized_test_notification_sent",
-      recipientEmail: decision.recipient,
-    });
-    return { outcome: "sent", providerMessageId };
   } catch (error) {
-    const reason = error instanceof Error ? error.message : "notification_delivery_failed";
-    await supabase
-      .from(EVENTS_TABLE)
-      .update({ claimed_at: null, claim_token: null, last_error: reason, status: "failed" })
-      .eq("id", event.id)
-      .eq("claim_token", claimToken);
+    const reason = error instanceof Error ? error.message : "provider_outcome_unknown";
+    await recordAttempt({ event, outcome: "failed", reasonCode: reason, recipientEmail: decision.recipient });
+    return { outcome: "failed", reason: "provider_outcome_unknown" };
+  }
+
+  if (!providerMessageId) {
     await recordAttempt({
       event,
       outcome: "failed",
-      reasonCode: reason,
+      reasonCode: "provider_accepted_identifier_missing",
       recipientEmail: decision.recipient,
     });
-    return { outcome: "failed", reason };
+    return { outcome: "failed", reason: "provider_accepted_identifier_missing" };
   }
+
+  const { error: acceptanceError } = await supabase.rpc(
+    "record_notification_test_provider_acceptance",
+    {
+      requested_claim_token: claimToken,
+      requested_event_id: event.id,
+      requested_provider_message_id: providerMessageId,
+    },
+  );
+  if (acceptanceError) {
+    await recordAttempt({
+      event,
+      outcome: "failed",
+      providerMessageId,
+      reasonCode: "provider_accepted_recording_pending",
+      recipientEmail: decision.recipient,
+    });
+    return { outcome: "failed", reason: "provider_accepted_recording_pending" };
+  }
+
+  const { error: finalizationError } = await supabase.rpc(
+    "finalize_accepted_notification_test_delivery",
+    {
+      requested_event_id: event.id,
+      requested_provider_message_id: providerMessageId,
+    },
+  );
+  if (finalizationError) {
+    await recordAttempt({
+      event,
+      outcome: "failed",
+      providerMessageId,
+      reasonCode: "provider_accepted_finalization_pending",
+      recipientEmail: decision.recipient,
+    });
+    return { outcome: "failed", reason: "provider_accepted_finalization_pending" };
+  }
+
+  return { outcome: "sent", providerMessageId };
 }

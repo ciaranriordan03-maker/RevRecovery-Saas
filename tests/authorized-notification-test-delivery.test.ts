@@ -47,10 +47,11 @@ describe("authorized notification test delivery connection", () => {
     expect(delivery).toContain('.eq("claim_token", claimToken)');
   });
 
-  it("clears both halves of the database claim before finalizing delivery", () => {
+  it("clears ineligible claims and delegates accepted delivery to atomic RPCs", () => {
     expect(delivery).toContain("claimed_at: null");
-    expect(delivery).toContain("status: \"sent\"");
     expect(delivery).toContain("status: \"failed\"");
+    expect(delivery).toContain("record_notification_test_provider_acceptance");
+    expect(delivery).toContain("finalize_accepted_notification_test_delivery");
   });
 
   it("has no route or UI caller and therefore remains dormant", () => {
