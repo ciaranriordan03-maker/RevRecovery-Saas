@@ -4,7 +4,7 @@ import type { NotificationDeliveryReconciliation } from "../app/lib/recovery/not
 
 const baseDelivery: NotificationDeliveryReconciliation = {
   detail: "Needs attention",
-  evidence: { attempts: [], authorization: null, reservation: { claimedAt: null, claimRecorded: false }, resolutionReview: null },
+  evidence: { attempts: [], authorization: null, quarantine: null, reservation: { claimedAt: null, claimRecorded: false }, resolutionReview: null },
   evidenceState: "ready",
   id: "event-1",
   occurredAt: "2026-10-15T12:00:00.000Z",

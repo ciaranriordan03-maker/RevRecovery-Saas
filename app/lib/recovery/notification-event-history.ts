@@ -44,7 +44,25 @@ export type NotificationReconciliationEvidence = {
     claimedAt: string | null;
     claimRecorded: boolean;
   };
+  quarantine: NotificationQuarantineEvidence | null;
   resolutionReview: NotificationResolutionReviewEvidence | null;
+};
+
+export type NotificationQuarantineEvidence = {
+  appliedAt: string;
+  appliedByRole: "reviewer" | "system";
+  decisionScope: string;
+  evidenceSummary: string;
+  resolutionRequestId: string;
+};
+
+export type NotificationQuarantineRow = {
+  applied_by: string;
+  created_at: string;
+  decision_scope: string;
+  event_id: string;
+  evidence_summary: string;
+  resolution_request_id: string;
 };
 
 export type NotificationResolutionReviewEvidence = {
@@ -87,9 +105,26 @@ export type NotificationResolutionRequestAuditRow = {
 export const EMPTY_RECONCILIATION_EVIDENCE: NotificationReconciliationEvidence = {
   attempts: [],
   authorization: null,
+  quarantine: null,
   reservation: { claimedAt: null, claimRecorded: false },
   resolutionReview: null,
 };
+
+export function mapNotificationQuarantine(
+  quarantine: NotificationQuarantineRow,
+  request: NotificationResolutionRequestRow | undefined,
+): NotificationQuarantineEvidence | null {
+  if (!quarantine.event_id || !quarantine.resolution_request_id || !quarantine.evidence_summary.trim()) return null;
+  if (Number.isNaN(new Date(quarantine.created_at).getTime())) return null;
+
+  return {
+    appliedAt: quarantine.created_at,
+    appliedByRole: request?.reviewer_id === quarantine.applied_by ? "reviewer" : "system",
+    decisionScope: quarantine.decision_scope,
+    evidenceSummary: quarantine.evidence_summary,
+    resolutionRequestId: quarantine.resolution_request_id,
+  };
+}
 
 export function mapNotificationResolutionReview(
   request: NotificationResolutionRequestRow,

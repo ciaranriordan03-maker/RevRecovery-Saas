@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapNotificationResolutionReview } from "../app/lib/recovery/notification-event-history";
+import { mapNotificationQuarantine, mapNotificationResolutionReview } from "../app/lib/recovery/notification-event-history";
 
 const request = {
   decision_scope: "quarantine_only",
@@ -43,5 +43,34 @@ describe("notification resolution review history", () => {
 
   it("rejects malformed request timestamps", () => {
     expect(mapNotificationResolutionReview({ ...request, requested_at: "invalid" }, [])).toBeNull();
+  });
+
+  it("maps quarantine evidence to a reviewer role without exposing identity IDs", () => {
+    const result = mapNotificationQuarantine({
+      applied_by: "reviewer-1",
+      created_at: "2026-10-15T16:32:00.000Z",
+      decision_scope: "quarantine_only",
+      event_id: "event-1",
+      evidence_summary: "Reviewed quarantine applied once.",
+      resolution_request_id: "request-1",
+    }, request);
+
+    expect(result).toMatchObject({
+      appliedByRole: "reviewer",
+      decisionScope: "quarantine_only",
+      evidenceSummary: "Reviewed quarantine applied once.",
+    });
+    expect(JSON.stringify(result)).not.toContain("reviewer-1");
+  });
+
+  it("rejects malformed quarantine evidence", () => {
+    expect(mapNotificationQuarantine({
+      applied_by: "reviewer-1",
+      created_at: "invalid",
+      decision_scope: "quarantine_only",
+      event_id: "event-1",
+      evidence_summary: "Reviewed.",
+      resolution_request_id: "request-1",
+    }, request)).toBeNull();
   });
 });

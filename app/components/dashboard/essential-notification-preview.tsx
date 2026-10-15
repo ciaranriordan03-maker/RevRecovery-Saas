@@ -244,6 +244,24 @@ export function EssentialNotificationPreview({
                     <p className="mt-3 border-t border-[var(--primary)] pt-3 text-xs font-medium leading-5 text-[var(--primary)]">Read only. No mutation, retry, or delivery control is exposed.</p>
                   </div>
                 ) : null}
+                {delivery.evidence.quarantine ? (
+                  <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--success)] bg-[var(--success-soft)] p-4" aria-label="Recorded quarantine evidence">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--success)]">D4w · Final quarantine evidence</p>
+                      <span className="rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--success)]">Quarantined</span>
+                    </div>
+                    <h4 className="mt-2 text-sm font-medium text-[var(--foreground)]">Single-use resolution completed</h4>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">The real quarantine record was read from the development database. The original reservation and delivery-attempt evidence remain preserved.</p>
+                    <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
+                      <div><dt className="font-medium text-[var(--foreground)]">Final state</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]">Quarantined and non-retryable</dd></div>
+                      <div><dt className="font-medium text-[var(--foreground)]">Applied by</dt><dd className="mt-1 capitalize leading-5 text-[var(--muted-strong)]">{delivery.evidence.quarantine.appliedByRole}</dd></div>
+                      <div><dt className="font-medium text-[var(--foreground)]">Applied</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]"><time dateTime={delivery.evidence.quarantine.appliedAt}>{formatTimestamp(delivery.evidence.quarantine.appliedAt)} UTC</time></dd></div>
+                      <div><dt className="font-medium text-[var(--foreground)]">Decision scope</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]">{delivery.evidence.quarantine.decisionScope.replaceAll("_", " ")}</dd></div>
+                      <div className="sm:col-span-2"><dt className="font-medium text-[var(--foreground)]">Application evidence</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]">{delivery.evidence.quarantine.evidenceSummary}</dd></div>
+                    </dl>
+                    <p className="mt-3 border-t border-[var(--success)] pt-3 text-xs font-medium leading-5 text-[var(--success)]">Immutable outcome. No retry, delivery, provider-contact, or mutation control is exposed.</p>
+                  </div>
+                ) : null}
               </li>
               );
             })}

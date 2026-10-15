@@ -4,8 +4,10 @@ import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "..
 import {
   mapPreviewNotificationEvent,
   mapNotificationDeliveryReconciliation,
+  mapNotificationQuarantine,
   mapNotificationResolutionReview,
   type NotificationReconciliationEvidence,
+  type NotificationQuarantineRow,
   type NotificationResolutionRequestAuditRow,
   type NotificationResolutionRequestRow,
   type PreviewNotificationHistory,
@@ -20,6 +22,7 @@ const DELIVERY_ATTEMPTS_TABLE = "recovery_notification_delivery_attempts";
 const TEST_AUTHORIZATIONS_TABLE = "recovery_notification_test_authorizations";
 const RESOLUTION_REQUESTS_TABLE = "recovery_notification_resolution_requests";
 const RESOLUTION_AUDIT_TABLE = "recovery_notification_resolution_request_audit";
+const QUARANTINES_TABLE = "recovery_notification_quarantines";
 
 type AccountSettingsRow = {
   id: string;
@@ -110,6 +113,7 @@ export async function getPreviewRecoveryNotificationHistory(
           .returns<NotificationResolutionRequestRow[]>();
 
         let resolutionAudit: NotificationResolutionRequestAuditRow[] = [];
+        let quarantines: NotificationQuarantineRow[] = [];
         if (resolutionRequestsError) {
           evidenceAvailable = false;
         } else {
@@ -125,6 +129,17 @@ export async function getPreviewRecoveryNotificationHistory(
             if (auditError) evidenceAvailable = false;
             else resolutionAudit = auditRows ?? [];
           }
+
+          if (evidenceAvailable) {
+            const { data: quarantineRows, error: quarantineError } = await supabase
+              .from(QUARANTINES_TABLE)
+              .select("event_id, resolution_request_id, applied_by, decision_scope, evidence_summary, created_at")
+              .eq("user_id", userId)
+              .in("event_id", deliveryIds)
+              .returns<NotificationQuarantineRow[]>();
+            if (quarantineError) evidenceAvailable = false;
+            else quarantines = quarantineRows ?? [];
+          }
         }
 
         for (const delivery of deliveries) {
@@ -133,6 +148,7 @@ export async function getPreviewRecoveryNotificationHistory(
           const authorization = authorizationId ? authorizationById.get(authorizationId) : null;
           const sourceRow = rows.find((row) => row.id === delivery.id);
           const resolutionRequest = (resolutionRequests ?? []).find((request) => request.event_id === delivery.id);
+          const quarantine = quarantines.find((candidate) => candidate.event_id === delivery.id);
           evidenceByEvent.set(delivery.id, {
             attempts: eventAttempts.map((attempt) => ({
               occurredAt: attempt.created_at,
@@ -150,6 +166,12 @@ export async function getPreviewRecoveryNotificationHistory(
               claimedAt: sourceRow?.claimed_at ?? null,
               claimRecorded: Boolean(sourceRow?.claimed_at),
             },
+            quarantine: quarantine
+              ? mapNotificationQuarantine(
+                  quarantine,
+                  (resolutionRequests ?? []).find((request) => request.id === quarantine.resolution_request_id),
+                )
+              : null,
             resolutionReview: resolutionRequest
               ? mapNotificationResolutionReview(resolutionRequest, resolutionAudit)
               : null,
@@ -160,11 +182,19 @@ export async function getPreviewRecoveryNotificationHistory(
   }
 
   return {
-    deliveries: deliveries.map((delivery) => ({
-      ...delivery,
-      evidence: evidenceByEvent.get(delivery.id) ?? delivery.evidence,
-      evidenceState: evidenceAvailable ? "ready" as const : "unavailable" as const,
-    })),
+    deliveries: deliveries.map((delivery) => {
+      const evidence = evidenceByEvent.get(delivery.id) ?? delivery.evidence;
+      return {
+        ...delivery,
+        ...(evidence.quarantine ? {
+          detail: "This stale reservation was quarantined after independent review. Its original evidence is preserved and further delivery attempts are blocked.",
+          state: "finalized" as const,
+          statusLabel: "Quarantined",
+        } : {}),
+        evidence,
+        evidenceState: evidenceAvailable ? "ready" as const : "unavailable" as const,
+      };
+    }),
     events: (data ?? []).map(mapPreviewNotificationEvent).filter((event) => event !== null),
     state: "ready",
   };

@@ -31,5 +31,9 @@ describe("essential notification preview", () => {
     expect(source).toContain("Real audit-only resolution review");
     expect(source).toContain("Confirmed — requester and reviewer are separate identities.");
     expect(source).toContain("Read only. No mutation, retry, or delivery control is exposed.");
+    expect(source).toContain("D4w · Final quarantine evidence");
+    expect(source).toContain("Single-use resolution completed");
+    expect(source).toContain("Quarantined and non-retryable");
+    expect(source).toContain("Immutable outcome. No retry, delivery, provider-contact, or mutation control is exposed.");
   });
 });
