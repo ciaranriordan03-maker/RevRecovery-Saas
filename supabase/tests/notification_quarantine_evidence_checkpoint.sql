@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(8);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at) values
   ('a0000000-0000-0000-0000-000000000001', 'checkpoint-owner@example.invalid', 'authenticated', 'authenticated', now(), now()),
@@ -88,6 +88,12 @@ select is(
   1, 'the checkpoint records its canonical format version'
 );
 
+select is(
+  (select evidence_fingerprint from public.recovery_notification_quarantine_checkpoints where quarantine_id = 'a7000000-0000-0000-0000-000000000001'),
+  public.notification_quarantine_evidence_fingerprint('a7000000-0000-0000-0000-000000000001'),
+  'the live evidence initially matches its immutable checkpoint'
+);
+
 select throws_ok(
   $$update public.recovery_notification_quarantine_checkpoints set canonical_version = 1 where quarantine_id = 'a7000000-0000-0000-0000-000000000001'$$,
   'P0001', 'Notification quarantine evidence checkpoints are immutable',
@@ -98,6 +104,16 @@ select throws_ok(
   $$delete from public.recovery_notification_quarantine_checkpoints where quarantine_id = 'a7000000-0000-0000-0000-000000000001'$$,
   'P0001', 'Notification quarantine evidence checkpoints are immutable',
   'checkpoint deletion is rejected'
+);
+
+update public.recovery_notification_quarantines
+set evidence_summary = 'Locally simulated evidence change.'
+where id = 'a7000000-0000-0000-0000-000000000001';
+
+select isnt(
+  (select evidence_fingerprint from public.recovery_notification_quarantine_checkpoints where quarantine_id = 'a7000000-0000-0000-0000-000000000001'),
+  public.notification_quarantine_evidence_fingerprint('a7000000-0000-0000-0000-000000000001'),
+  'a coordinated evidence change no longer matches the immutable checkpoint'
 );
 
 select is(
