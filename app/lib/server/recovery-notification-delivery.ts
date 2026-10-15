@@ -1,7 +1,5 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
-
 import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "../recovery/essential-notification-policy";
 import { evaluateNotificationDeliveryGate } from "../recovery/notification-delivery-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
@@ -11,6 +9,7 @@ const ATTEMPTS_TABLE = "recovery_notification_delivery_attempts";
 
 type DeliveryEventRow = {
   account_settings_id: string;
+  claim_token: string | null;
   delivery_enabled_snapshot: boolean;
   id: string;
   payload: Record<string, unknown>;
@@ -115,15 +114,30 @@ async function sendTestNotification({
 export async function deliverQueuedTestNotification(
   eventId: string,
 ): Promise<NotificationDeliveryResult> {
+  void eventId;
+  return { outcome: "blocked", reason: "single_use_authorization_required" };
+}
+
+export async function deliverReservedTestNotification(
+  eventId: string,
+  claimToken: string,
+): Promise<NotificationDeliveryResult> {
+  if (process.env.ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED !== "true") {
+    return { outcome: "blocked", reason: "authorized_test_delivery_disabled" };
+  }
+
   const supabase = createSupabaseAdminClient();
   if (!supabase) return { outcome: "blocked", reason: "storage_unavailable" };
 
   const { data: event, error: eventError } = await supabase
     .from(EVENTS_TABLE)
-    .select("id, user_id, account_settings_id, rule_id, status, recipient_email, delivery_enabled_snapshot, payload")
+    .select("id, user_id, account_settings_id, rule_id, status, recipient_email, delivery_enabled_snapshot, payload, claim_token")
     .eq("id", eventId)
     .maybeSingle<DeliveryEventRow>();
   if (eventError || !event) return { outcome: "blocked", reason: "event_unavailable" };
+  if (event.claim_token !== claimToken || event.status !== "queued") {
+    return { outcome: "blocked", reason: "reservation_mismatch" };
+  }
 
   const [{ data: settings }, { data: domain }] = await Promise.all([
     supabase
@@ -151,6 +165,11 @@ export async function deliverQueuedTestNotification(
   });
 
   if (!decision.allowed) {
+    await supabase
+      .from(EVENTS_TABLE)
+      .update({ claim_token: null, last_error: decision.reason, status: "failed" })
+      .eq("id", event.id)
+      .eq("claim_token", claimToken);
     await recordAttempt({
       event,
       outcome: "blocked",
@@ -162,58 +181,32 @@ export async function deliverQueuedTestNotification(
 
   if (!domain) return { outcome: "blocked", reason: "domain_unverified" };
 
-  const claimToken = randomUUID();
-  const { data: claimed, error: claimError } = await supabase
-    .from(EVENTS_TABLE)
-    .update({ claim_token: claimToken, claimed_at: new Date().toISOString() })
-    .eq("id", event.id)
-    .eq("status", "queued")
-    .is("claim_token", null)
-    .select("id")
-    .maybeSingle<{ id: string }>();
-
-  if (claimError || !claimed) {
-    await recordAttempt({
-      event,
-      outcome: "blocked",
-      reasonCode: "claim_unavailable",
-      recipientEmail: decision.recipient,
-    });
-    return { outcome: "blocked", reason: "claim_unavailable" };
-  }
-
-  await recordAttempt({
-    event,
-    outcome: "claimed",
-    reasonCode: "all_delivery_gates_passed",
-    recipientEmail: decision.recipient,
-  });
-
   try {
     const providerMessageId = await sendTestNotification({
       domain: domain.domain,
       event,
       recipient: decision.recipient,
     });
-    const sentAt = new Date().toISOString();
-    const { error } = await supabase
+    const { data: completed, error } = await supabase
       .from(EVENTS_TABLE)
       .update({
         claim_token: null,
         last_error: null,
         provider_message_id: providerMessageId,
-        sent_at: sentAt,
+        sent_at: new Date().toISOString(),
         status: "sent",
       })
       .eq("id", event.id)
-      .eq("claim_token", claimToken);
-    if (error) throw new Error("delivery_completion_failed");
+      .eq("claim_token", claimToken)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+    if (error || !completed) throw new Error("delivery_completion_failed");
 
     await recordAttempt({
       event,
       outcome: "sent",
       providerMessageId,
-      reasonCode: "test_notification_sent",
+      reasonCode: "authorized_test_notification_sent",
       recipientEmail: decision.recipient,
     });
     return { outcome: "sent", providerMessageId };

@@ -27,9 +27,10 @@ describe("notification test-delivery foundation", () => {
     expect(delivery).not.toContain("tryRecordPreviewRecoveryNotificationEvent");
   });
 
-  it("uses an idempotency key, an exclusive claim, and an append-only attempt ledger", () => {
+  it("requires the single-use reservation path and keeps an append-only attempt ledger", () => {
     expect(delivery).toContain('"Idempotency-Key": `essential-notification/${event.id}`');
-    expect(delivery).toContain('.is("claim_token", null)');
+    expect(delivery).toContain('reason: "single_use_authorization_required"');
+    expect(delivery).toContain("event.claim_token !== claimToken");
     expect(delivery).toContain("recovery_notification_delivery_attempts");
     expect(migration).toContain("recovery_notification_events_claim_token_unique");
     expect(migration).toContain("recovery_notification_events_claim_state_check");
