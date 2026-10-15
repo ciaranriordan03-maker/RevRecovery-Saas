@@ -81,7 +81,8 @@ function SegmentBreakdown({ rows }: { rows: SegmentMetric[] }) {
         {rows.map((row) => (
           <article className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4" key={row.label}>
             <h3 className="text-sm font-medium text-[var(--foreground)]">{row.label}</h3>
-            <p className="mt-2 text-2xl font-semibold text-[var(--success)]">{row.recoveredRevenue}</p>
+            <p className="mt-3 text-xs text-[var(--muted)]">Amount due on invoices later recovered</p>
+            <p className="mt-1 text-2xl font-semibold text-[var(--success)]">{row.amountDueOnRecoveredInvoices}</p>
             <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
               <div><dt className="text-[var(--muted)]">Cases</dt><dd className="mt-1 font-medium">{row.totalCount}</dd></div>
               <div><dt className="text-[var(--muted)]">Recovery rate</dt><dd className="mt-1 font-medium">{row.recoveryRate}%</dd></div>
@@ -276,10 +277,10 @@ function EmailRecoveryTable({ rows }: { rows: EmailRecoveryMetric[] }) {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-[var(--foreground)]">
-            Recoveries Attributed by Email Step
+            Recoveries after latest prior email
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            For directional reporting, each recovery is attributed to the latest email sent before the payment recovered.
+            For directional reporting, each recovery is associated with the latest email sent before Stripe recorded the payment as recovered. This timing does not prove that the email caused the recovery.
           </p>
         </div>
       </div>
@@ -288,8 +289,8 @@ function EmailRecoveryTable({ rows }: { rows: EmailRecoveryMetric[] }) {
         <div className="grid grid-cols-[1.2fr_0.8fr_0.8fr_1fr] bg-[var(--surface-muted)] px-4 py-3 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
           <span>Email</span>
           <span>Sent</span>
-          <span>Attributed</span>
-          <span>Attributed rate</span>
+          <span>Associated</span>
+          <span>Associated rate</span>
         </div>
 
         {rows.length === 0 ? (

@@ -45,6 +45,7 @@ export type MeasurementQualityMetric = {
 };
 
 export type SegmentMetric = {
+  amountDueOnRecoveredInvoices: string;
   averageRecoveryTime: string;
   clickRate: number | null;
   deliveryRate: number | null;
@@ -52,7 +53,6 @@ export type SegmentMetric = {
   openCount: number;
   openRate: number | null;
   recoveredCount: number;
-  recoveredRevenue: string;
   recoveryRate: number;
   sentCount: number;
   totalCount: number;
@@ -527,6 +527,11 @@ function buildSegmentMetrics(
       ? recoveryHours.reduce((total, value) => total + value, 0) / recoveryHours.length
       : null;
     return {
+      amountDueOnRecoveredInvoices: formatCurrencyAmounts(aggregateCurrencyAmounts(
+        segmentRows
+          .filter((row) => row.status === "recovered")
+          .map((row) => ({ amount: row.amount_due ?? 0, currency: row.currency ?? null })),
+      )),
       averageRecoveryTime: formatRecoveryTime(averageHours),
       clickRate: engagement.clickRate,
       deliveryRate: delivery.deliveryRate,
@@ -534,11 +539,6 @@ function buildSegmentMetrics(
       openCount: segmentRows.length - recoveredCount,
       openRate: engagement.openRate,
       recoveredCount,
-      recoveredRevenue: formatCurrencyAmounts(aggregateCurrencyAmounts(
-        segmentRows
-          .filter((row) => row.status === "recovered")
-          .map((row) => ({ amount: row.amount_due ?? 0, currency: row.currency ?? null })),
-      )),
       recoveryRate: percent(recoveredCount, segmentRows.length),
       sentCount: segmentMessages.filter((message) => message.status === "sent").length,
       totalCount: segmentRows.length,
