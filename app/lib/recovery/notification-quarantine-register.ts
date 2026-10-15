@@ -7,6 +7,7 @@ export type NotificationQuarantineRegisterEntry = {
   evidenceComplete: boolean;
   eventId: string;
   independentReviewConfirmed: boolean;
+  checkpointStatus: "changed" | "missing" | "verified";
   integrityIssues: string[];
   integrityStatus: "attention_required" | "verified";
   recipientEmail: string;
@@ -38,6 +39,8 @@ function inspectEvidenceIntegrity(delivery: NotificationDeliveryReconciliation) 
 
   if (!review) return ["The linked resolution-review record is missing."];
   if (!quarantine) return ["The final quarantine record is missing."];
+  if (!quarantine.checkpoint) issues.push("The immutable evidence checkpoint is missing or unavailable.");
+  if (quarantine.checkpoint?.status === "changed") issues.push("The live quarantine or audit evidence no longer matches its immutable checkpoint.");
   if (!review.requesterReviewerSeparated) issues.push("Independent requester and reviewer identities are not confirmed.");
   if (review.status !== "quarantined") issues.push("The resolution-review status does not match the final quarantine state.");
   if (review.decisionScope !== quarantine.decisionScope) issues.push("The approved decision scope does not match the applied quarantine scope.");
@@ -74,6 +77,7 @@ export function buildNotificationQuarantineRegister(
       return [{
         ageLabel: formatAge(quarantine.appliedAt, now),
         appliedAt: quarantine.appliedAt,
+        checkpointStatus: quarantine.checkpoint?.status ?? "missing",
         decisionScope: quarantine.decisionScope,
         evidenceComplete: integrityIssues.length === 0,
         eventId: delivery.id,

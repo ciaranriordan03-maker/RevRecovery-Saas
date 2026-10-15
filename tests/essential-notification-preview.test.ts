@@ -39,8 +39,9 @@ describe("essential notification preview", () => {
     expect(source).toContain("Quarantine health and evidence");
     expect(source).toContain("Quarantined and non-retryable");
     expect(source).toContain("D4y · Evidence integrity monitor");
-    expect(source).toContain("Quarantine evidence is internally consistent");
-    expect(source).toContain("Integrity verified against the linked review and audit ledger.");
+    expect(source).toContain("Checkpoint verified");
+    expect(source).toContain("Evidence changed");
+    expect(source).toContain("Checkpoint verified against the live quarantine and ordered audit ledger.");
     expect(source).toContain("Permanent safety boundary: this monitor is read only and exposes no restore, retry, deletion, delivery, or provider-contact control.");
   });
 });

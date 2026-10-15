@@ -295,11 +295,11 @@ export function EssentialNotificationPreview({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className={`text-xs font-medium uppercase tracking-[0.04em] ${quarantineRegister.integrityIssueCount === 0 ? "text-[var(--success)]" : "text-[var(--warning-text)]"}`}>D4y · Evidence integrity monitor</p>
-                  <h4 className="mt-2 text-sm font-medium text-[var(--foreground)]" id="notification-quarantine-integrity-heading">{quarantineRegister.integrityIssueCount === 0 ? "Quarantine evidence is internally consistent" : "Quarantine evidence needs attention"}</h4>
+                  <h4 className="mt-2 text-sm font-medium text-[var(--foreground)]" id="notification-quarantine-integrity-heading">{quarantineRegister.integrityIssueCount === 0 ? "Checkpoint verified" : "Evidence changed"}</h4>
                 </div>
                 <span className="rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--foreground)]">Read only</span>
               </div>
-              <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">Checks scope, reviewer separation, single-use audit actions, timestamp order, and final evidence against the immutable ledger.</p>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">Recomputes the database-side fingerprint and compares the live quarantine and ordered audit evidence with the immutable checkpoint.</p>
               <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
                 <div><dt className="text-[var(--muted)]">Integrity verified</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{quarantineRegister.verifiedIntegrityCount} of {quarantineRegister.total}</dd></div>
                 <div><dt className="text-[var(--muted)]">Detected inconsistencies</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{quarantineRegister.integrityIssueCount}</dd></div>
@@ -320,11 +320,12 @@ export function EssentialNotificationPreview({
                     </div>
                     <span className={`rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium ${entry.evidenceComplete ? "text-[var(--success)]" : "text-[var(--warning-text)]"}`}>{entry.evidenceComplete ? "Evidence complete" : "Evidence needs review"}</span>
                   </div>
-                  <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-4">
+                  <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2 xl:grid-cols-5">
                     <div><dt className="text-[var(--muted)]">Age</dt><dd className="mt-1 text-[var(--foreground)]">{entry.ageLabel}</dd></div>
                     <div><dt className="text-[var(--muted)]">Applied</dt><dd className="mt-1 text-[var(--foreground)]"><time dateTime={entry.appliedAt}>{formatTimestamp(entry.appliedAt)} UTC</time></dd></div>
                     <div><dt className="text-[var(--muted)]">Scope</dt><dd className="mt-1 text-[var(--foreground)]">{entry.decisionScope.replaceAll("_", " ")}</dd></div>
                     <div><dt className="text-[var(--muted)]">Independent review</dt><dd className="mt-1 text-[var(--foreground)]">{entry.independentReviewConfirmed ? "Confirmed" : "Needs review"}</dd></div>
+                    <div><dt className="text-[var(--muted)]">Evidence checkpoint</dt><dd className="mt-1 text-[var(--foreground)]">{entry.checkpointStatus === "verified" ? "Checkpoint verified" : entry.checkpointStatus === "changed" ? "Evidence changed" : "Checkpoint unavailable"}</dd></div>
                   </dl>
                   {entry.integrityIssues.length > 0 ? (
                     <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--warning)] bg-[var(--surface)] p-3">
@@ -332,7 +333,7 @@ export function EssentialNotificationPreview({
                       <ul className="mt-1 space-y-1 text-xs leading-5 text-[var(--muted-strong)]">{entry.integrityIssues.map((issue) => <li key={issue}>• {issue}</li>)}</ul>
                     </div>
                   ) : (
-                    <p className="mt-3 border-t border-[var(--success)] pt-3 text-xs font-medium text-[var(--success)]">Integrity verified against the linked review and audit ledger.</p>
+                    <p className="mt-3 border-t border-[var(--success)] pt-3 text-xs font-medium text-[var(--success)]">Checkpoint verified against the live quarantine and ordered audit ledger.</p>
                   )}
                 </li>
               ))}

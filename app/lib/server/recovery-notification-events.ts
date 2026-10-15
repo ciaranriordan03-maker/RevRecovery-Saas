@@ -7,6 +7,7 @@ import {
   mapNotificationQuarantine,
   mapNotificationResolutionReview,
   type NotificationReconciliationEvidence,
+  type NotificationQuarantineCheckpointRow,
   type NotificationQuarantineRow,
   type NotificationResolutionRequestAuditRow,
   type NotificationResolutionRequestRow,
@@ -23,6 +24,7 @@ const TEST_AUTHORIZATIONS_TABLE = "recovery_notification_test_authorizations";
 const RESOLUTION_REQUESTS_TABLE = "recovery_notification_resolution_requests";
 const RESOLUTION_AUDIT_TABLE = "recovery_notification_resolution_request_audit";
 const QUARANTINES_TABLE = "recovery_notification_quarantines";
+const QUARANTINE_CHECKPOINTS_TABLE = "recovery_notification_quarantine_checkpoints";
 
 type AccountSettingsRow = {
   id: string;
@@ -114,6 +116,8 @@ export async function getPreviewRecoveryNotificationHistory(
 
         let resolutionAudit: NotificationResolutionRequestAuditRow[] = [];
         let quarantines: NotificationQuarantineRow[] = [];
+        let checkpoints: NotificationQuarantineCheckpointRow[] = [];
+        const liveFingerprintByQuarantine = new Map<string, string>();
         if (resolutionRequestsError) {
           evidenceAvailable = false;
         } else {
@@ -133,12 +137,41 @@ export async function getPreviewRecoveryNotificationHistory(
           if (evidenceAvailable) {
             const { data: quarantineRows, error: quarantineError } = await supabase
               .from(QUARANTINES_TABLE)
-              .select("event_id, resolution_request_id, applied_by, decision_scope, evidence_summary, created_at")
+              .select("id, event_id, resolution_request_id, applied_by, decision_scope, evidence_summary, created_at")
               .eq("user_id", userId)
               .in("event_id", deliveryIds)
               .returns<NotificationQuarantineRow[]>();
             if (quarantineError) evidenceAvailable = false;
             else quarantines = quarantineRows ?? [];
+
+            const quarantineIds = quarantines.map((quarantine) => quarantine.id);
+            if (evidenceAvailable && quarantineIds.length > 0) {
+              const { data: checkpointRows, error: checkpointError } = await supabase
+                .from(QUARANTINE_CHECKPOINTS_TABLE)
+                .select("quarantine_id, canonical_version, evidence_fingerprint, created_at")
+                .eq("user_id", userId)
+                .in("quarantine_id", quarantineIds)
+                .returns<NotificationQuarantineCheckpointRow[]>();
+              if (checkpointError) {
+                evidenceAvailable = false;
+              } else {
+                checkpoints = checkpointRows ?? [];
+                const fingerprintResults = await Promise.all(quarantineIds.map(async (quarantineId) => {
+                  const { data: fingerprint, error: fingerprintError } = await supabase.rpc(
+                    "notification_quarantine_evidence_fingerprint",
+                    { requested_quarantine_id: quarantineId },
+                  );
+                  return { fingerprint, fingerprintError, quarantineId };
+                }));
+                if (fingerprintResults.some((result) => result.fingerprintError || typeof result.fingerprint !== "string")) {
+                  evidenceAvailable = false;
+                } else {
+                  for (const result of fingerprintResults) {
+                    liveFingerprintByQuarantine.set(result.quarantineId, result.fingerprint as string);
+                  }
+                }
+              }
+            }
           }
         }
 
@@ -170,6 +203,8 @@ export async function getPreviewRecoveryNotificationHistory(
               ? mapNotificationQuarantine(
                   quarantine,
                   (resolutionRequests ?? []).find((request) => request.id === quarantine.resolution_request_id),
+                  checkpoints.find((checkpoint) => checkpoint.quarantine_id === quarantine.id),
+                  liveFingerprintByQuarantine.get(quarantine.id),
                 )
               : null,
             resolutionReview: resolutionRequest

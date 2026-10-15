@@ -52,6 +52,7 @@ describe("notification resolution review history", () => {
       decision_scope: "quarantine_only",
       event_id: "event-1",
       evidence_summary: "Reviewed quarantine applied once.",
+      id: "quarantine-1",
       resolution_request_id: "request-1",
     }, request);
 
@@ -63,6 +64,31 @@ describe("notification resolution review history", () => {
     expect(JSON.stringify(result)).not.toContain("reviewer-1");
   });
 
+  it("reports only the database-side checkpoint comparison result", () => {
+    const quarantine = {
+      applied_by: "reviewer-1",
+      created_at: "2026-10-15T16:32:00.000Z",
+      decision_scope: "quarantine_only",
+      event_id: "event-1",
+      evidence_summary: "Reviewed quarantine applied once.",
+      id: "quarantine-1",
+      resolution_request_id: "request-1",
+    };
+    const checkpoint = {
+      canonical_version: 1,
+      created_at: "2026-10-15T16:32:01.000Z",
+      evidence_fingerprint: "stored-fingerprint",
+      quarantine_id: "quarantine-1",
+    };
+
+    const verified = mapNotificationQuarantine(quarantine, request, checkpoint, "stored-fingerprint");
+    const changed = mapNotificationQuarantine(quarantine, request, checkpoint, "different-fingerprint");
+
+    expect(verified?.checkpoint).toMatchObject({ canonicalVersion: 1, status: "verified" });
+    expect(changed?.checkpoint?.status).toBe("changed");
+    expect(JSON.stringify(verified)).not.toContain("stored-fingerprint");
+  });
+
   it("rejects malformed quarantine evidence", () => {
     expect(mapNotificationQuarantine({
       applied_by: "reviewer-1",
@@ -70,6 +96,7 @@ describe("notification resolution review history", () => {
       decision_scope: "quarantine_only",
       event_id: "event-1",
       evidence_summary: "Reviewed.",
+      id: "quarantine-1",
       resolution_request_id: "request-1",
     }, request)).toBeNull();
   });

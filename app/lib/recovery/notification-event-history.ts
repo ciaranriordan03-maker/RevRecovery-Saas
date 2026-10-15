@@ -51,6 +51,11 @@ export type NotificationReconciliationEvidence = {
 export type NotificationQuarantineEvidence = {
   appliedAt: string;
   appliedByRole: "reviewer" | "system";
+  checkpoint: {
+    canonicalVersion: number;
+    createdAt: string;
+    status: "changed" | "verified";
+  } | null;
   decisionScope: string;
   evidenceSummary: string;
   resolutionRequestId: string;
@@ -62,7 +67,15 @@ export type NotificationQuarantineRow = {
   decision_scope: string;
   event_id: string;
   evidence_summary: string;
+  id: string;
   resolution_request_id: string;
+};
+
+export type NotificationQuarantineCheckpointRow = {
+  canonical_version: number;
+  created_at: string;
+  evidence_fingerprint: string;
+  quarantine_id: string;
 };
 
 export type NotificationResolutionReviewEvidence = {
@@ -113,6 +126,8 @@ export const EMPTY_RECONCILIATION_EVIDENCE: NotificationReconciliationEvidence =
 export function mapNotificationQuarantine(
   quarantine: NotificationQuarantineRow,
   request: NotificationResolutionRequestRow | undefined,
+  checkpoint?: NotificationQuarantineCheckpointRow,
+  liveFingerprint?: string | null,
 ): NotificationQuarantineEvidence | null {
   if (!quarantine.event_id || !quarantine.resolution_request_id || !quarantine.evidence_summary.trim()) return null;
   if (Number.isNaN(new Date(quarantine.created_at).getTime())) return null;
@@ -120,6 +135,11 @@ export function mapNotificationQuarantine(
   return {
     appliedAt: quarantine.created_at,
     appliedByRole: request?.reviewer_id === quarantine.applied_by ? "reviewer" : "system",
+    checkpoint: checkpoint && liveFingerprint ? {
+      canonicalVersion: checkpoint.canonical_version,
+      createdAt: checkpoint.created_at,
+      status: checkpoint.evidence_fingerprint === liveFingerprint ? "verified" : "changed",
+    } : null,
     decisionScope: quarantine.decision_scope,
     evidenceSummary: quarantine.evidence_summary,
     resolutionRequestId: quarantine.resolution_request_id,

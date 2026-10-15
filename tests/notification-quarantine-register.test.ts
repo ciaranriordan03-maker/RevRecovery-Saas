@@ -11,6 +11,11 @@ function delivery(overrides: Partial<NotificationDeliveryReconciliation> = {}): 
       quarantine: {
         appliedAt: "2026-10-15T12:00:00.000Z",
         appliedByRole: "reviewer",
+        checkpoint: {
+          canonicalVersion: 1,
+          createdAt: "2026-10-15T12:00:01.000Z",
+          status: "verified",
+        },
         decisionScope: "quarantine_only",
         evidenceSummary: "Applied.",
         resolutionRequestId: "request-1",
@@ -57,6 +62,7 @@ describe("notification quarantine register", () => {
     });
     expect(register.entries[0]).toMatchObject({
       decisionScope: "quarantine_only",
+      checkpointStatus: "verified",
       evidenceComplete: true,
       independentReviewConfirmed: true,
       integrityIssues: [],
@@ -103,5 +109,30 @@ describe("notification quarantine register", () => {
       "The final quarantine timestamp differs from the immutable audit entry.",
       "The final quarantine evidence differs from the immutable audit entry.",
     ]));
+  });
+
+  it("flags evidence that no longer matches the immutable checkpoint", () => {
+    const changed = delivery();
+    changed.evidence.quarantine = {
+      ...changed.evidence.quarantine!,
+      checkpoint: {
+        ...changed.evidence.quarantine!.checkpoint!,
+        status: "changed",
+      },
+    };
+
+    const entry = buildNotificationQuarantineRegister([changed]).entries[0];
+    expect(entry.checkpointStatus).toBe("changed");
+    expect(entry.integrityStatus).toBe("attention_required");
+    expect(entry.integrityIssues).toContain("The live quarantine or audit evidence no longer matches its immutable checkpoint.");
+  });
+
+  it("flags a missing checkpoint", () => {
+    const missing = delivery();
+    missing.evidence.quarantine = { ...missing.evidence.quarantine!, checkpoint: null };
+
+    const entry = buildNotificationQuarantineRegister([missing]).entries[0];
+    expect(entry.checkpointStatus).toBe("missing");
+    expect(entry.integrityIssues).toContain("The immutable evidence checkpoint is missing or unavailable.");
   });
 });
