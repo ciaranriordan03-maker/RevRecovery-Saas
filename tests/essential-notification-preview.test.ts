@@ -35,5 +35,9 @@ describe("essential notification preview", () => {
     expect(source).toContain("Single-use resolution completed");
     expect(source).toContain("Quarantined and non-retryable");
     expect(source).toContain("Immutable outcome. No retry, delivery, provider-contact, or mutation control is exposed.");
+    expect(source).toContain("D4x · Quarantine register");
+    expect(source).toContain("Quarantine health and evidence");
+    expect(source).toContain("Quarantined and non-retryable");
+    expect(source).toContain("Permanent safety boundary: this register exposes no restore, retry, deletion, delivery, or provider-contact control.");
   });
 });

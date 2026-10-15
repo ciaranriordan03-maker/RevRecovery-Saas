@@ -4,6 +4,7 @@ import type { NotificationActivationReadiness } from "../../lib/recovery/notific
 import { NotificationActivationChecklist } from "./notification-activation-checklist";
 import { buildNotificationReconciliationPlan } from "../../lib/recovery/notification-reconciliation-policy";
 import { buildNotificationResolutionRequestPreview } from "../../lib/recovery/notification-resolution-request-policy";
+import { buildNotificationQuarantineRegister } from "../../lib/recovery/notification-quarantine-register";
 
 function formatTimestamp(value: string) {
   return new Intl.DateTimeFormat("en-IE", {
@@ -23,6 +24,7 @@ export function EssentialNotificationPreview({
   readiness: NotificationActivationReadiness;
 }) {
   const preview = buildEssentialNotificationPreview(accountEmail);
+  const quarantineRegister = buildNotificationQuarantineRegister(history.deliveries);
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]" aria-labelledby="essential-notifications-heading">
@@ -268,6 +270,54 @@ export function EssentialNotificationPreview({
           </ol>
         )}
         <p className="mt-4 text-xs leading-5 text-[var(--muted)]">This view never retries a message or contacts the email provider.</p>
+      </div>
+
+      <div className="mt-5 border-t border-[var(--border)] pt-5" aria-labelledby="notification-quarantine-register-heading">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--success)]">D4x · Quarantine register</p>
+            <h3 className="mt-2 text-sm font-medium text-[var(--foreground)]" id="notification-quarantine-register-heading">Quarantine health and evidence</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">An account-wide read-only register of final, non-retryable notification outcomes.</p>
+          </div>
+          <span className="rounded bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Read only</span>
+        </div>
+
+        {history.state === "unavailable" ? (
+          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--warning)] bg-[var(--warning-soft)] p-4 text-sm text-[var(--warning-text)]">Quarantine health is temporarily unavailable. No delivery or retry action is permitted.</div>
+        ) : quarantineRegister.total === 0 ? (
+          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
+            <p className="text-sm font-medium text-[var(--foreground)]">No quarantined notifications</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Final quarantine outcomes will appear here after a reviewed, single-use transition.</p>
+          </div>
+        ) : (
+          <>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Total quarantined</dt><dd className="mt-1 text-lg font-medium text-[var(--foreground)]">{quarantineRegister.total}</dd></div>
+              <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Complete evidence</dt><dd className="mt-1 text-lg font-medium text-[var(--foreground)]">{quarantineRegister.completeEvidenceCount} of {quarantineRegister.total}</dd></div>
+              <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Oldest quarantine</dt><dd className="mt-1 text-lg font-medium text-[var(--foreground)]">{quarantineRegister.oldestAgeLabel}</dd></div>
+            </dl>
+            <ol className="mt-3 space-y-3">
+              {quarantineRegister.entries.map((entry) => (
+                <li className="rounded-[var(--radius-control)] border border-[var(--success)] bg-[var(--success-soft)] p-4" key={entry.eventId}>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--foreground)]">Quarantined and non-retryable</p>
+                      <p className="mt-1 break-all text-xs leading-5 text-[var(--muted-strong)]">{entry.recipientEmail}</p>
+                    </div>
+                    <span className={`rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium ${entry.evidenceComplete ? "text-[var(--success)]" : "text-[var(--warning-text)]"}`}>{entry.evidenceComplete ? "Evidence complete" : "Evidence needs review"}</span>
+                  </div>
+                  <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-4">
+                    <div><dt className="text-[var(--muted)]">Age</dt><dd className="mt-1 text-[var(--foreground)]">{entry.ageLabel}</dd></div>
+                    <div><dt className="text-[var(--muted)]">Applied</dt><dd className="mt-1 text-[var(--foreground)]"><time dateTime={entry.appliedAt}>{formatTimestamp(entry.appliedAt)} UTC</time></dd></div>
+                    <div><dt className="text-[var(--muted)]">Scope</dt><dd className="mt-1 text-[var(--foreground)]">{entry.decisionScope.replaceAll("_", " ")}</dd></div>
+                    <div><dt className="text-[var(--muted)]">Independent review</dt><dd className="mt-1 text-[var(--foreground)]">{entry.independentReviewConfirmed ? "Confirmed" : "Needs review"}</dd></div>
+                  </dl>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+        <p className="mt-4 text-xs font-medium leading-5 text-[var(--success)]">Permanent safety boundary: this register exposes no restore, retry, deletion, delivery, or provider-contact control.</p>
       </div>
 
       <NotificationActivationChecklist readiness={readiness} />
