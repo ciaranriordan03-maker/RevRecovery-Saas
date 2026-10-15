@@ -21,5 +21,8 @@ describe("essential notification preview", () => {
     expect(source).toContain("This view never retries a message or contacts the email provider.");
     expect(source).toContain("View audit evidence");
     expect(source).toContain("Evidence only. No resolution, retry, or provider action is available here.");
+    expect(source).toContain("D4r · Reviewed resolution plan");
+    expect(source).toContain("Policy preview only");
+    expect(source).toContain("No resolution action is implemented or authorized by this preview.");
   });
 });

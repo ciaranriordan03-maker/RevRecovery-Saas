@@ -2,6 +2,7 @@ import { buildEssentialNotificationPreview } from "../../lib/recovery/essential-
 import type { PreviewNotificationHistory } from "../../lib/recovery/notification-event-history";
 import type { NotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
 import { NotificationActivationChecklist } from "./notification-activation-checklist";
+import { buildNotificationReconciliationPlan } from "../../lib/recovery/notification-reconciliation-policy";
 
 function formatTimestamp(value: string) {
   return new Intl.DateTimeFormat("en-IE", {
@@ -119,7 +120,9 @@ export function EssentialNotificationPreview({
           </div>
         ) : (
           <ol className="mt-4 space-y-3">
-            {history.deliveries.map((delivery) => (
+            {history.deliveries.map((delivery) => {
+              const resolutionPlan = buildNotificationReconciliationPlan(delivery);
+              return (
               <li className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4" key={delivery.id}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -162,8 +165,31 @@ export function EssentialNotificationPreview({
                     <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Evidence only. No resolution, retry, or provider action is available here.</p>
                   </details>
                 ) : null}
+                {resolutionPlan ? (
+                  <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--warning)] bg-[var(--warning-soft)] p-4" aria-label="Read-only resolution policy">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--warning-text)]">D4r · Reviewed resolution plan</p>
+                      <span className="rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Policy preview only</span>
+                    </div>
+                    <h4 className="mt-2 text-sm font-medium text-[var(--foreground)]">{resolutionPlan.title}</h4>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{resolutionPlan.summary}</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs font-medium text-[var(--foreground)]">Required evidence</p>
+                        <ul className="mt-1 space-y-1 text-xs leading-5 text-[var(--muted-strong)]">{resolutionPlan.prerequisites.map((item) => <li key={item}>• {item}</li>)}</ul>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-[var(--foreground)]">Hard prohibitions</p>
+                        <ul className="mt-1 space-y-1 text-xs leading-5 text-[var(--muted-strong)]">{resolutionPlan.prohibitedActions.map((item) => <li key={item}>• {item}</li>)}</ul>
+                      </div>
+                    </div>
+                    <p className="mt-3 border-t border-[var(--warning)] pt-3 text-xs font-medium leading-5 text-[var(--warning-text)]">Permitted future outcome: {resolutionPlan.allowedOutcome}</p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--muted)]">No resolution action is implemented or authorized by this preview.</p>
+                  </div>
+                ) : null}
               </li>
-            ))}
+              );
+            })}
           </ol>
         )}
         <p className="mt-4 text-xs leading-5 text-[var(--muted)]">This view never retries a message or contacts the email provider.</p>
