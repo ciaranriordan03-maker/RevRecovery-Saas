@@ -291,7 +291,21 @@ export function EssentialNotificationPreview({
           </div>
         ) : (
           <>
-            <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className={`mt-4 rounded-[var(--radius-control)] border p-4 ${quarantineRegister.integrityIssueCount === 0 ? "border-[var(--success)] bg-[var(--success-soft)]" : "border-[var(--warning)] bg-[var(--warning-soft)]"}`} aria-labelledby="notification-quarantine-integrity-heading">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className={`text-xs font-medium uppercase tracking-[0.04em] ${quarantineRegister.integrityIssueCount === 0 ? "text-[var(--success)]" : "text-[var(--warning-text)]"}`}>D4y · Evidence integrity monitor</p>
+                  <h4 className="mt-2 text-sm font-medium text-[var(--foreground)]" id="notification-quarantine-integrity-heading">{quarantineRegister.integrityIssueCount === 0 ? "Quarantine evidence is internally consistent" : "Quarantine evidence needs attention"}</h4>
+                </div>
+                <span className="rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--foreground)]">Read only</span>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">Checks scope, reviewer separation, single-use audit actions, timestamp order, and final evidence against the immutable ledger.</p>
+              <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
+                <div><dt className="text-[var(--muted)]">Integrity verified</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{quarantineRegister.verifiedIntegrityCount} of {quarantineRegister.total}</dd></div>
+                <div><dt className="text-[var(--muted)]">Detected inconsistencies</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{quarantineRegister.integrityIssueCount}</dd></div>
+              </dl>
+            </div>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-3">
               <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Total quarantined</dt><dd className="mt-1 text-lg font-medium text-[var(--foreground)]">{quarantineRegister.total}</dd></div>
               <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Complete evidence</dt><dd className="mt-1 text-lg font-medium text-[var(--foreground)]">{quarantineRegister.completeEvidenceCount} of {quarantineRegister.total}</dd></div>
               <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Oldest quarantine</dt><dd className="mt-1 text-lg font-medium text-[var(--foreground)]">{quarantineRegister.oldestAgeLabel}</dd></div>
@@ -312,12 +326,20 @@ export function EssentialNotificationPreview({
                     <div><dt className="text-[var(--muted)]">Scope</dt><dd className="mt-1 text-[var(--foreground)]">{entry.decisionScope.replaceAll("_", " ")}</dd></div>
                     <div><dt className="text-[var(--muted)]">Independent review</dt><dd className="mt-1 text-[var(--foreground)]">{entry.independentReviewConfirmed ? "Confirmed" : "Needs review"}</dd></div>
                   </dl>
+                  {entry.integrityIssues.length > 0 ? (
+                    <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--warning)] bg-[var(--surface)] p-3">
+                      <p className="text-xs font-medium text-[var(--warning-text)]">Integrity attention required</p>
+                      <ul className="mt-1 space-y-1 text-xs leading-5 text-[var(--muted-strong)]">{entry.integrityIssues.map((issue) => <li key={issue}>• {issue}</li>)}</ul>
+                    </div>
+                  ) : (
+                    <p className="mt-3 border-t border-[var(--success)] pt-3 text-xs font-medium text-[var(--success)]">Integrity verified against the linked review and audit ledger.</p>
+                  )}
                 </li>
               ))}
             </ol>
           </>
         )}
-        <p className="mt-4 text-xs font-medium leading-5 text-[var(--success)]">Permanent safety boundary: this register exposes no restore, retry, deletion, delivery, or provider-contact control.</p>
+        <p className="mt-4 text-xs font-medium leading-5 text-[var(--success)]">Permanent safety boundary: this monitor is read only and exposes no restore, retry, deletion, delivery, or provider-contact control.</p>
       </div>
 
       <NotificationActivationChecklist readiness={readiness} />
