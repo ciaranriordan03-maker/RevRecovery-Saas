@@ -28,8 +28,20 @@ export type InsightsMetrics = {
   emailEngagement: EmailEngagementMetric;
   emailRecovery: EmailRecoveryMetric[];
   funnel: InsightFunnelMetric[];
+  measurementQuality: MeasurementQualityMetric;
   sequenceSummary: SequenceSummaryMetric[];
   segmentBreakdown: SegmentMetric[];
+};
+
+export type MeasurementQualityMetric = {
+  items: {
+    detail: string;
+    label: string;
+    status: "attention" | "clear" | "informational";
+    value: string;
+  }[];
+  summary: string;
+  title: string;
 };
 
 export type SegmentMetric = {
@@ -89,10 +101,12 @@ export type RecoveryMessageMetricRow = {
 export type FailedPaymentMetricRow = {
   amount_due?: number;
   audience_segment?: string;
+  case_status?: string | null;
   created_at: string;
   currency?: string | null;
   id: string;
   last_event_type: string;
+  livemode?: boolean | null;
   recovered_at: string | null;
   status: string;
 };
@@ -276,7 +290,7 @@ async function getFailedPaymentRows(userId: string) {
 
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
-    .select("amount_due, audience_segment, created_at, currency, id, last_event_type, recovered_at, status")
+    .select("amount_due, audience_segment, case_status, created_at, currency, id, last_event_type, livemode, recovered_at, status")
     .eq("user_id", userId)
     .returns<FailedPaymentMetricRow[]>();
 
@@ -532,14 +546,116 @@ function buildSegmentMetrics(
   });
 }
 
+const TERMINAL_CASE_STATUSES = new Set([
+  "canceled_by_merchant",
+  "exhausted",
+  "no_longer_applicable",
+  "recovered",
+]);
+
+function describePeriod(period: InsightPeriod) {
+  if (period === "all") {
+    return "All recorded failure dates";
+  }
+
+  return `Failures first recorded in the last ${period.replace("d", " days")}`;
+}
+
+function describeSegment(segment: InsightSegment) {
+  const labels: Record<InsightSegment, string> = {
+    all: "all invoice audiences",
+    standalone: "standalone invoices",
+    subscription: "subscription renewals",
+    unknown: "unknown invoice types",
+  };
+
+  return labels[segment];
+}
+
+export function buildMeasurementQualityMetric(
+  failedPayments: FailedPaymentMetricRow[],
+  filter: InsightsFilter,
+): MeasurementQualityMetric {
+  const liveCount = failedPayments.filter((payment) => payment.livemode === true).length;
+  const testCount = failedPayments.filter((payment) => payment.livemode === false).length;
+  const unknownEnvironmentCount = failedPayments.filter(
+    (payment) => payment.livemode === null || payment.livemode === undefined,
+  ).length;
+  const terminalCount = failedPayments.filter((payment) =>
+    TERMINAL_CASE_STATUSES.has(payment.case_status ?? ""),
+  ).length;
+  const unresolvedCount = failedPayments.length - terminalCount;
+  const environmentValue = failedPayments.length === 0
+    ? "No evidence selected"
+    : liveCount > 0 && testCount > 0
+      ? "Mixed test and live evidence"
+      : liveCount > 0
+        ? "Live evidence only"
+        : testCount > 0
+          ? "Test evidence only"
+          : "Environment unconfirmed";
+  const environmentDetail = [
+    `${liveCount} live`,
+    `${testCount} test`,
+    unknownEnvironmentCount > 0 ? `${unknownEnvironmentCount} unconfirmed` : null,
+  ].filter(Boolean).join(" · ");
+
+  return {
+    items: [
+      {
+        detail: "The period applies to when each failed-payment case entered the cohort, not when messages or recoveries occurred.",
+        label: "Cohort definition",
+        status: "informational",
+        value: `${describePeriod(filter.period)} · ${describeSegment(filter.segment)}`,
+      },
+      {
+        detail: failedPayments.length === 0
+          ? "No selected cases are available to assess outcome maturity."
+          : unresolvedCount > 0
+            ? `${terminalCount} terminal · ${unresolvedCount} non-terminal. Observed recovery rates may change as open cases progress.`
+            : `${terminalCount} terminal · 0 non-terminal among the selected records.`,
+        label: "Outcome maturity",
+        status: unresolvedCount > 0 ? "attention" : "clear",
+        value: failedPayments.length === 0
+          ? "Awaiting cohort evidence"
+          : unresolvedCount > 0
+            ? "Outcomes still maturing"
+            : "Recorded outcomes are terminal",
+      },
+      {
+        detail: `${environmentDetail}. Current headline metrics are not split by environment; test evidence must not support live-performance claims.`,
+        label: "Test / live boundary",
+        status: liveCount > 0 && testCount > 0 || unknownEnvironmentCount > 0 ? "attention" : "clear",
+        value: environmentValue,
+      },
+      {
+        detail: "Audience amounts sum the invoice amount due at failure for cases later marked recovered; they are not confirmed collected or incremental revenue.",
+        label: "Amount basis",
+        status: "attention",
+        value: "Failure-time amount due",
+      },
+      {
+        detail: "No control group or counterfactual baseline is present. Email-step reporting is latest-prior-message association only.",
+        label: "Evidence limitation",
+        status: "informational",
+        value: "Descriptive, not causal",
+      },
+    ],
+    summary: "Read-only evidence context. No headline calculation, recovery state, message schedule, or delivery behavior is changed.",
+    title: "Measurement quality",
+  };
+}
+
 export function buildInsightsMetrics({
   events = [],
   failedPayments,
+  filter = { period: "30d", segment: "all" },
   messages,
   sequences,
 }: {
   events?: RecoveryMessageEventMetricRow[];
   failedPayments: FailedPaymentMetricRow[];
+  filter?: InsightsFilter;
   messages: RecoveryMessageMetricRow[];
   sequences: RecoverySequenceMetricRow[];
 }): InsightsMetrics {
@@ -629,6 +745,7 @@ export function buildInsightsMetrics({
         value: formatPercent(recoveryRate),
       },
     ],
+    measurementQuality: buildMeasurementQualityMetric(failedPayments, filter),
     sequenceSummary,
     segmentBreakdown,
   };
@@ -691,5 +808,8 @@ export async function getInsightsMetrics(
     getRecoverySequenceRows(userId),
   ]);
 
-  return buildInsightsMetrics(filterInsightsRows({ events, failedPayments, filter, messages, sequences }));
+  return buildInsightsMetrics({
+    ...filterInsightsRows({ events, failedPayments, filter, messages, sequences }),
+    filter,
+  });
 }

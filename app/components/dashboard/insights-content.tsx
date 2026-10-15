@@ -8,9 +8,54 @@ import type {
   InsightFunnelMetric,
   InsightsMetrics,
   InsightsFilter,
+  MeasurementQualityMetric,
   SequenceSummaryMetric,
   SegmentMetric,
 } from "../../lib/server/insights-metrics";
+
+function MeasurementQualityPanel({ metric }: { metric: MeasurementQualityMetric }) {
+  const statusClasses = {
+    attention: "border-[var(--warning)] bg-[var(--warning-soft)]",
+    clear: "border-[var(--success-badge)] bg-[var(--success-soft)]",
+    informational: "border-[var(--blue-border)] bg-[var(--blue-soft)]",
+  } as const;
+
+  return (
+    <section
+      aria-labelledby="measurement-quality-heading"
+      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+            Evidence context
+          </p>
+          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="measurement-quality-heading">
+            {metric.title}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Understand what the selected Insights figures can—and cannot—support.
+          </p>
+        </div>
+        <span className="w-fit rounded-[8px] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--muted-strong)]">
+          Read only
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        {metric.items.map((item) => (
+          <article className={`rounded-[10px] border p-4 ${statusClasses[item.status]}`} key={item.label}>
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">{item.label}</p>
+            <p className="mt-2 text-sm font-medium text-[var(--foreground)]">{item.value}</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{item.detail}</p>
+          </article>
+        ))}
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
+    </section>
+  );
+}
 
 function InsightFilters({ filter }: { filter: InsightsFilter }) {
   const periods = [["30d", "30 days"], ["90d", "90 days"], ["all", "All time"]] as const;
@@ -278,6 +323,7 @@ export function InsightsContent({ filter, insights }: { filter: InsightsFilter; 
     <div className="px-5 py-8 sm:px-8">
       <div className="mx-auto flex max-w-[1024px] flex-col gap-7">
         <InsightFilters filter={filter} />
+        <MeasurementQualityPanel metric={insights.measurementQuality} />
         <SequenceSummaryCard metrics={insights.sequenceSummary} />
 
         <SegmentBreakdown rows={insights.segmentBreakdown} />

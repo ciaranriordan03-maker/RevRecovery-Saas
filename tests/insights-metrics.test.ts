@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMeasurementQualityMetric,
   buildInsightsMetrics,
   type FailedPaymentMetricRow,
   type RecoveryMessageEventMetricRow,
@@ -51,6 +52,50 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("describes cohort quality without changing headline calculations", () => {
+    const metric = buildMeasurementQualityMetric([
+      failedPayment({ case_status: "active", livemode: false }),
+      failedPayment({ case_status: "recovered", id: "payment-2", livemode: true }),
+    ], { period: "30d", segment: "subscription" });
+
+    expect(metric.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        label: "Cohort definition",
+        value: "Failures first recorded in the last 30 days · subscription renewals",
+      }),
+      expect.objectContaining({
+        label: "Outcome maturity",
+        status: "attention",
+        value: "Outcomes still maturing",
+      }),
+      expect.objectContaining({
+        label: "Test / live boundary",
+        status: "attention",
+        value: "Mixed test and live evidence",
+      }),
+      expect.objectContaining({
+        label: "Amount basis",
+        value: "Failure-time amount due",
+      }),
+      expect.objectContaining({
+        label: "Evidence limitation",
+        value: "Descriptive, not causal",
+      }),
+    ]));
+  });
+
+  it("does not present missing cohort evidence as a measured zero", () => {
+    const metric = buildMeasurementQualityMetric([], { period: "all", segment: "all" });
+
+    expect(metric.items.find((item) => item.label === "Outcome maturity")).toMatchObject({
+      status: "clear",
+      value: "Awaiting cohort evidence",
+    });
+    expect(metric.items.find((item) => item.label === "Test / live boundary")).toMatchObject({
+      value: "No evidence selected",
+    });
+  });
+
   it("counts only explicitly recovered sequences as recovered", () => {
     const insights = buildInsightsMetrics({
       failedPayments: [
