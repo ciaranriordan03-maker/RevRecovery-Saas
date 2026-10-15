@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  getEffectiveNotificationTestAuthorizationStatus,
   getNotificationTestAuthorizationInputError,
   isNotificationTestAuthorizationAction,
 } from "../app/lib/recovery/notification-test-authorization-policy";
@@ -27,6 +28,41 @@ describe("one-time notification test authorization", () => {
     expect(isNotificationTestAuthorizationAction("send")).toBe(false);
     expect(getNotificationTestAuthorizationInputError({ action: "request", authorizationId: null })).toBeNull();
     expect(getNotificationTestAuthorizationInputError({ action: "approve", authorizationId: "bad" })).toBe("Choose an active notification test authorization.");
+  });
+
+  it("treats elapsed and malformed active authorizations as expired", () => {
+    const now = Date.parse("2026-10-15T12:00:00.000Z");
+
+    expect(getEffectiveNotificationTestAuthorizationStatus({
+      expiresAt: "2026-10-15T11:59:59.999Z",
+      now,
+      status: "approved",
+    })).toBe("expired");
+    expect(getEffectiveNotificationTestAuthorizationStatus({
+      expiresAt: "invalid",
+      now,
+      status: "pending",
+    })).toBe("expired");
+  });
+
+  it("preserves active and terminal authorization states", () => {
+    const now = Date.parse("2026-10-15T12:00:00.000Z");
+
+    expect(getEffectiveNotificationTestAuthorizationStatus({
+      expiresAt: "2026-10-15T12:15:00.000Z",
+      now,
+      status: "approved",
+    })).toBe("approved");
+    expect(getEffectiveNotificationTestAuthorizationStatus({
+      expiresAt: "2026-10-15T11:00:00.000Z",
+      now,
+      status: "consumed",
+    })).toBe("consumed");
+    expect(getEffectiveNotificationTestAuthorizationStatus({
+      expiresAt: "2026-10-15T11:00:00.000Z",
+      now,
+      status: "revoked",
+    })).toBe("revoked");
   });
 
   it("requires exact-recipient review, disabled gates, D4i evidence, and a verified domain", () => {

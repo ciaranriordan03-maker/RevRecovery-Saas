@@ -1,9 +1,11 @@
 import "server-only";
 
 import {
+  getEffectiveNotificationTestAuthorizationStatus,
   getNotificationTestAuthorizationInputError,
   isNotificationTestAuthorizationAction,
   type NotificationTestAuthorizationAction,
+  type NotificationTestAuthorizationStatus,
 } from "../recovery/notification-test-authorization-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
@@ -13,7 +15,7 @@ type AuthorizationRow = {
   id: string;
   recipient_email: string;
   requested_at: string;
-  status: "approved" | "consumed" | "expired" | "pending" | "revoked";
+  status: NotificationTestAuthorizationStatus;
 };
 
 export type NotificationTestAuthorization = {
@@ -44,7 +46,10 @@ function toAuthorization(row: AuthorizationRow): NotificationTestAuthorization {
     id: row.id,
     recipientEmail: row.recipient_email,
     requestedAt: row.requested_at,
-    status: row.status,
+    status: getEffectiveNotificationTestAuthorizationStatus({
+      expiresAt: row.expires_at,
+      status: row.status,
+    }),
   };
 }
 

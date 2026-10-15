@@ -1,4 +1,27 @@
 export type NotificationTestAuthorizationAction = "approve" | "request" | "revoke";
+export type NotificationTestAuthorizationStatus =
+  | "approved"
+  | "consumed"
+  | "expired"
+  | "pending"
+  | "revoked";
+
+export function getEffectiveNotificationTestAuthorizationStatus({
+  expiresAt,
+  now = Date.now(),
+  status,
+}: {
+  expiresAt: string;
+  now?: number;
+  status: NotificationTestAuthorizationStatus;
+}): NotificationTestAuthorizationStatus {
+  if (status !== "pending" && status !== "approved") return status;
+
+  const expiresAtTimestamp = Date.parse(expiresAt);
+  if (!Number.isFinite(expiresAtTimestamp) || expiresAtTimestamp <= now) return "expired";
+
+  return status;
+}
 
 export function isNotificationTestAuthorizationAction(
   value: unknown,
