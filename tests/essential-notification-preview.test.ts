@@ -27,5 +27,9 @@ describe("essential notification preview", () => {
     expect(source).toContain("D4s · Reviewed request workflow");
     expect(source).toContain("Audit preview only");
     expect(source).toContain("No request action, approval action, retry, or provider contact is available in D4s.");
+    expect(source).toContain("D4u · Recorded review evidence");
+    expect(source).toContain("Real audit-only resolution review");
+    expect(source).toContain("Confirmed — requester and reviewer are separate identities.");
+    expect(source).toContain("Read only. No mutation, retry, or delivery control is exposed.");
   });
 });

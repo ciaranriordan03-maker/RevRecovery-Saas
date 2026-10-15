@@ -4,7 +4,10 @@ import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "..
 import {
   mapPreviewNotificationEvent,
   mapNotificationDeliveryReconciliation,
+  mapNotificationResolutionReview,
   type NotificationReconciliationEvidence,
+  type NotificationResolutionRequestAuditRow,
+  type NotificationResolutionRequestRow,
   type PreviewNotificationHistory,
   type RecoveryNotificationEventRow,
 } from "../recovery/notification-event-history";
@@ -15,6 +18,8 @@ const ACCOUNT_SETTINGS_TABLE = "recovery_account_settings";
 const NOTIFICATION_EVENTS_TABLE = "recovery_notification_events";
 const DELIVERY_ATTEMPTS_TABLE = "recovery_notification_delivery_attempts";
 const TEST_AUTHORIZATIONS_TABLE = "recovery_notification_test_authorizations";
+const RESOLUTION_REQUESTS_TABLE = "recovery_notification_resolution_requests";
+const RESOLUTION_AUDIT_TABLE = "recovery_notification_resolution_request_audit";
 
 type AccountSettingsRow = {
   id: string;
@@ -96,11 +101,38 @@ export async function getPreviewRecoveryNotificationHistory(
       }
 
       if (evidenceAvailable) {
+        const { data: resolutionRequests, error: resolutionRequestsError } = await supabase
+          .from(RESOLUTION_REQUESTS_TABLE)
+          .select("id, event_id, requester_id, reviewer_id, status, decision_scope, evidence_summary, requested_at, expires_at, reviewed_at")
+          .eq("user_id", userId)
+          .in("event_id", deliveryIds)
+          .order("requested_at", { ascending: false })
+          .returns<NotificationResolutionRequestRow[]>();
+
+        let resolutionAudit: NotificationResolutionRequestAuditRow[] = [];
+        if (resolutionRequestsError) {
+          evidenceAvailable = false;
+        } else {
+          const requestIds = (resolutionRequests ?? []).map((request) => request.id);
+          if (requestIds.length > 0) {
+            const { data: auditRows, error: auditError } = await supabase
+              .from(RESOLUTION_AUDIT_TABLE)
+              .select("request_id, actor_id, action, evidence_summary, created_at")
+              .eq("user_id", userId)
+              .in("request_id", requestIds)
+              .order("created_at", { ascending: true })
+              .returns<NotificationResolutionRequestAuditRow[]>();
+            if (auditError) evidenceAvailable = false;
+            else resolutionAudit = auditRows ?? [];
+          }
+        }
+
         for (const delivery of deliveries) {
           const eventAttempts = (attempts ?? []).filter((attempt) => attempt.event_id === delivery.id);
           const authorizationId = eventAttempts.find((attempt) => attempt.authorization_id)?.authorization_id;
           const authorization = authorizationId ? authorizationById.get(authorizationId) : null;
           const sourceRow = rows.find((row) => row.id === delivery.id);
+          const resolutionRequest = (resolutionRequests ?? []).find((request) => request.event_id === delivery.id);
           evidenceByEvent.set(delivery.id, {
             attempts: eventAttempts.map((attempt) => ({
               occurredAt: attempt.created_at,
@@ -118,6 +150,9 @@ export async function getPreviewRecoveryNotificationHistory(
               claimedAt: sourceRow?.claimed_at ?? null,
               claimRecorded: Boolean(sourceRow?.claimed_at),
             },
+            resolutionReview: resolutionRequest
+              ? mapNotificationResolutionReview(resolutionRequest, resolutionAudit)
+              : null,
           });
         }
       }

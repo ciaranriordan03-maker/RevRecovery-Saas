@@ -207,6 +207,43 @@ export function EssentialNotificationPreview({
                     <p className="mt-2 text-xs font-medium leading-5 text-[var(--danger)]">No request action, approval action, retry, or provider contact is available in D4s.</p>
                   </div>
                 ) : null}
+                {delivery.evidence.resolutionReview ? (
+                  <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--primary)] bg-[var(--primary-soft)] p-4" aria-label="Recorded resolution review evidence">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--primary)]">D4u · Recorded review evidence</p>
+                      <span className="rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium capitalize text-[var(--foreground)]">{delivery.evidence.resolutionReview.status}</span>
+                    </div>
+                    <h4 className="mt-2 text-sm font-medium text-[var(--foreground)]">Real audit-only resolution review</h4>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">This evidence was read from the development database. It does not authorize a retry, provider contact, or delivery-state change.</p>
+                    <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
+                      <div><dt className="font-medium text-[var(--foreground)]">Decision scope</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]">{delivery.evidence.resolutionReview.decisionScope.replaceAll("_", " ")}</dd></div>
+                      <div><dt className="font-medium text-[var(--foreground)]">Independent review</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]">{delivery.evidence.resolutionReview.requesterReviewerSeparated ? "Confirmed — requester and reviewer are separate identities." : "Not confirmed."}</dd></div>
+                      <div><dt className="font-medium text-[var(--foreground)]">Requested</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]"><time dateTime={delivery.evidence.resolutionReview.requestedAt}>{formatTimestamp(delivery.evidence.resolutionReview.requestedAt)} UTC</time></dd></div>
+                      <div><dt className="font-medium text-[var(--foreground)]">Expires</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]"><time dateTime={delivery.evidence.resolutionReview.expiresAt}>{formatTimestamp(delivery.evidence.resolutionReview.expiresAt)} UTC</time></dd></div>
+                    </dl>
+                    <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-3">
+                      <p className="text-xs font-medium text-[var(--foreground)]">Request evidence</p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{delivery.evidence.resolutionReview.evidenceSummary}</p>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-[var(--foreground)]">Audit ledger</p>
+                      {delivery.evidence.resolutionReview.audit.length > 0 ? (
+                        <ol className="mt-2 space-y-2">
+                          {delivery.evidence.resolutionReview.audit.map((entry, index) => (
+                            <li className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-3 text-xs" key={`${entry.action}-${entry.occurredAt}-${index}`}>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-medium capitalize text-[var(--foreground)]">{entry.action}</span>
+                                <span className="capitalize text-[var(--muted)]">{entry.actorRole} · {formatTimestamp(entry.occurredAt)} UTC</span>
+                              </div>
+                              <p className="mt-1 leading-5 text-[var(--muted-strong)]">{entry.evidence}</p>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : <p className="mt-1 text-xs leading-5 text-[var(--warning-text)]">No audit entries are available for this request.</p>}
+                    </div>
+                    <p className="mt-3 border-t border-[var(--primary)] pt-3 text-xs font-medium leading-5 text-[var(--primary)]">Read only. No mutation, retry, or delivery control is exposed.</p>
+                  </div>
+                ) : null}
               </li>
               );
             })}

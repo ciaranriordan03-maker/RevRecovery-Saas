@@ -44,13 +44,83 @@ export type NotificationReconciliationEvidence = {
     claimedAt: string | null;
     claimRecorded: boolean;
   };
+  resolutionReview: NotificationResolutionReviewEvidence | null;
+};
+
+export type NotificationResolutionReviewEvidence = {
+  audit: Array<{
+    action: string;
+    actorRole: "requester" | "reviewer" | "system";
+    evidence: string;
+    occurredAt: string;
+  }>;
+  decisionScope: string;
+  evidenceSummary: string;
+  expiresAt: string;
+  requestedAt: string;
+  requesterReviewerSeparated: boolean;
+  reviewedAt: string | null;
+  status: string;
+};
+
+export type NotificationResolutionRequestRow = {
+  decision_scope: string;
+  event_id: string;
+  evidence_summary: string;
+  expires_at: string;
+  id: string;
+  requested_at: string;
+  requester_id: string;
+  reviewed_at: string | null;
+  reviewer_id: string | null;
+  status: string;
+};
+
+export type NotificationResolutionRequestAuditRow = {
+  action: string;
+  actor_id: string;
+  created_at: string;
+  evidence_summary: string;
+  request_id: string;
 };
 
 export const EMPTY_RECONCILIATION_EVIDENCE: NotificationReconciliationEvidence = {
   attempts: [],
   authorization: null,
   reservation: { claimedAt: null, claimRecorded: false },
+  resolutionReview: null,
 };
+
+export function mapNotificationResolutionReview(
+  request: NotificationResolutionRequestRow,
+  audit: NotificationResolutionRequestAuditRow[],
+): NotificationResolutionReviewEvidence | null {
+  if (!request.id || !request.event_id || !request.requester_id) return null;
+  if (Number.isNaN(new Date(request.requested_at).getTime())) return null;
+  if (Number.isNaN(new Date(request.expires_at).getTime())) return null;
+
+  return {
+    audit: audit
+      .filter((entry) => entry.request_id === request.id && !Number.isNaN(new Date(entry.created_at).getTime()))
+      .map((entry) => ({
+        action: entry.action,
+        actorRole: entry.actor_id === request.requester_id
+          ? "requester" as const
+          : entry.actor_id === request.reviewer_id
+            ? "reviewer" as const
+            : "system" as const,
+        evidence: entry.evidence_summary,
+        occurredAt: entry.created_at,
+      })),
+    decisionScope: request.decision_scope,
+    evidenceSummary: request.evidence_summary,
+    expiresAt: request.expires_at,
+    requestedAt: request.requested_at,
+    requesterReviewerSeparated: Boolean(request.reviewer_id && request.reviewer_id !== request.requester_id),
+    reviewedAt: request.reviewed_at,
+    status: request.status,
+  };
+}
 
 export type RecoveryNotificationEventRow = {
   claimed_at?: string | null;
