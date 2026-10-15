@@ -26,6 +26,7 @@ export type NotificationDeliveryReconciliation = {
 };
 
 export type RecoveryNotificationEventRow = {
+  claimed_at?: string | null;
   cooldown_until: string;
   id: string;
   occurred_at: string;
@@ -95,6 +96,7 @@ export function mapPreviewNotificationEvent(
 
 export function mapNotificationDeliveryReconciliation(
   row: RecoveryNotificationEventRow,
+  now = new Date(),
 ): NotificationDeliveryReconciliation | null {
   if (!['accepted', 'failed', 'queued', 'sent'].includes(row.status)) return null;
   if (Number.isNaN(new Date(row.occurred_at).getTime())) return null;
@@ -129,6 +131,21 @@ export function mapNotificationDeliveryReconciliation(
       recipientEmail: row.recipient_email,
       state: "attention_required",
       statusLabel: "Needs review",
+    };
+  }
+
+  const claimedAt = row.claimed_at ? new Date(row.claimed_at) : new Date(row.occurred_at);
+  const reservationIsStale = Number.isNaN(claimedAt.getTime()) ||
+    now.getTime() - claimedAt.getTime() >= 15 * 60 * 1000;
+
+  if (reservationIsStale) {
+    return {
+      detail: "This single-use reservation is older than its 15-minute authorization window. Review the audit trail; do not resend it.",
+      id: row.id,
+      occurredAt: row.claimed_at ?? row.occurred_at,
+      recipientEmail: row.recipient_email,
+      state: "attention_required",
+      statusLabel: "Stale reservation",
     };
   }
 

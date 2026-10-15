@@ -32,7 +32,7 @@ export async function getPreviewRecoveryNotificationHistory(
 
   const { data, error } = await supabase
     .from(NOTIFICATION_EVENTS_TABLE)
-    .select("id, rule_id, severity, status, recipient_email, occurred_at, cooldown_until, payload, provider_accepted_at, provider_message_id, sent_at, last_error")
+    .select("id, rule_id, severity, status, recipient_email, occurred_at, cooldown_until, payload, claimed_at, provider_accepted_at, provider_message_id, sent_at, last_error")
     .eq("user_id", userId)
     .order("occurred_at", { ascending: false })
     .limit(20)
@@ -41,7 +41,7 @@ export async function getPreviewRecoveryNotificationHistory(
   if (error) return { deliveries: [], events: [], state: "unavailable" };
 
   return {
-    deliveries: (data ?? []).map(mapNotificationDeliveryReconciliation).filter((event) => event !== null),
+    deliveries: (data ?? []).map((row) => mapNotificationDeliveryReconciliation(row)).filter((event) => event !== null),
     events: (data ?? []).map(mapPreviewNotificationEvent).filter((event) => event !== null),
     state: "ready",
   };
