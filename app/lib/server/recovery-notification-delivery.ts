@@ -167,7 +167,7 @@ export async function deliverReservedTestNotification(
   if (!decision.allowed) {
     await supabase
       .from(EVENTS_TABLE)
-      .update({ claim_token: null, last_error: decision.reason, status: "failed" })
+      .update({ claimed_at: null, claim_token: null, last_error: decision.reason, status: "failed" })
       .eq("id", event.id)
       .eq("claim_token", claimToken);
     await recordAttempt({
@@ -190,6 +190,7 @@ export async function deliverReservedTestNotification(
     const { data: completed, error } = await supabase
       .from(EVENTS_TABLE)
       .update({
+        claimed_at: null,
         claim_token: null,
         last_error: null,
         provider_message_id: providerMessageId,
@@ -214,7 +215,7 @@ export async function deliverReservedTestNotification(
     const reason = error instanceof Error ? error.message : "notification_delivery_failed";
     await supabase
       .from(EVENTS_TABLE)
-      .update({ claim_token: null, last_error: reason, status: "failed" })
+      .update({ claimed_at: null, claim_token: null, last_error: reason, status: "failed" })
       .eq("id", event.id)
       .eq("claim_token", claimToken);
     await recordAttempt({

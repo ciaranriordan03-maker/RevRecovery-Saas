@@ -42,9 +42,15 @@ describe("authorized notification test delivery connection", () => {
 
   it("releases an exact reservation if eligibility changes before delivery", () => {
     expect(delivery).toContain(
-      '.update({ claim_token: null, last_error: decision.reason, status: "failed" })',
+      '.update({ claimed_at: null, claim_token: null, last_error: decision.reason, status: "failed" })',
     );
     expect(delivery).toContain('.eq("claim_token", claimToken)');
+  });
+
+  it("clears both halves of the database claim before finalizing delivery", () => {
+    expect(delivery).toContain("claimed_at: null");
+    expect(delivery).toContain("status: \"sent\"");
+    expect(delivery).toContain("status: \"failed\"");
   });
 
   it("has no route or UI caller and therefore remains dormant", () => {
