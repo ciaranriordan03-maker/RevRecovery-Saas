@@ -45,7 +45,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
     getStripeConnectionSummary(claims.sub),
     mode === "sequence"
       ? getPreviewRecoveryNotificationHistory(claims.sub)
-      : Promise.resolve({ events: [], state: "ready" as const }),
+      : Promise.resolve({ deliveries: [], events: [], state: "ready" as const }),
     mode === "sequence"
       ? getNotificationActivationReviewForUser(claims.sub)
       : Promise.resolve(unavailableNotificationActivationReview()),

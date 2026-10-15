@@ -101,6 +101,44 @@ export function EssentialNotificationPreview({
         )}
       </div>
 
+      <div className="mt-5 border-t border-[var(--border)] pt-5" aria-labelledby="notification-reconciliation-heading">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-medium text-[var(--foreground)]" id="notification-reconciliation-heading">Delivery reconciliation</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Read-only evidence from controlled notification delivery attempts.</p>
+          </div>
+          <span className="rounded bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">No retry actions</span>
+        </div>
+
+        {history.state === "unavailable" ? (
+          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--warning)] bg-[var(--warning-soft)] p-4 text-sm text-[var(--warning-text)]">Reconciliation evidence is temporarily unavailable. Delivery remains disabled.</div>
+        ) : history.deliveries.length === 0 ? (
+          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
+            <p className="text-sm font-medium text-[var(--foreground)]">No delivery attempts to reconcile</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Controlled delivery evidence will appear here without enabling retries.</p>
+          </div>
+        ) : (
+          <ol className="mt-4 space-y-3">
+            {history.deliveries.map((delivery) => (
+              <li className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4" key={delivery.id}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)]">{delivery.statusLabel}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{delivery.detail}</p>
+                  </div>
+                  <span className={`rounded px-2 py-1 text-xs font-medium ${delivery.state === "finalized" ? "bg-[var(--success-soft)] text-[var(--success)]" : delivery.state === "attention_required" ? "bg-[var(--warning-soft)] text-[var(--warning-text)]" : "bg-[var(--primary-soft)] text-[var(--primary)]"}`}>{delivery.state === "finalized" ? "Complete" : delivery.state === "attention_required" ? "Attention required" : "In progress"}</span>
+                </div>
+                <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                  <div><dt className="text-[var(--muted)]">Recorded</dt><dd className="mt-1 text-[var(--foreground)]"><time dateTime={delivery.occurredAt}>{formatTimestamp(delivery.occurredAt)} UTC</time></dd></div>
+                  <div><dt className="text-[var(--muted)]">Test recipient</dt><dd className="mt-1 break-all text-[var(--foreground)]">{delivery.recipientEmail}</dd></div>
+                </dl>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="mt-4 text-xs leading-5 text-[var(--muted)]">This view never retries a message or contacts the email provider.</p>
+      </div>
+
       <NotificationActivationChecklist readiness={readiness} />
 
       <p className="mt-4 text-xs leading-5 text-[var(--muted)]">No notifications are enabled or sent by this preview.</p>

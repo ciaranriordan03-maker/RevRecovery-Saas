@@ -17,7 +17,7 @@ describe("notification activation readiness", () => {
     const result = evaluateNotificationActivationReadiness({
       accountEmail: "owner@example.com",
       activationReadiness: activationReadiness(),
-      notificationHistory: { events: [], state: "ready" },
+      notificationHistory: { deliveries: [], events: [], state: "ready" },
     });
 
     expect(result.state).toBe("ready_for_review");
@@ -29,7 +29,7 @@ describe("notification activation readiness", () => {
     const result = evaluateNotificationActivationReadiness({
       accountEmail: "Account owner email unavailable",
       activationReadiness: activationReadiness(),
-      notificationHistory: { events: [], state: "ready" },
+      notificationHistory: { deliveries: [], events: [], state: "ready" },
     });
 
     expect(result.state).toBe("blocked");
@@ -40,7 +40,7 @@ describe("notification activation readiness", () => {
     const result = evaluateNotificationActivationReadiness({
       accountEmail: "owner@example.com",
       activationReadiness: activationReadiness({ domain: "warning", test: "warning" }),
-      notificationHistory: { events: [], state: "unavailable" },
+      notificationHistory: { deliveries: [], events: [], state: "unavailable" },
     });
 
     expect(result.state).toBe("blocked");

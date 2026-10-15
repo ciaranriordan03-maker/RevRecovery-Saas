@@ -16,5 +16,8 @@ describe("essential notification preview", () => {
     expect(source).toContain("Preview only — nothing sent");
     expect(source).toContain("No preview events recorded yet");
     expect(source).toContain("Duplicates ignored until");
+    expect(source).toContain("Delivery reconciliation");
+    expect(source).toContain("No retry actions");
+    expect(source).toContain("This view never retries a message or contacts the email provider.");
   });
 });

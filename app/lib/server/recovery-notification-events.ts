@@ -3,6 +3,7 @@ import "server-only";
 import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "../recovery/essential-notification-policy";
 import {
   mapPreviewNotificationEvent,
+  mapNotificationDeliveryReconciliation,
   type PreviewNotificationHistory,
   type RecoveryNotificationEventRow,
 } from "../recovery/notification-event-history";
@@ -27,20 +28,20 @@ export async function getPreviewRecoveryNotificationHistory(
   userId: string,
 ): Promise<PreviewNotificationHistory> {
   const supabase = createSupabaseAdminClient();
-  if (!supabase) return { events: [], state: "unavailable" };
+  if (!supabase) return { deliveries: [], events: [], state: "unavailable" };
 
   const { data, error } = await supabase
     .from(NOTIFICATION_EVENTS_TABLE)
-    .select("id, rule_id, severity, status, recipient_email, occurred_at, cooldown_until, payload")
+    .select("id, rule_id, severity, status, recipient_email, occurred_at, cooldown_until, payload, provider_accepted_at, provider_message_id, sent_at, last_error")
     .eq("user_id", userId)
-    .eq("status", "recorded")
     .order("occurred_at", { ascending: false })
-    .limit(10)
+    .limit(20)
     .returns<RecoveryNotificationEventRow[]>();
 
-  if (error) return { events: [], state: "unavailable" };
+  if (error) return { deliveries: [], events: [], state: "unavailable" };
 
   return {
+    deliveries: (data ?? []).map(mapNotificationDeliveryReconciliation).filter((event) => event !== null),
     events: (data ?? []).map(mapPreviewNotificationEvent).filter((event) => event !== null),
     state: "ready",
   };
