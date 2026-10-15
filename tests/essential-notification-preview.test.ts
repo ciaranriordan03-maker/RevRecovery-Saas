@@ -24,5 +24,8 @@ describe("essential notification preview", () => {
     expect(source).toContain("D4r · Reviewed resolution plan");
     expect(source).toContain("Policy preview only");
     expect(source).toContain("No resolution action is implemented or authorized by this preview.");
+    expect(source).toContain("D4s · Reviewed request workflow");
+    expect(source).toContain("Audit preview only");
+    expect(source).toContain("No request action, approval action, retry, or provider contact is available in D4s.");
   });
 });

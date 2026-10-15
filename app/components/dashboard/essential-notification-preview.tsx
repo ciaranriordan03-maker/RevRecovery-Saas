@@ -3,6 +3,7 @@ import type { PreviewNotificationHistory } from "../../lib/recovery/notification
 import type { NotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
 import { NotificationActivationChecklist } from "./notification-activation-checklist";
 import { buildNotificationReconciliationPlan } from "../../lib/recovery/notification-reconciliation-policy";
+import { buildNotificationResolutionRequestPreview } from "../../lib/recovery/notification-resolution-request-policy";
 
 function formatTimestamp(value: string) {
   return new Intl.DateTimeFormat("en-IE", {
@@ -122,6 +123,7 @@ export function EssentialNotificationPreview({
           <ol className="mt-4 space-y-3">
             {history.deliveries.map((delivery) => {
               const resolutionPlan = buildNotificationReconciliationPlan(delivery);
+              const resolutionRequest = buildNotificationResolutionRequestPreview(delivery, resolutionPlan);
               return (
               <li className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4" key={delivery.id}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -185,6 +187,24 @@ export function EssentialNotificationPreview({
                     </div>
                     <p className="mt-3 border-t border-[var(--warning)] pt-3 text-xs font-medium leading-5 text-[var(--warning-text)]">Permitted future outcome: {resolutionPlan.allowedOutcome}</p>
                     <p className="mt-2 text-xs leading-5 text-[var(--muted)]">No resolution action is implemented or authorized by this preview.</p>
+                  </div>
+                ) : null}
+                {resolutionRequest ? (
+                  <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-4" aria-label="Read-only resolution request workflow">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--primary)]">D4s · Reviewed request workflow</p>
+                      <span className="rounded bg-[var(--primary-soft)] px-2 py-1 text-xs font-medium text-[var(--primary)]">Audit preview only</span>
+                    </div>
+                    <h4 className="mt-2 text-sm font-medium text-[var(--foreground)]">{resolutionRequest.title}</h4>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">A future operator could request review of this exact resolution scope without changing delivery state.</p>
+                    <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
+                      <div><dt className="font-medium text-[var(--foreground)]">Exact decision scope</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]">{resolutionRequest.decisionScope}</dd></div>
+                      <div><dt className="font-medium text-[var(--foreground)]">Expiry</dt><dd className="mt-1 leading-5 text-[var(--muted-strong)]">{resolutionRequest.expiresAfter}</dd></div>
+                    </dl>
+                    <p className="mt-3 text-xs font-medium text-[var(--foreground)]">Evidence required before review</p>
+                    <ul className="mt-1 space-y-1 text-xs leading-5 text-[var(--muted-strong)]">{resolutionRequest.evidenceRequired.map((item) => <li key={item}>• {item}</li>)}</ul>
+                    <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs leading-5 text-[var(--muted)]">{resolutionRequest.auditEffect}</p>
+                    <p className="mt-2 text-xs font-medium leading-5 text-[var(--danger)]">No request action, approval action, retry, or provider contact is available in D4s.</p>
                   </div>
                 ) : null}
               </li>
