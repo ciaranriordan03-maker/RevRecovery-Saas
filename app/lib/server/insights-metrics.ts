@@ -73,9 +73,15 @@ export type RecoveryMessageEventMetricRow = {
 
 export const INSIGHT_PERIODS = ["30d", "90d", "all"] as const;
 export const INSIGHT_SEGMENTS = ["all", "subscription", "standalone", "unknown"] as const;
+export const INSIGHT_ENVIRONMENTS = ["live", "test", "unconfirmed"] as const;
 export type InsightPeriod = (typeof INSIGHT_PERIODS)[number];
 export type InsightSegment = (typeof INSIGHT_SEGMENTS)[number];
-export type InsightsFilter = { period: InsightPeriod; segment: InsightSegment };
+export type InsightEnvironment = (typeof INSIGHT_ENVIRONMENTS)[number];
+export type InsightsFilter = {
+  environment: InsightEnvironment;
+  period: InsightPeriod;
+  segment: InsightSegment;
+};
 
 export type DeliveryHealthMetric = {
   deliveryRate: number | null;
@@ -588,7 +594,7 @@ export function buildMeasurementQualityMetric(
   const environmentValue = failedPayments.length === 0
     ? "No evidence selected"
     : liveCount > 0 && testCount > 0
-      ? "Mixed test and live evidence"
+      ? "Unexpected mixed evidence"
       : liveCount > 0
         ? "Live evidence only"
         : testCount > 0
@@ -623,7 +629,7 @@ export function buildMeasurementQualityMetric(
             : "Recorded outcomes are terminal",
       },
       {
-        detail: `${environmentDetail}. Current headline metrics are not split by environment; test evidence must not support live-performance claims.`,
+        detail: `${environmentDetail}. This view includes only the selected evidence environment; test evidence must not support live-performance claims.`,
         label: "Test / live boundary",
         status: liveCount > 0 && testCount > 0 || unknownEnvironmentCount > 0 ? "attention" : "clear",
         value: environmentValue,
@@ -649,7 +655,7 @@ export function buildMeasurementQualityMetric(
 export function buildInsightsMetrics({
   events = [],
   failedPayments,
-  filter = { period: "30d", segment: "all" },
+  filter = { environment: "unconfirmed", period: "30d", segment: "all" },
   messages,
   sequences,
 }: {
@@ -752,12 +758,19 @@ export function buildInsightsMetrics({
 }
 
 export function normalizeInsightsFilter(input?: {
+  environment?: string | string[];
   period?: string | string[];
   segment?: string | string[];
-}): InsightsFilter {
+}, defaultEnvironment: InsightEnvironment = "unconfirmed"): InsightsFilter {
+  const rawEnvironment = Array.isArray(input?.environment)
+    ? input?.environment[0]
+    : input?.environment;
   const rawPeriod = Array.isArray(input?.period) ? input?.period[0] : input?.period;
   const rawSegment = Array.isArray(input?.segment) ? input?.segment[0] : input?.segment;
   return {
+    environment: INSIGHT_ENVIRONMENTS.includes(rawEnvironment as InsightEnvironment)
+      ? rawEnvironment as InsightEnvironment
+      : defaultEnvironment,
     period: INSIGHT_PERIODS.includes(rawPeriod as InsightPeriod) ? rawPeriod as InsightPeriod : "30d",
     segment: INSIGHT_SEGMENTS.includes(rawSegment as InsightSegment) ? rawSegment as InsightSegment : "all",
   };
@@ -782,9 +795,14 @@ export function filterInsightsRows({
     ? null
     : now.getTime() - Number.parseInt(filter.period, 10) * 24 * 60 * 60 * 1000;
   const selectedPayments = failedPayments.filter((payment) => {
+    const inEnvironment = filter.environment === "live"
+      ? payment.livemode === true
+      : filter.environment === "test"
+        ? payment.livemode === false
+        : payment.livemode === null || payment.livemode === undefined;
     const inPeriod = cutoff === null || new Date(payment.created_at).getTime() >= cutoff;
     const inSegment = filter.segment === "all" || (payment.audience_segment ?? "unknown") === filter.segment;
-    return inPeriod && inSegment;
+    return inEnvironment && inPeriod && inSegment;
   });
   const paymentIds = new Set(selectedPayments.map((payment) => payment.id));
   const selectedMessages = messages.filter((message) => paymentIds.has(message.failed_payment_id));
@@ -799,7 +817,7 @@ export function filterInsightsRows({
 
 export async function getInsightsMetrics(
   userId: string,
-  filter: InsightsFilter = { period: "30d", segment: "all" },
+  filter: InsightsFilter = { environment: "unconfirmed", period: "30d", segment: "all" },
 ): Promise<InsightsMetrics> {
   const [messages, events, failedPayments, sequences] = await Promise.all([
     getRecoveryMessageRows(userId),

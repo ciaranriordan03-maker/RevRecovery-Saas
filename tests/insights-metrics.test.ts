@@ -56,7 +56,7 @@ describe("Insights metrics", () => {
     const metric = buildMeasurementQualityMetric([
       failedPayment({ case_status: "active", livemode: false }),
       failedPayment({ case_status: "recovered", id: "payment-2", livemode: true }),
-    ], { period: "30d", segment: "subscription" });
+    ], { environment: "test", period: "30d", segment: "subscription" });
 
     expect(metric.items).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -71,7 +71,7 @@ describe("Insights metrics", () => {
       expect.objectContaining({
         label: "Test / live boundary",
         status: "attention",
-        value: "Mixed test and live evidence",
+        value: "Unexpected mixed evidence",
       }),
       expect.objectContaining({
         label: "Amount basis",
@@ -85,7 +85,7 @@ describe("Insights metrics", () => {
   });
 
   it("does not present missing cohort evidence as a measured zero", () => {
-    const metric = buildMeasurementQualityMetric([], { period: "all", segment: "all" });
+    const metric = buildMeasurementQualityMetric([], { environment: "unconfirmed", period: "all", segment: "all" });
 
     expect(metric.items.find((item) => item.label === "Outcome maturity")).toMatchObject({
       status: "clear",

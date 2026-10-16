@@ -60,13 +60,28 @@ function MeasurementQualityPanel({ metric }: { metric: MeasurementQualityMetric 
 function InsightFilters({ filter }: { filter: InsightsFilter }) {
   const periods = [["30d", "30 days"], ["90d", "90 days"], ["all", "All time"]] as const;
   const segments = [["all", "All audiences"], ["subscription", "Subscriptions"], ["standalone", "Standalone"], ["unknown", "Unknown"]] as const;
+  const environments = [["live", "Live"], ["test", "Test"], ["unconfirmed", "Unconfirmed"]] as const;
   return (
-    <section className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap gap-2" aria-label="Date range">
-        {periods.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.period === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?period=${value}&segment=${filter.segment}`} key={value}>{label}</Link>)}
+    <section className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Evidence environment</p>
+        <div className="flex flex-wrap gap-2" aria-label="Evidence environment">
+          {environments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.environment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?environment=${value}&period=${filter.period}&segment=${filter.segment}`} key={value}>{label}</Link>)}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2" aria-label="Audience cohort">
-        {segments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.segment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?period=${filter.period}&segment=${value}`} key={value}>{label}</Link>)}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Failure period</p>
+          <div className="flex flex-wrap gap-2" aria-label="Date range">
+            {periods.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.period === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?environment=${filter.environment}&period=${value}&segment=${filter.segment}`} key={value}>{label}</Link>)}
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Invoice audience</p>
+          <div className="flex flex-wrap gap-2" aria-label="Audience cohort">
+            {segments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.segment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?environment=${filter.environment}&period=${filter.period}&segment=${value}`} key={value}>{label}</Link>)}
+          </div>
+        </div>
       </div>
     </section>
   );
