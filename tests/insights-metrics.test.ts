@@ -3,6 +3,7 @@ import {
   buildMeasurementQualityMetric,
   buildDataSufficiencyMetric,
   buildDescriptiveBaselineMetric,
+  buildCohortComparisonMetric,
   buildInsightsMetrics,
   type FailedPaymentMetricRow,
   type RecoveryMessageEventMetricRow,
@@ -54,6 +55,64 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("withholds adjacent-period comparisons unless both cohorts pass independently", () => {
+    const metric = buildCohortComparisonMetric([
+      failedPayment({ amount_due: 7900, case_status: "active", created_at: "2026-10-10T00:00:00.000Z", currency: "eur", livemode: false }),
+    ], { environment: "test", period: "30d", segment: "all" }, new Date("2026-10-16T00:00:00.000Z"));
+
+    expect(metric).toMatchObject({
+      available: false,
+      currentLabel: "Current 30 days",
+      previousLabel: "Previous 30 days",
+      rows: [],
+      title: "Cohort comparison withheld",
+    });
+  });
+
+  it("shows observed changes only when adjacent cohorts both pass", () => {
+    const makeCohort = (period: "current" | "previous") => Array.from({ length: 30 }, (_, index) => {
+      const recoveredLimit = period === "current" ? 12 : 6;
+      const caseStatus = index < recoveredLimit ? "recovered" : index < 24 ? "exhausted" : "active";
+      return failedPayment({
+        amount_due: 1000,
+        case_status: caseStatus,
+        created_at: period === "current" ? "2026-10-10T00:00:00.000Z" : "2026-09-10T00:00:00.000Z",
+        currency: "eur",
+        id: `${period}-${index}`,
+        livemode: false,
+        status: caseStatus === "recovered" ? "recovered" : "active",
+      });
+    });
+    const metric = buildCohortComparisonMetric(
+      [...makeCohort("current"), ...makeCohort("previous")],
+      { environment: "test", period: "30d", segment: "all" },
+      new Date("2026-10-16T00:00:00.000Z"),
+    );
+
+    expect(metric.available).toBe(true);
+    expect(metric.rows).toEqual([
+      expect.objectContaining({ label: "Selected cases", observedChange: "No observed change" }),
+      expect.objectContaining({ label: "Outcome maturity", observedChange: "No observed change" }),
+      expect.objectContaining({
+        current: "50%",
+        label: "Terminal recovery share",
+        observedChange: "+25 percentage points observed",
+        previous: "25%",
+      }),
+    ]);
+    expect(metric.summary).toContain("not performance lift, attribution, or incremental revenue");
+  });
+
+  it("does not infer a previous cohort for all-time evidence", () => {
+    const metric = buildCohortComparisonMetric([], { environment: "live", period: "all", segment: "all" });
+
+    expect(metric).toMatchObject({
+      available: false,
+      rows: [],
+      title: "Cohort comparison unavailable",
+    });
+  });
+
   it("withholds every descriptive baseline value when sufficiency gates are waiting", () => {
     const metric = buildDescriptiveBaselineMetric([
       failedPayment({ amount_due: 7900, case_status: "active", currency: "eur", livemode: false }),

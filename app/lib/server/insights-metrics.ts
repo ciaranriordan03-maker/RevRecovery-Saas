@@ -25,6 +25,7 @@ export type InsightCardMetric = {
 export type InsightsMetrics = {
   baselineSummary: DescriptiveBaselineMetric;
   cards: InsightCardMetric[];
+  cohortComparison: CohortComparisonMetric;
   dataSufficiency: DataSufficiencyMetric;
   deliveryHealth: DeliveryHealthMetric;
   emailEngagement: EmailEngagementMetric;
@@ -33,6 +34,21 @@ export type InsightsMetrics = {
   measurementQuality: MeasurementQualityMetric;
   sequenceSummary: SequenceSummaryMetric[];
   segmentBreakdown: SegmentMetric[];
+};
+
+export type CohortComparisonMetric = {
+  available: boolean;
+  currentLabel: string;
+  previousLabel: string;
+  rows: {
+    current: string;
+    detail: string;
+    label: string;
+    observedChange: string;
+    previous: string;
+  }[];
+  summary: string;
+  title: string;
 };
 
 export type DescriptiveBaselineMetric = {
@@ -712,6 +728,123 @@ export function buildDescriptiveBaselineMetric(
   };
 }
 
+function formatObservedCountChange(change: number) {
+  if (change === 0) return "No observed change";
+  return `${change > 0 ? "+" : ""}${change} cases observed`;
+}
+
+function formatObservedPointChange(change: number) {
+  if (change === 0) return "No observed change";
+  return `${change > 0 ? "+" : ""}${change} percentage points observed`;
+}
+
+export function buildCohortComparisonMetric(
+  failedPayments: FailedPaymentMetricRow[],
+  filter: InsightsFilter,
+  now = new Date(),
+): CohortComparisonMetric {
+  if (filter.period === "all") {
+    return {
+      available: false,
+      currentLabel: "All recorded time",
+      previousLabel: "No preceding period",
+      rows: [],
+      summary: "Choose a bounded 30-day or 90-day failure period to define two non-overlapping cohorts. No comparison is inferred for all-time evidence.",
+      title: "Cohort comparison unavailable",
+    };
+  }
+
+  const periodDays = Number.parseInt(filter.period, 10);
+  const periodMs = periodDays * 24 * 60 * 60 * 1000;
+  const currentEnd = now.getTime();
+  const currentStart = currentEnd - periodMs;
+  const previousStart = currentStart - periodMs;
+  const matchesDimensions = (payment: FailedPaymentMetricRow) => {
+    const inEnvironment = filter.environment === "live"
+      ? payment.livemode === true
+      : filter.environment === "test"
+        ? payment.livemode === false
+        : payment.livemode === null || payment.livemode === undefined;
+    const inSegment = filter.segment === "all" ||
+      (payment.audience_segment ?? "unknown") === filter.segment;
+    return inEnvironment && inSegment;
+  };
+  const current = failedPayments.filter((payment) => {
+    const createdAt = new Date(payment.created_at).getTime();
+    return matchesDimensions(payment) && createdAt >= currentStart && createdAt <= currentEnd;
+  });
+  const previous = failedPayments.filter((payment) => {
+    const createdAt = new Date(payment.created_at).getTime();
+    return matchesDimensions(payment) && createdAt >= previousStart && createdAt < currentStart;
+  });
+  const currentSufficiency = buildDataSufficiencyMetric(current, filter);
+  const previousSufficiency = buildDataSufficiencyMetric(previous, filter);
+  const currentLabel = `Current ${periodDays} days`;
+  const previousLabel = `Previous ${periodDays} days`;
+
+  if (!currentSufficiency.eligible || !previousSufficiency.eligible) {
+    const waiting = [
+      !currentSufficiency.eligible ? currentLabel : null,
+      !previousSufficiency.eligible ? previousLabel : null,
+    ].filter(Boolean).join(" and ");
+    return {
+      available: false,
+      currentLabel,
+      previousLabel,
+      rows: [],
+      summary: `${waiting} ${waiting.includes(" and ") ? "do" : "does"} not independently pass every Baseline readiness gate. No comparison values are shown.`,
+      title: "Cohort comparison withheld",
+    };
+  }
+
+  const terminalRows = (rows: FailedPaymentMetricRow[]) => rows.filter((payment) =>
+    TERMINAL_CASE_STATUSES.has(payment.case_status ?? ""),
+  );
+  const recoveryShare = (rows: FailedPaymentMetricRow[]) => {
+    const terminal = terminalRows(rows);
+    const recovered = terminal.filter((payment) =>
+      payment.case_status === "recovered" || payment.status === "recovered",
+    ).length;
+    return percent(recovered, terminal.length);
+  };
+  const maturity = (rows: FailedPaymentMetricRow[]) => percent(terminalRows(rows).length, rows.length);
+  const currentMaturity = maturity(current);
+  const previousMaturity = maturity(previous);
+  const currentRecoveryShare = recoveryShare(current);
+  const previousRecoveryShare = recoveryShare(previous);
+
+  return {
+    available: true,
+    currentLabel,
+    previousLabel,
+    rows: [
+      {
+        current: `${current.length} cases`,
+        detail: "Case counts for two adjacent, non-overlapping failure-date cohorts.",
+        label: "Selected cases",
+        observedChange: formatObservedCountChange(current.length - previous.length),
+        previous: `${previous.length} cases`,
+      },
+      {
+        current: `${currentMaturity}% terminal`,
+        detail: "Share of each cohort with a recorded terminal outcome.",
+        label: "Outcome maturity",
+        observedChange: formatObservedPointChange(currentMaturity - previousMaturity),
+        previous: `${previousMaturity}% terminal`,
+      },
+      {
+        current: `${currentRecoveryShare}%`,
+        detail: "Recorded recoveries as a share of terminal outcomes. The difference is observational and does not establish causation.",
+        label: "Terminal recovery share",
+        observedChange: formatObservedPointChange(currentRecoveryShare - previousRecoveryShare),
+        previous: `${previousRecoveryShare}%`,
+      },
+    ],
+    summary: "Read-only adjacent-cohort comparison. Observed changes are not performance lift, attribution, or incremental revenue.",
+    title: "Descriptive cohort comparison",
+  };
+}
+
 function describePeriod(period: InsightPeriod) {
   if (period === "all") {
     return "All recorded failure dates";
@@ -806,12 +939,14 @@ export function buildMeasurementQualityMetric(
 }
 
 export function buildInsightsMetrics({
+  cohortComparison,
   events = [],
   failedPayments,
   filter = { environment: "unconfirmed", period: "30d", segment: "all" },
   messages,
   sequences,
 }: {
+  cohortComparison?: CohortComparisonMetric;
   events?: RecoveryMessageEventMetricRow[];
   failedPayments: FailedPaymentMetricRow[];
   filter?: InsightsFilter;
@@ -877,6 +1012,14 @@ export function buildInsightsMetrics({
         title: "Recovery Outcomes",
       },
     ],
+    cohortComparison: cohortComparison ?? {
+      available: false,
+      currentLabel: "Selected cohort",
+      previousLabel: "Comparison cohort",
+      rows: [],
+      summary: "Comparison evidence was not supplied. No comparison values are shown.",
+      title: "Cohort comparison withheld",
+    },
     dataSufficiency,
     deliveryHealth,
     emailEngagement,
@@ -982,8 +1125,10 @@ export async function getInsightsMetrics(
     getRecoverySequenceRows(userId),
   ]);
 
+  const now = new Date();
   return buildInsightsMetrics({
-    ...filterInsightsRows({ events, failedPayments, filter, messages, sequences }),
+    ...filterInsightsRows({ events, failedPayments, filter, messages, now, sequences }),
+    cohortComparison: buildCohortComparisonMetric(failedPayments, filter, now),
     filter,
   });
 }

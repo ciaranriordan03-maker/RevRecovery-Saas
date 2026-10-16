@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "../ui-icon";
 import type {
+  CohortComparisonMetric,
   DescriptiveBaselineMetric,
   EmailRecoveryMetric,
   DeliveryHealthMetric,
@@ -14,6 +15,60 @@ import type {
   SequenceSummaryMetric,
   SegmentMetric,
 } from "../../lib/server/insights-metrics";
+
+function CohortComparisonPanel({ metric }: { metric: CohortComparisonMetric }) {
+  return (
+    <section
+      aria-labelledby="cohort-comparison-heading"
+      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Period comparison</p>
+          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="cohort-comparison-heading">
+            {metric.title}
+          </h2>
+        </div>
+        <span className={`w-fit rounded-[8px] px-3 py-1.5 text-xs font-medium ${metric.available ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--surface-muted)] text-[var(--muted-strong)]"}`}>
+          {metric.available ? "Read only" : "Withheld"}
+        </span>
+      </div>
+
+      {metric.available ? (
+        <div className="mt-5 overflow-x-auto">
+          <div className="min-w-[680px]">
+            <div className="grid grid-cols-[1.2fr_1fr_1fr_1.2fr] gap-3 border-b border-[var(--border)] px-3 pb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+              <span>Measure</span>
+              <span>{metric.previousLabel}</span>
+              <span>{metric.currentLabel}</span>
+              <span>Observed change</span>
+            </div>
+            {metric.rows.map((row) => (
+              <div className="grid grid-cols-[1.2fr_1fr_1fr_1.2fr] gap-3 border-b border-[var(--border)] px-3 py-4 text-sm last:border-b-0" key={row.label}>
+                <div>
+                  <p className="font-medium text-[var(--foreground)]">{row.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{row.detail}</p>
+                </div>
+                <p className="text-[var(--muted-strong)]">{row.previous}</p>
+                <p className="font-medium text-[var(--foreground)]">{row.current}</p>
+                <p className="text-[var(--muted-strong)]">{row.observedChange}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] p-4">
+          <p className="text-sm font-medium text-[var(--foreground)]">No period comparison values are displayed</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
+            Both adjacent cohorts must independently pass every Baseline readiness gate.
+          </p>
+        </div>
+      )}
+
+      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
+    </section>
+  );
+}
 
 function DescriptiveBaselinePanel({ metric }: { metric: DescriptiveBaselineMetric }) {
   return (
@@ -434,6 +489,7 @@ export function InsightsContent({ filter, insights }: { filter: InsightsFilter; 
         <MeasurementQualityPanel metric={insights.measurementQuality} />
         <DataSufficiencyPanel metric={insights.dataSufficiency} />
         <DescriptiveBaselinePanel metric={insights.baselineSummary} />
+        <CohortComparisonPanel metric={insights.cohortComparison} />
         <SequenceSummaryCard metrics={insights.sequenceSummary} />
 
         <SegmentBreakdown rows={insights.segmentBreakdown} />
