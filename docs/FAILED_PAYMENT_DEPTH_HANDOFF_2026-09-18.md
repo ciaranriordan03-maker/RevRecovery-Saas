@@ -213,8 +213,8 @@ Primary outcome: a founder can adopt RevRecovery with less direct support.
 - Failure-specific communication.
 - Advisory Stripe retry coordination.
 - Recovery-window and exhaustion controls.
-- Health monitoring and essential notifications.
-- Better baseline and attribution reporting.
+- Health monitoring and essential notifications. D4 safe-development scope accepted on 15 October 2026; see [D4 acceptance evidence](./D4_ESSENTIAL_NOTIFICATIONS_ACCEPTANCE_2026-10-15.md).
+- Better baseline and attribution reporting. D5a read-only audit and measurement contract defined on 15 October 2026; see [D5a measurement contract](./D5A_BASELINE_ATTRIBUTION_MEASUREMENT_CONTRACT_2026-10-15.md). D5b adds read-only cohort, maturity, environment, amount-basis, and evidence-limit context to Insights without changing headline calculations. D5c replaces causal-sounding email attribution and recovered-revenue wording with explicit temporal-association and invoice-amount-due language, again without changing calculations. D5d requires one explicit Live, Test, or Unconfirmed evidence environment and never combines those records in one metric view. No baseline, incremental-revenue, or causal claim is enabled yet.
 
 Primary outcome: the founder can improve recovery and judge whether RevRecovery is worth the proposed price.
 
@@ -316,4 +316,3 @@ The likely first implementation unit, subject to audit confirmation, is:
 - Protected Codex backup: `/Users/grainnedignam/Desktop/Codex-Recovery-Backup-2026-09-18`
 - Phase 3 production commit: `b0bc30e16c1c9613599c2b2307c2205600c00d47`
 - Paused Phase 4 preservation commit: `7ed3e0dae1bb563815abc02a72c22b9ef15e2763`
-

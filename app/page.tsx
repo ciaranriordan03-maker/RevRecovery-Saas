@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserClaims } from "./lib/auth";
+import { buildPasswordRecoveryCallbackPath } from "./lib/auth-callback";
 import { getOrCreateUserOnboardingProfile } from "./lib/server/onboarding-store";
-import { createClient } from "./lib/supabase/server";
 
 type HomeProps = {
   searchParams?: Promise<{
@@ -13,30 +13,10 @@ type HomeProps = {
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
+  const callbackPath = buildPasswordRecoveryCallbackPath(params ?? {});
 
-  if (params?.code || params?.token_hash) {
-    const supabase = await createClient();
-
-    if (params.code) {
-      const { error } = await supabase.auth.exchangeCodeForSession(params.code);
-
-      if (!error) {
-        redirect("/reset-password");
-      }
-    }
-
-    if (params.token_hash) {
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: params.token_hash,
-        type: "recovery",
-      });
-
-      if (!error) {
-        redirect("/reset-password");
-      }
-    }
-
-    redirect("/login?status=error&message=That+reset+link+is+no+longer+valid.+Please+request+a+new+one.");
+  if (callbackPath) {
+    redirect(callbackPath);
   }
 
   const claims = await getCurrentUserClaims();

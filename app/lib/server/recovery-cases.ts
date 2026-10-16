@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getRecoveryDeclineDiagnostic } from "../recovery/decline-diagnostics";
+import type { RecoveryFailureCategory } from "../recovery/decline-diagnostics";
 import {
   getHighestRecoveryAttentionLevel,
   getRecoveryAttentionFlags,
@@ -63,6 +64,8 @@ export type RecoveryCaseListItem = {
   currency: string | null;
   customerEmail: string | null;
   customerId: string | null;
+  customerAction: string;
+  failureCategory: RecoveryFailureCategory;
   failureExplanation: string;
   failureTitle: string;
   id: string;
@@ -70,10 +73,15 @@ export type RecoveryCaseListItem = {
   invoiceStatus: string | null;
   livemode: boolean | null;
   manuallyPausedAt: string | null;
+  merchantAction: string;
   nextEmailAt: string | null;
   nextPaymentAttemptAt: string | null;
+  recoveryWindowEndsAt: string | null;
   recoveredAt: string | null;
+  remainingMessageCount: number;
   recoveryStage: string;
+  retryGuidance: string;
+  scheduledMessageCount: number;
   updatedAt: string;
 };
 
@@ -117,8 +125,11 @@ type RecoveryMessageRow = {
 };
 
 type RecoveryCaseMessageFacts = {
+  messageCountByCase: Map<string, number>;
   nextMessageByCase: Map<string, string>;
   providerDeliveryStatusesByCase: Map<string, string[]>;
+  remainingMessageCountByCase: Map<string, number>;
+  windowEndsAtByCase: Map<string, string>;
 };
 
 const FAILED_PAYMENTS_TABLE = "failed_payments";
@@ -220,8 +231,11 @@ async function getCaseMessageFacts(
   failedPaymentIds: string[],
 ): Promise<RecoveryCaseMessageFacts> {
   const emptyFacts = {
+    messageCountByCase: new Map<string, number>(),
     nextMessageByCase: new Map<string, string>(),
     providerDeliveryStatusesByCase: new Map<string, string[]>(),
+    remainingMessageCountByCase: new Map<string, number>(),
+    windowEndsAtByCase: new Map<string, string>(),
   };
 
   if (failedPaymentIds.length === 0) {
@@ -246,10 +260,27 @@ async function getCaseMessageFacts(
     throw new Error(`Unable to load recovery case message facts: ${error.message}`);
   }
 
+  const messageCountByCase = new Map<string, number>();
   const nextMessageByCase = new Map<string, string>();
   const providerDeliveryStatusesByCase = new Map<string, string[]>();
+  const remainingMessageCountByCase = new Map<string, number>();
+  const windowEndsAtByCase = new Map<string, string>();
+  const remainingStatuses = new Set(["claimed", "paused", "pending", "scheduled"]);
 
   for (const message of data ?? []) {
+    messageCountByCase.set(
+      message.failed_payment_id,
+      (messageCountByCase.get(message.failed_payment_id) ?? 0) + 1,
+    );
+    windowEndsAtByCase.set(message.failed_payment_id, message.scheduled_for);
+
+    if (remainingStatuses.has(message.status)) {
+      remainingMessageCountByCase.set(
+        message.failed_payment_id,
+        (remainingMessageCountByCase.get(message.failed_payment_id) ?? 0) + 1,
+      );
+    }
+
     if (
       (message.status === "pending" || message.status === "scheduled") &&
       !nextMessageByCase.has(message.failed_payment_id)
@@ -264,7 +295,13 @@ async function getCaseMessageFacts(
     }
   }
 
-  return { nextMessageByCase, providerDeliveryStatusesByCase };
+  return {
+    messageCountByCase,
+    nextMessageByCase,
+    providerDeliveryStatusesByCase,
+    remainingMessageCountByCase,
+    windowEndsAtByCase,
+  };
 }
 
 async function getAttentionMessageCaseIds(userId: string) {
@@ -416,6 +453,8 @@ function mapRecoveryCase(
     currency: row.currency,
     customerEmail: getCustomerEmail(row.latest_payload),
     customerId: row.stripe_customer_id,
+    customerAction: diagnostic.customerAction,
+    failureCategory: diagnostic.category,
     failureExplanation: diagnostic.explanation,
     failureTitle: diagnostic.title,
     id: row.id,
@@ -423,10 +462,15 @@ function mapRecoveryCase(
     invoiceStatus: row.invoice_status,
     livemode: row.livemode,
     manuallyPausedAt: row.manual_outreach_paused_at,
+    merchantAction: diagnostic.merchantAction,
     nextEmailAt: messageFacts.nextMessageByCase.get(row.id) ?? null,
     nextPaymentAttemptAt: row.next_payment_attempt_at,
+    recoveryWindowEndsAt: messageFacts.windowEndsAtByCase.get(row.id) ?? null,
     recoveredAt: row.recovered_at,
+    remainingMessageCount: messageFacts.remainingMessageCountByCase.get(row.id) ?? 0,
     recoveryStage: row.recovery_stage,
+    retryGuidance: diagnostic.retryGuidance,
+    scheduledMessageCount: messageFacts.messageCountByCase.get(row.id) ?? 0,
     updatedAt: row.updated_at,
   };
 }

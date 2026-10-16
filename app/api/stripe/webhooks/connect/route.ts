@@ -11,6 +11,7 @@ import {
   recordPaymentMethodUpdated,
   recordSubscriptionState,
 } from "../../../../lib/server/stripe-customer-states";
+import { tryRecordPreviewRecoveryNotificationEvent } from "../../../../lib/server/recovery-notification-events";
 import {
   claimWebhookEvent,
   completeWebhookEvent,
@@ -285,6 +286,20 @@ export async function POST(request: Request) {
       outcome: "failed",
       stripeEventId: event.id,
     });
+
+    if (userId) {
+      await tryRecordPreviewRecoveryNotificationEvent({
+        fingerprint: `${stripeAccountId}:${sanitizedError.code}`,
+        payload: {
+          errorCode: sanitizedError.code,
+          eventType: event.type,
+          stripeAccountId,
+        },
+        ruleId: "webhook_failure",
+        stripeAccountId,
+        userId,
+      });
+    }
 
     return NextResponse.json(
       { error: "Webhook processing failed.", retry: true },

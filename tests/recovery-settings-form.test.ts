@@ -28,4 +28,12 @@ describe("recovery settings form", () => {
     expect(source).toContain("Standalone invoices");
     expect(source).toContain("Unknown invoice type");
   });
+
+  it("previews the recovery window and limits schedule changes to future cases", () => {
+    expect(source).toContain("Window and exhaustion preview");
+    expect(source).toContain("getRecoveryScheduleWindowDays");
+    expect(source).toContain("marked exhausted for manual review");
+    expect(source).toContain("applies to future recovery cases only");
+    expect(source).toContain("keep the schedule snapshot they started with");
+  });
 });

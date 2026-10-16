@@ -1,7 +1,36 @@
+import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeAppRedirect } from "../../lib/safe-redirect";
-import { createClient } from "../../lib/supabase/server";
+import {
+  getSupabasePublishableKey,
+  getSupabaseUrl,
+} from "../../lib/supabase/env";
+
+function createAuthCallbackClient(request: NextRequest, response: NextResponse) {
+  const url = getSupabaseUrl();
+  const publishableKey = getSupabasePublishableKey();
+
+  if (!url || !publishableKey) {
+    throw new Error("Supabase URL and publishable key are required.");
+  }
+
+  return createServerClient(url, publishableKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet, headersToSet) {
+        cookiesToSet.forEach(({ name, options, value }) => {
+          response.cookies.set(name, value, options);
+        });
+        Object.entries(headersToSet).forEach(([name, value]) => {
+          response.headers.set(name, value);
+        });
+      },
+    },
+  });
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -14,13 +43,14 @@ export async function GET(request: NextRequest) {
   redirectTo.searchParams.delete("token_hash");
   redirectTo.searchParams.delete("type");
 
-  const supabase = await createClient();
+  const successResponse = NextResponse.redirect(redirectTo);
+  const supabase = createAuthCallbackClient(request, successResponse);
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(redirectTo);
+      return successResponse;
     }
   }
 
@@ -31,7 +61,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!error) {
-      return NextResponse.redirect(redirectTo);
+      return successResponse;
     }
   }
 

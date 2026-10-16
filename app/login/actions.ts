@@ -170,34 +170,3 @@ export async function requestPasswordReset(formData: FormData) {
     path: "/login",
   });
 }
-
-export async function updatePassword(formData: FormData) {
-  const password = String(formData.get("password") ?? "");
-  const confirmPassword = String(formData.get("confirm_password") ?? "");
-
-  if (password !== confirmPassword) {
-    redirectWithMessage({
-      message: "Passwords do not match.",
-      path: "/login",
-      status: "error",
-    });
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({
-    password,
-  });
-
-  if (error) {
-    redirectWithMessage({
-      message: error.message,
-      path: "/login",
-      status: "error",
-    });
-  }
-
-  redirectWithMessage({
-    message: "Password updated. You can now sign in with your new password.",
-    path: "/login",
-  });
-}

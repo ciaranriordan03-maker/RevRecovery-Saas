@@ -9,6 +9,7 @@ import {
 } from "../email/sending-domain";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { createResendDomain, getResendDomain, ResendDomainError, verifyResendDomain } from "./resend-domains";
+import { tryRecordPreviewRecoveryNotificationEvent } from "./recovery-notification-events";
 
 const TABLE = "recovery_sending_domains";
 
@@ -96,6 +97,17 @@ async function updateFromProvider(userId: string, row: SendingDomainRow) {
     .select("id, domain, provider_domain_id, status, dns_records, failure_reason, verified_at")
     .single<SendingDomainRow>();
   if (error || !data) throw new SendingDomainSettingsError("Unable to save sending domain status.", 500);
+
+  if (nextStatus === "failed" && row.status !== "failed") {
+    await tryRecordPreviewRecoveryNotificationEvent({
+      fingerprint: `${row.domain}:failed`,
+      occurredAt: now,
+      payload: { domain: row.domain, status: nextStatus },
+      ruleId: "sending_domain_failure",
+      userId,
+    });
+  }
+
   return toSettings(data);
 }
 
@@ -148,6 +160,15 @@ export async function disableSendingDomainForUser(userId: string) {
     .select("id, domain, provider_domain_id, status, dns_records, failure_reason, verified_at")
     .single<SendingDomainRow>();
   if (error || !data) throw new SendingDomainSettingsError("Unable to disable the sending domain.", 500);
+
+  await tryRecordPreviewRecoveryNotificationEvent({
+    fingerprint: `${row.domain}:disabled`,
+    occurredAt: now,
+    payload: { domain: row.domain, status: "disabled" },
+    ruleId: "sending_domain_failure",
+    userId,
+  });
+
   return toSettings(data);
 }
 

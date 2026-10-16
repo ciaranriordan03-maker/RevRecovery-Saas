@@ -1,15 +1,37 @@
 import Link from "next/link";
 import { Icon } from "../ui-icon";
 import { AtRiskCustomersTable } from "./at-risk-customers-table";
+import { ActivationReadinessChecklist } from "./activation-readiness-checklist";
+import { ControlledTestPlan } from "./controlled-test-plan";
+import { RecoveryOpportunityReportCard } from "./recovery-opportunity-report";
 import { RecoverySettingsForm } from "./recovery-settings-form";
+import { RecoveryHealthBanner } from "./recovery-health-banner";
+import { EssentialNotificationPreview } from "./essential-notification-preview";
+import { NotificationTestRecipientSettings } from "./notification-test-recipient-settings";
+import { NotificationTestAuthorization } from "./notification-test-authorization";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
 import type { UserSettings } from "../../lib/settings";
+import type { ActivationReadiness } from "../../lib/recovery/activation-readiness";
+import type { ControlledTestEligibility } from "../../lib/recovery/controlled-test-plan";
+import type { RecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
+import { buildRecoveryHealthSummary } from "../../lib/recovery/recovery-health";
+import type { PreviewNotificationHistory } from "../../lib/recovery/notification-event-history";
+import type { NotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
+import type { NotificationActivationReview as NotificationActivationReviewModel } from "../../lib/recovery/notification-activation-review";
+import { NotificationActivationReview } from "./notification-activation-review";
 
 type RecoveryContentProps = {
+  accountEmail: string;
   atRiskCustomers?: AtRiskCustomer[];
+  activationReadiness: ActivationReadiness;
+  controlledTestEligibility: ControlledTestEligibility;
   mode?: "sequence" | "customize" | "review";
+  opportunityReport: RecoveryOpportunityReport;
+  notificationHistory: PreviewNotificationHistory;
+  notificationActivationReview: NotificationActivationReviewModel;
+  notificationReadiness: NotificationActivationReadiness;
   recoveryView: RecoveryFlowView;
   userSettings: UserSettings;
 };
@@ -52,10 +74,20 @@ function MessageCards({ recoveryView }: { recoveryView: RecoveryFlowView }) {
   );
 }
 
-function RecoverySequence({ atRiskCustomers, recoveryView }: { atRiskCustomers: AtRiskCustomer[]; recoveryView: RecoveryFlowView }) {
+function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView }: { accountEmail: string; activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; notificationActivationReview: NotificationActivationReviewModel; notificationHistory: PreviewNotificationHistory; notificationReadiness: NotificationActivationReadiness; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView }) {
+  const recoveryHealth = buildRecoveryHealthSummary(
+    activationReadiness,
+    recoveryView.mode,
+  );
+
   return (
     <div className="px-5 py-8 sm:px-8 xl:px-[143px]">
       <div className="mx-auto flex max-w-[896px] flex-col gap-8">
+        <RecoveryOpportunityReportCard report={opportunityReport} />
+        <RecoveryHealthBanner health={recoveryHealth} />
+        <EssentialNotificationPreview accountEmail={accountEmail} history={notificationHistory} readiness={notificationReadiness} />
+        <NotificationActivationReview review={notificationActivationReview} />
+        <ActivationReadinessChecklist readiness={activationReadiness} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <p className="text-sm leading-5 text-[var(--muted-strong)]">
             This account is in <strong>{modeLabels[recoveryView.mode]} mode</strong> and uses the {recoveryView.scheduleLabel.toLowerCase()} in {recoveryView.timezone}. The messages below are the templates currently used by the delivery worker.
@@ -72,7 +104,7 @@ function RecoverySequence({ atRiskCustomers, recoveryView }: { atRiskCustomers: 
   );
 }
 
-function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: RecoveryFlowView; userSettings: UserSettings }) {
+function CustomizeRecoveryStep({ controlledTestEligibility, recoveryView, userSettings }: { controlledTestEligibility: ControlledTestEligibility; recoveryView: RecoveryFlowView; userSettings: UserSettings }) {
   const recipient = recoveryView.approvedTestRecipient ?? "Not configured";
   return (
     <div className="px-5 py-7 sm:px-8 xl:px-[143px]">
@@ -103,6 +135,9 @@ function CustomizeRecoveryStep({ recoveryView, userSettings }: { recoveryView: R
           }}
           initialUserSettings={userSettings}
         />
+        <NotificationTestRecipientSettings />
+        <NotificationTestAuthorization />
+        <ControlledTestPlan eligibility={controlledTestEligibility} />
         <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
           <h2 className="text-base font-medium text-[var(--foreground)]">Saved message preview</h2>
           <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">These previews show the message copy currently saved for new recovery cases. Existing active sequences keep the configuration snapshot they started with.</p>
@@ -152,8 +187,8 @@ function ReviewRecoveryStep({ recoveryView }: { recoveryView: RecoveryFlowView }
   );
 }
 
-export function RecoveryContent({ atRiskCustomers = [], mode = "sequence", recoveryView, userSettings }: RecoveryContentProps) {
+export function RecoveryContent({ accountEmail, activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView, userSettings }: RecoveryContentProps) {
   if (mode === "review") return <ReviewRecoveryStep recoveryView={recoveryView} />;
-  if (mode === "customize") return <CustomizeRecoveryStep recoveryView={recoveryView} userSettings={userSettings} />;
-  return <RecoverySequence atRiskCustomers={atRiskCustomers} recoveryView={recoveryView} />;
+  if (mode === "customize") return <CustomizeRecoveryStep controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
+  return <RecoverySequence accountEmail={accountEmail} activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} notificationActivationReview={notificationActivationReview} notificationHistory={notificationHistory} notificationReadiness={notificationReadiness} opportunityReport={opportunityReport} recoveryView={recoveryView} />;
 }

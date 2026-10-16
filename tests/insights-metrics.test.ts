@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMeasurementQualityMetric,
+  buildDataSufficiencyMetric,
+  buildDescriptiveBaselineMetric,
+  buildCohortComparisonMetric,
+  buildMeasurementEvidenceMetric,
   buildInsightsMetrics,
   type FailedPaymentMetricRow,
   type RecoveryMessageEventMetricRow,
@@ -51,6 +56,330 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("records exact bounded cohort evidence without changing measurements", () => {
+    const filter = { environment: "test", period: "30d", segment: "subscription" } as const;
+    const sufficiency = buildDataSufficiencyMetric([], filter);
+    const comparison = buildCohortComparisonMetric([], filter, new Date("2026-10-16T12:00:00.000Z"));
+    const metric = buildMeasurementEvidenceMetric(
+      filter,
+      sufficiency,
+      comparison,
+      new Date("2026-10-16T12:00:00.000Z"),
+    );
+
+    expect(metric).toMatchObject({
+      boundaries: {
+        current: "2026-09-16T12:00:00.000Z ≤ created_at ≤ 2026-10-16T12:00:00.000Z",
+        previous: "2026-08-17T12:00:00.000Z ≤ created_at < 2026-09-16T12:00:00.000Z",
+      },
+      evaluatedAt: "2026-10-16T12:00:00.000Z",
+      exportManifest: {
+        contractVersion: "revrecovery-insights-v1",
+        evaluatedAt: "2026-10-16T12:00:00.000Z",
+        fingerprint: {
+          algorithm: "SHA-256",
+        },
+        manifestVersion: "revrecovery-insights-evidence-manifest-v1",
+      },
+      scope: {
+        audience: "Subscription renewals (audience_segment = subscription)",
+        environment: "Test evidence (livemode = false)",
+      },
+      title: "Measurement evidence",
+      traceability: {
+        contractVersion: "revrecovery-insights-v1",
+        fingerprintAlgorithm: "SHA-256",
+      },
+    });
+    expect(metric.traceability.evidenceFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    expect(metric.exportManifest.fingerprint.value).toBe(metric.traceability.evidenceFingerprint);
+    expect(metric.gateOutcomes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Sample size", passed: false }),
+      expect.objectContaining({ label: "Adjacent comparison", passed: false }),
+    ]));
+    expect(metric.definitions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Observed period change" }),
+    ]));
+  });
+
+  it("states that an all-time view has no preceding cohort boundary", () => {
+    const filter = { environment: "live", period: "all", segment: "all" } as const;
+    const sufficiency = buildDataSufficiencyMetric([], filter);
+    const comparison = buildCohortComparisonMetric([], filter, new Date("2026-10-16T12:00:00.000Z"));
+    const metric = buildMeasurementEvidenceMetric(
+      filter,
+      sufficiency,
+      comparison,
+      new Date("2026-10-16T12:00:00.000Z"),
+    );
+
+    expect(metric.boundaries).toEqual({
+      current: "created_at at or before 2026-10-16T12:00:00.000Z",
+      previous: "Not defined for all-time evidence",
+    });
+  });
+
+  it("fingerprints selected evidence deterministically without exposing source rows", () => {
+    const evaluatedAt = new Date("2026-10-16T12:00:00.000Z");
+    const failedPayments = [
+      failedPayment({ amount_due: 7900, currency: "EUR", id: "private-case-b", livemode: false }),
+      failedPayment({ amount_due: 4200, currency: "eur", id: "private-case-a", livemode: false }),
+    ];
+    const messages = [
+      message({ failed_payment_id: "private-case-b", id: "private-message-b", sequence_id: "private-sequence-b" }),
+      message({ failed_payment_id: "private-case-a", id: "private-message-a", sequence_id: "private-sequence-a" }),
+    ];
+    const sequences = [
+      sequence({ failed_payment_id: "private-case-b", id: "private-sequence-b" }),
+      sequence({ failed_payment_id: "private-case-a", id: "private-sequence-a" }),
+    ];
+    const events = [
+      event({ event_type: "opened", recovery_message_id: "private-message-b" }),
+      event({ event_type: "delivered", recovery_message_id: "private-message-a" }),
+    ];
+    const build = (paymentRows: FailedPaymentMetricRow[], reverse = false) => buildInsightsMetrics({
+      evaluatedAt,
+      events: reverse ? [...events].reverse() : events,
+      failedPayments: paymentRows,
+      filter: { environment: "test", period: "30d", segment: "all" },
+      messages: reverse ? [...messages].reverse() : messages,
+      sequences: reverse ? [...sequences].reverse() : sequences,
+    }).measurementEvidence;
+
+    const first = build(failedPayments);
+    const reordered = build([...failedPayments].reverse(), true);
+    const changed = build([
+      { ...failedPayments[0], amount_due: 7901 },
+      failedPayments[1],
+    ]);
+
+    expect(first.traceability.evidenceFingerprint).toBe(reordered.traceability.evidenceFingerprint);
+    expect(changed.traceability.evidenceFingerprint).not.toBe(first.traceability.evidenceFingerprint);
+    expect(JSON.stringify(first)).not.toContain("private-case");
+    expect(JSON.stringify(first)).not.toContain("private-message");
+    expect(JSON.stringify(first.exportManifest)).not.toContain("private-sequence");
+    expect(first.exportManifest).toMatchObject({
+      boundaries: first.boundaries,
+      contractVersion: first.traceability.contractVersion,
+      definitions: first.definitions,
+      evaluatedAt: first.evaluatedAt,
+      fingerprint: {
+        algorithm: first.traceability.fingerprintAlgorithm,
+        value: first.traceability.evidenceFingerprint,
+      },
+      gates: first.gateOutcomes,
+      scope: first.scope,
+    });
+    expect(Object.keys(first.exportManifest).sort()).toEqual([
+      "boundaries",
+      "contractVersion",
+      "definitions",
+      "evaluatedAt",
+      "fingerprint",
+      "gates",
+      "limitations",
+      "manifestVersion",
+      "scope",
+    ]);
+    expect(first.exportManifest.limitations).toEqual(expect.arrayContaining([
+      expect.stringContaining("no row-level"),
+      expect.stringContaining("Does not establish causation"),
+    ]));
+  });
+
+  it("withholds adjacent-period comparisons unless both cohorts pass independently", () => {
+    const metric = buildCohortComparisonMetric([
+      failedPayment({ amount_due: 7900, case_status: "active", created_at: "2026-10-10T00:00:00.000Z", currency: "eur", livemode: false }),
+    ], { environment: "test", period: "30d", segment: "all" }, new Date("2026-10-16T00:00:00.000Z"));
+
+    expect(metric).toMatchObject({
+      available: false,
+      currentLabel: "Current 30 days",
+      previousLabel: "Previous 30 days",
+      rows: [],
+      title: "Cohort comparison withheld",
+    });
+  });
+
+  it("shows observed changes only when adjacent cohorts both pass", () => {
+    const makeCohort = (period: "current" | "previous") => Array.from({ length: 30 }, (_, index) => {
+      const recoveredLimit = period === "current" ? 12 : 6;
+      const caseStatus = index < recoveredLimit ? "recovered" : index < 24 ? "exhausted" : "active";
+      return failedPayment({
+        amount_due: 1000,
+        case_status: caseStatus,
+        created_at: period === "current" ? "2026-10-10T00:00:00.000Z" : "2026-09-10T00:00:00.000Z",
+        currency: "eur",
+        id: `${period}-${index}`,
+        livemode: false,
+        status: caseStatus === "recovered" ? "recovered" : "active",
+      });
+    });
+    const metric = buildCohortComparisonMetric(
+      [...makeCohort("current"), ...makeCohort("previous")],
+      { environment: "test", period: "30d", segment: "all" },
+      new Date("2026-10-16T00:00:00.000Z"),
+    );
+
+    expect(metric.available).toBe(true);
+    expect(metric.rows).toEqual([
+      expect.objectContaining({ label: "Selected cases", observedChange: "No observed change" }),
+      expect.objectContaining({ label: "Outcome maturity", observedChange: "No observed change" }),
+      expect.objectContaining({
+        current: "50%",
+        label: "Terminal recovery share",
+        observedChange: "+25 percentage points observed",
+        previous: "25%",
+      }),
+    ]);
+    expect(metric.summary).toContain("not performance lift, attribution, or incremental revenue");
+  });
+
+  it("does not infer a previous cohort for all-time evidence", () => {
+    const metric = buildCohortComparisonMetric([], { environment: "live", period: "all", segment: "all" });
+
+    expect(metric).toMatchObject({
+      available: false,
+      rows: [],
+      title: "Cohort comparison unavailable",
+    });
+  });
+
+  it("withholds every descriptive baseline value when sufficiency gates are waiting", () => {
+    const metric = buildDescriptiveBaselineMetric([
+      failedPayment({ amount_due: 7900, case_status: "active", currency: "eur", livemode: false }),
+    ], { environment: "test", period: "30d", segment: "all" });
+
+    expect(metric).toMatchObject({
+      available: false,
+      rows: [],
+      title: "Descriptive baseline withheld",
+    });
+    expect(metric.summary).not.toContain("€79.00");
+  });
+
+  it("shows only descriptive cohort facts after every readiness gate passes", () => {
+    const payments = Array.from({ length: 30 }, (_, index) => failedPayment({
+      amount_due: 1000,
+      case_status: index < 12 ? "recovered" : index < 24 ? "exhausted" : "active",
+      currency: "eur",
+      id: `payment-${index}`,
+      livemode: false,
+      status: index < 12 ? "recovered" : "active",
+    }));
+    const metric = buildDescriptiveBaselineMetric(
+      payments,
+      { environment: "test", period: "all", segment: "subscription" },
+    );
+
+    expect(metric).toMatchObject({
+      available: true,
+      title: "Descriptive cohort baseline",
+    });
+    expect(metric.rows).toEqual([
+      expect.objectContaining({ label: "Selected cohort", value: "30 cases" }),
+      expect.objectContaining({ label: "Terminal outcomes", value: "24 cases" }),
+      expect.objectContaining({ label: "Observed terminal recovery share", value: "50%" }),
+      expect.objectContaining({ label: "Failure-time amount represented", value: "€300.00" }),
+    ]);
+    expect(metric.summary).toContain("not a control group or performance lift claim");
+  });
+
+  it("withholds baseline eligibility until every sufficiency gate passes", () => {
+    const metric = buildDataSufficiencyMetric([
+      failedPayment({ amount_due: 7900, case_status: "active", currency: "eur", livemode: false }),
+      failedPayment({ amount_due: 7900, case_status: "recovered", currency: null, id: "payment-2", livemode: false }),
+    ], { environment: "test", period: "30d", segment: "all" });
+
+    expect(metric).toMatchObject({
+      eligible: false,
+      title: "Not yet eligible for baseline",
+    });
+    expect(metric.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Sample size", passed: false, value: "2 of 30 cases" }),
+      expect.objectContaining({ label: "Outcome maturity", passed: false, value: "50% terminal" }),
+      expect.objectContaining({ label: "Monetary evidence", passed: false, value: "1 of 2 complete" }),
+      expect.objectContaining({ label: "Environment certainty", passed: true, value: "Test evidence confirmed" }),
+    ]));
+  });
+
+  it("allows a descriptive test baseline only when all evidence gates pass", () => {
+    const payments = Array.from({ length: 30 }, (_, index) => failedPayment({
+      amount_due: 7900,
+      case_status: index < 24 ? "recovered" : "active",
+      currency: "eur",
+      id: `payment-${index}`,
+      livemode: false,
+    }));
+    const metric = buildDataSufficiencyMetric(payments, { environment: "test", period: "all", segment: "all" });
+
+    expect(metric.eligible).toBe(true);
+    expect(metric.title).toBe("Eligible for descriptive baseline");
+    expect(metric.gates.every((gate) => gate.passed)).toBe(true);
+    expect(metric.summary).toContain("remains test evidence");
+  });
+
+  it("never treats unconfirmed environment evidence as baseline-ready", () => {
+    const payments = Array.from({ length: 30 }, (_, index) => failedPayment({
+      amount_due: 7900,
+      case_status: "recovered",
+      currency: "eur",
+      id: `payment-${index}`,
+      livemode: null,
+    }));
+    const metric = buildDataSufficiencyMetric(payments, { environment: "unconfirmed", period: "all", segment: "all" });
+
+    expect(metric.eligible).toBe(false);
+    expect(metric.gates.find((gate) => gate.label === "Environment certainty")).toMatchObject({
+      passed: false,
+      value: "Environment evidence incomplete",
+    });
+  });
+
+  it("describes cohort quality without changing headline calculations", () => {
+    const metric = buildMeasurementQualityMetric([
+      failedPayment({ case_status: "active", livemode: false }),
+      failedPayment({ case_status: "recovered", id: "payment-2", livemode: true }),
+    ], { environment: "test", period: "30d", segment: "subscription" });
+
+    expect(metric.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        label: "Cohort definition",
+        value: "Failures first recorded in the last 30 days · subscription renewals",
+      }),
+      expect.objectContaining({
+        label: "Outcome maturity",
+        status: "attention",
+        value: "Outcomes still maturing",
+      }),
+      expect.objectContaining({
+        label: "Test / live boundary",
+        status: "attention",
+        value: "Unexpected mixed evidence",
+      }),
+      expect.objectContaining({
+        label: "Amount basis",
+        value: "Failure-time amount due",
+      }),
+      expect.objectContaining({
+        label: "Evidence limitation",
+        value: "Descriptive, not causal",
+      }),
+    ]));
+  });
+
+  it("does not present missing cohort evidence as a measured zero", () => {
+    const metric = buildMeasurementQualityMetric([], { environment: "unconfirmed", period: "all", segment: "all" });
+
+    expect(metric.items.find((item) => item.label === "Outcome maturity")).toMatchObject({
+      status: "clear",
+      value: "Awaiting cohort evidence",
+    });
+    expect(metric.items.find((item) => item.label === "Test / live boundary")).toMatchObject({
+      value: "No evidence selected",
+    });
+  });
+
   it("counts only explicitly recovered sequences as recovered", () => {
     const insights = buildInsightsMetrics({
       failedPayments: [

@@ -64,6 +64,12 @@ export function getRecoverySchedule(scheduleId: RecoveryScheduleId) {
   return RECOVERY_SCHEDULES.find((schedule) => schedule.id === scheduleId)!;
 }
 
+export function getRecoveryScheduleWindowDays(scheduleId: RecoveryScheduleId) {
+  const schedule = getRecoverySchedule(scheduleId);
+  const finalOffsetMinutes = schedule.offsetsMinutes.at(-1) ?? 0;
+  return finalOffsetMinutes / (24 * 60);
+}
+
 export function buildRecoveryScheduleSnapshot({
   policyVersion = null,
   scheduleId,
