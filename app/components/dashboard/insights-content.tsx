@@ -3,6 +3,7 @@ import { Icon } from "../ui-icon";
 import type {
   EmailRecoveryMetric,
   DeliveryHealthMetric,
+  DataSufficiencyMetric,
   EmailEngagementMetric,
   InsightCardMetric,
   InsightFunnelMetric,
@@ -12,6 +13,52 @@ import type {
   SequenceSummaryMetric,
   SegmentMetric,
 } from "../../lib/server/insights-metrics";
+
+function DataSufficiencyPanel({ metric }: { metric: DataSufficiencyMetric }) {
+  return (
+    <section
+      aria-labelledby="data-sufficiency-heading"
+      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+            Baseline readiness
+          </p>
+          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="data-sufficiency-heading">
+            {metric.title}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Check whether the selected evidence is sufficient for defensible descriptive reporting.
+          </p>
+        </div>
+        <span className={`w-fit rounded-[8px] px-3 py-1.5 text-xs font-medium ${metric.eligible ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--warning-soft)] text-[var(--warning-text)]"}`}>
+          {metric.eligible ? "All gates passed" : "Evidence incomplete"}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        {metric.gates.map((gate) => (
+          <article
+            className={`rounded-[10px] border p-4 ${gate.passed ? "border-[var(--success-badge)] bg-[var(--success-soft)]" : "border-[var(--warning)] bg-[var(--warning-soft)]"}`}
+            key={gate.label}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">{gate.label}</p>
+              <span className={`text-xs font-medium ${gate.passed ? "text-[var(--success)]" : "text-[var(--warning-text)]"}`}>
+                {gate.passed ? "Pass" : "Waiting"}
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-medium text-[var(--foreground)]">{gate.value}</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{gate.detail}</p>
+          </article>
+        ))}
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
+    </section>
+  );
+}
 
 function MeasurementQualityPanel({ metric }: { metric: MeasurementQualityMetric }) {
   const statusClasses = {
@@ -340,6 +387,7 @@ export function InsightsContent({ filter, insights }: { filter: InsightsFilter; 
       <div className="mx-auto flex max-w-[1024px] flex-col gap-7">
         <InsightFilters filter={filter} />
         <MeasurementQualityPanel metric={insights.measurementQuality} />
+        <DataSufficiencyPanel metric={insights.dataSufficiency} />
         <SequenceSummaryCard metrics={insights.sequenceSummary} />
 
         <SegmentBreakdown rows={insights.segmentBreakdown} />

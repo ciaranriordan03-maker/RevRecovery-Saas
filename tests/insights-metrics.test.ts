@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMeasurementQualityMetric,
+  buildDataSufficiencyMetric,
   buildInsightsMetrics,
   type FailedPaymentMetricRow,
   type RecoveryMessageEventMetricRow,
@@ -52,6 +53,57 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("withholds baseline eligibility until every sufficiency gate passes", () => {
+    const metric = buildDataSufficiencyMetric([
+      failedPayment({ amount_due: 7900, case_status: "active", currency: "eur", livemode: false }),
+      failedPayment({ amount_due: 7900, case_status: "recovered", currency: null, id: "payment-2", livemode: false }),
+    ], { environment: "test", period: "30d", segment: "all" });
+
+    expect(metric).toMatchObject({
+      eligible: false,
+      title: "Not yet eligible for baseline",
+    });
+    expect(metric.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Sample size", passed: false, value: "2 of 30 cases" }),
+      expect.objectContaining({ label: "Outcome maturity", passed: false, value: "50% terminal" }),
+      expect.objectContaining({ label: "Monetary evidence", passed: false, value: "1 of 2 complete" }),
+      expect.objectContaining({ label: "Environment certainty", passed: true, value: "Test evidence confirmed" }),
+    ]));
+  });
+
+  it("allows a descriptive test baseline only when all evidence gates pass", () => {
+    const payments = Array.from({ length: 30 }, (_, index) => failedPayment({
+      amount_due: 7900,
+      case_status: index < 24 ? "recovered" : "active",
+      currency: "eur",
+      id: `payment-${index}`,
+      livemode: false,
+    }));
+    const metric = buildDataSufficiencyMetric(payments, { environment: "test", period: "all", segment: "all" });
+
+    expect(metric.eligible).toBe(true);
+    expect(metric.title).toBe("Eligible for descriptive baseline");
+    expect(metric.gates.every((gate) => gate.passed)).toBe(true);
+    expect(metric.summary).toContain("remains test evidence");
+  });
+
+  it("never treats unconfirmed environment evidence as baseline-ready", () => {
+    const payments = Array.from({ length: 30 }, (_, index) => failedPayment({
+      amount_due: 7900,
+      case_status: "recovered",
+      currency: "eur",
+      id: `payment-${index}`,
+      livemode: null,
+    }));
+    const metric = buildDataSufficiencyMetric(payments, { environment: "unconfirmed", period: "all", segment: "all" });
+
+    expect(metric.eligible).toBe(false);
+    expect(metric.gates.find((gate) => gate.label === "Environment certainty")).toMatchObject({
+      passed: false,
+      value: "Environment evidence incomplete",
+    });
+  });
+
   it("describes cohort quality without changing headline calculations", () => {
     const metric = buildMeasurementQualityMetric([
       failedPayment({ case_status: "active", livemode: false }),

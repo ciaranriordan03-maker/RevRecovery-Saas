@@ -24,6 +24,7 @@ export type InsightCardMetric = {
 
 export type InsightsMetrics = {
   cards: InsightCardMetric[];
+  dataSufficiency: DataSufficiencyMetric;
   deliveryHealth: DeliveryHealthMetric;
   emailEngagement: EmailEngagementMetric;
   emailRecovery: EmailRecoveryMetric[];
@@ -31,6 +32,18 @@ export type InsightsMetrics = {
   measurementQuality: MeasurementQualityMetric;
   sequenceSummary: SequenceSummaryMetric[];
   segmentBreakdown: SegmentMetric[];
+};
+
+export type DataSufficiencyMetric = {
+  eligible: boolean;
+  gates: {
+    detail: string;
+    label: string;
+    passed: boolean;
+    value: string;
+  }[];
+  summary: string;
+  title: string;
 };
 
 export type MeasurementQualityMetric = {
@@ -558,6 +571,78 @@ const TERMINAL_CASE_STATUSES = new Set([
   "no_longer_applicable",
   "recovered",
 ]);
+const BASELINE_MINIMUM_CASES = 30;
+const BASELINE_MINIMUM_MATURITY_PERCENT = 80;
+
+function hasValidMonetaryEvidence(payment: FailedPaymentMetricRow) {
+  return Number.isFinite(payment.amount_due) &&
+    (payment.amount_due ?? -1) >= 0 &&
+    /^[a-z]{3}$/i.test(payment.currency ?? "");
+}
+
+export function buildDataSufficiencyMetric(
+  failedPayments: FailedPaymentMetricRow[],
+  filter: InsightsFilter,
+): DataSufficiencyMetric {
+  const terminalCount = failedPayments.filter((payment) =>
+    TERMINAL_CASE_STATUSES.has(payment.case_status ?? ""),
+  ).length;
+  const maturityPercent = percent(terminalCount, failedPayments.length);
+  const validMonetaryCount = failedPayments.filter(hasValidMonetaryEvidence).length;
+  const environmentCount = failedPayments.filter((payment) => filter.environment === "live"
+    ? payment.livemode === true
+    : filter.environment === "test"
+      ? payment.livemode === false
+      : false).length;
+  const samplePassed = failedPayments.length >= BASELINE_MINIMUM_CASES;
+  const maturityPassed = failedPayments.length > 0 &&
+    maturityPercent >= BASELINE_MINIMUM_MATURITY_PERCENT;
+  const monetaryPassed = failedPayments.length > 0 &&
+    validMonetaryCount === failedPayments.length;
+  const environmentPassed = failedPayments.length > 0 &&
+    filter.environment !== "unconfirmed" &&
+    environmentCount === failedPayments.length;
+  const gates = [
+    {
+      detail: `A descriptive baseline requires at least ${BASELINE_MINIMUM_CASES} cases in the selected cohort.`,
+      label: "Sample size",
+      passed: samplePassed,
+      value: `${failedPayments.length} of ${BASELINE_MINIMUM_CASES} cases`,
+    },
+    {
+      detail: `${terminalCount} of ${failedPayments.length} cases have a recorded terminal outcome. The reporting threshold is ${BASELINE_MINIMUM_MATURITY_PERCENT}%.`,
+      label: "Outcome maturity",
+      passed: maturityPassed,
+      value: failedPayments.length === 0 ? "Awaiting cases" : `${maturityPercent}% terminal`,
+    },
+    {
+      detail: "Every case must have a non-negative failure-time amount and a three-letter currency code. Multiple currencies remain reported separately.",
+      label: "Monetary evidence",
+      passed: monetaryPassed,
+      value: `${validMonetaryCount} of ${failedPayments.length} complete`,
+    },
+    {
+      detail: filter.environment === "unconfirmed"
+        ? "Unconfirmed records cannot support an environment-specific baseline."
+        : `Every selected case must be explicitly recorded as ${filter.environment} evidence.`,
+      label: "Environment certainty",
+      passed: environmentPassed,
+      value: environmentPassed
+        ? `${filter.environment === "live" ? "Live" : "Test"} evidence confirmed`
+        : "Environment evidence incomplete",
+    },
+  ];
+  const eligible = gates.every((gate) => gate.passed);
+
+  return {
+    eligible,
+    gates,
+    summary: eligible
+      ? `The selected cohort meets the current descriptive-baseline policy. ${filter.environment === "test" ? "It remains test evidence and cannot support live-performance claims." : "This does not establish causation or incremental revenue."}`
+      : "Baseline reporting remains withheld until every gate passes. Existing operational metrics remain visible and unchanged.",
+    title: eligible ? "Eligible for descriptive baseline" : "Not yet eligible for baseline",
+  };
+}
 
 function describePeriod(period: InsightPeriod) {
   if (period === "all") {
@@ -722,6 +807,7 @@ export function buildInsightsMetrics({
         title: "Recovery Outcomes",
       },
     ],
+    dataSufficiency: buildDataSufficiencyMetric(failedPayments, filter),
     deliveryHealth,
     emailEngagement,
     emailRecovery,
