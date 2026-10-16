@@ -56,6 +56,29 @@ function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetri
         </div>
       </div>
 
+      <div className="mt-5 rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
+        <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Measurement traceability</p>
+        <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt className="text-xs text-[var(--muted)]">Contract version</dt>
+            <dd className="mt-1 font-mono text-xs font-medium text-[var(--foreground)]">{metric.traceability.contractVersion}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-[var(--muted)]">Fingerprint algorithm</dt>
+            <dd className="mt-1 font-mono text-xs font-medium text-[var(--foreground)]">{metric.traceability.fingerprintAlgorithm}</dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-xs text-[var(--muted)]">Evidence fingerprint</dt>
+            <dd className="mt-1 break-all font-mono text-xs leading-5 text-[var(--foreground)]">
+              {metric.traceability.evidenceFingerprint}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-xs leading-5 text-[var(--muted-strong)]">
+          {metric.traceability.fingerprintBasis} The fingerprint is generated server-side; no row identifiers or source values are displayed.
+        </p>
+      </div>
+
       <div className="mt-5">
         <h3 className="text-sm font-medium text-[var(--foreground)]">Gate outcomes</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">

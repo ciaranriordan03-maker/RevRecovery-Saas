@@ -78,7 +78,12 @@ describe("Insights metrics", () => {
         environment: "Test evidence (livemode = false)",
       },
       title: "Measurement evidence",
+      traceability: {
+        contractVersion: "revrecovery-insights-v1",
+        fingerprintAlgorithm: "SHA-256",
+      },
     });
+    expect(metric.traceability.evidenceFingerprint).toMatch(/^[0-9a-f]{64}$/);
     expect(metric.gateOutcomes).toEqual(expect.arrayContaining([
       expect.objectContaining({ label: "Sample size", passed: false }),
       expect.objectContaining({ label: "Adjacent comparison", passed: false }),
@@ -103,6 +108,46 @@ describe("Insights metrics", () => {
       current: "created_at at or before 2026-10-16T12:00:00.000Z",
       previous: "Not defined for all-time evidence",
     });
+  });
+
+  it("fingerprints selected evidence deterministically without exposing source rows", () => {
+    const evaluatedAt = new Date("2026-10-16T12:00:00.000Z");
+    const failedPayments = [
+      failedPayment({ amount_due: 7900, currency: "EUR", id: "private-case-b", livemode: false }),
+      failedPayment({ amount_due: 4200, currency: "eur", id: "private-case-a", livemode: false }),
+    ];
+    const messages = [
+      message({ failed_payment_id: "private-case-b", id: "private-message-b", sequence_id: "private-sequence-b" }),
+      message({ failed_payment_id: "private-case-a", id: "private-message-a", sequence_id: "private-sequence-a" }),
+    ];
+    const sequences = [
+      sequence({ failed_payment_id: "private-case-b", id: "private-sequence-b" }),
+      sequence({ failed_payment_id: "private-case-a", id: "private-sequence-a" }),
+    ];
+    const events = [
+      event({ event_type: "opened", recovery_message_id: "private-message-b" }),
+      event({ event_type: "delivered", recovery_message_id: "private-message-a" }),
+    ];
+    const build = (paymentRows: FailedPaymentMetricRow[], reverse = false) => buildInsightsMetrics({
+      evaluatedAt,
+      events: reverse ? [...events].reverse() : events,
+      failedPayments: paymentRows,
+      filter: { environment: "test", period: "30d", segment: "all" },
+      messages: reverse ? [...messages].reverse() : messages,
+      sequences: reverse ? [...sequences].reverse() : sequences,
+    }).measurementEvidence;
+
+    const first = build(failedPayments);
+    const reordered = build([...failedPayments].reverse(), true);
+    const changed = build([
+      { ...failedPayments[0], amount_due: 7901 },
+      failedPayments[1],
+    ]);
+
+    expect(first.traceability.evidenceFingerprint).toBe(reordered.traceability.evidenceFingerprint);
+    expect(changed.traceability.evidenceFingerprint).not.toBe(first.traceability.evidenceFingerprint);
+    expect(JSON.stringify(first)).not.toContain("private-case");
+    expect(JSON.stringify(first)).not.toContain("private-message");
   });
 
   it("withholds adjacent-period comparisons unless both cohorts pass independently", () => {

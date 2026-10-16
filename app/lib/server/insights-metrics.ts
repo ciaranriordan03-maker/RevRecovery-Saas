@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { aggregateCurrencyAmounts, formatCurrencyAmounts } from "../currency";
 
@@ -58,6 +59,12 @@ export type MeasurementEvidenceMetric = {
   };
   summary: string;
   title: string;
+  traceability: {
+    contractVersion: string;
+    evidenceFingerprint: string;
+    fingerprintAlgorithm: "SHA-256";
+    fingerprintBasis: string;
+  };
 };
 
 export type CohortComparisonMetric = {
@@ -208,6 +215,85 @@ const FAILED_PAYMENTS_TABLE = "failed_payments";
 const RECOVERY_MESSAGE_EVENTS_TABLE = "recovery_message_events";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 const RECOVERY_SEQUENCES_TABLE = "recovery_sequences";
+const INSIGHTS_MEASUREMENT_CONTRACT_VERSION = "revrecovery-insights-v1";
+
+type MeasurementFingerprintEvidence = {
+  events?: RecoveryMessageEventMetricRow[];
+  failedPayments?: FailedPaymentMetricRow[];
+  messages?: RecoveryMessageMetricRow[];
+  sequences?: RecoverySequenceMetricRow[];
+};
+
+function canonicalizeFingerprintRows(rows: unknown[][]) {
+  return rows.map((row) => JSON.stringify(row)).sort();
+}
+
+function buildMeasurementEvidenceFingerprint({
+  comparison,
+  evaluatedAt,
+  evidence,
+  filter,
+  sufficiency,
+}: {
+  comparison: CohortComparisonMetric;
+  evaluatedAt: string;
+  evidence: MeasurementFingerprintEvidence;
+  filter: InsightsFilter;
+  sufficiency: DataSufficiencyMetric;
+}) {
+  const payload = {
+    comparison,
+    contractVersion: INSIGHTS_MEASUREMENT_CONTRACT_VERSION,
+    evaluatedAt,
+    evidence: {
+      events: canonicalizeFingerprintRows((evidence.events ?? []).map((event) => [
+        event.event_type,
+        event.recovery_message_id,
+      ])),
+      failedPayments: canonicalizeFingerprintRows((evidence.failedPayments ?? []).map((payment) => [
+        payment.id,
+        payment.amount_due ?? null,
+        payment.audience_segment ?? null,
+        payment.case_status ?? null,
+        payment.created_at,
+        payment.currency?.toLowerCase() ?? null,
+        payment.last_event_type,
+        payment.livemode ?? null,
+        payment.recovered_at,
+        payment.status,
+      ])),
+      messages: canonicalizeFingerprintRows((evidence.messages ?? []).map((message) => [
+        message.id ?? null,
+        message.failed_payment_id,
+        message.message_key,
+        message.provider_delivery_occurred_at,
+        message.provider_delivery_status,
+        message.sequence_id,
+        message.sent_at,
+        message.status,
+        message.step_number,
+      ])),
+      sequences: canonicalizeFingerprintRows((evidence.sequences ?? []).map((sequence) => [
+        sequence.id,
+        sequence.failed_payment_id ?? null,
+        sequence.completed_at,
+        sequence.started_at,
+        sequence.status,
+      ])),
+    },
+    filter,
+    sufficiency: {
+      eligible: sufficiency.eligible,
+      gates: sufficiency.gates.map((gate) => ({
+        label: gate.label,
+        passed: gate.passed,
+        value: gate.value,
+      })),
+    },
+  };
+
+  return createHash("sha256").update(JSON.stringify(payload), "utf8").digest("hex");
+}
 
 function percent(part: number, total: number) {
   if (total <= 0) {
@@ -874,6 +960,7 @@ export function buildMeasurementEvidenceMetric(
   sufficiency: DataSufficiencyMetric,
   comparison: CohortComparisonMetric,
   evaluatedAt = new Date(),
+  evidence: MeasurementFingerprintEvidence = {},
 ): MeasurementEvidenceMetric {
   const evaluatedAtIso = evaluatedAt.toISOString();
   let currentBoundary = `created_at at or before ${evaluatedAtIso}`;
@@ -945,6 +1032,18 @@ export function buildMeasurementEvidenceMetric(
     },
     summary: "Generated read-only from the selected evidence at the evaluation timestamp. This is calculation context, not an immutable snapshot or a new performance claim.",
     title: "Measurement evidence",
+    traceability: {
+      contractVersion: INSIGHTS_MEASUREMENT_CONTRACT_VERSION,
+      evidenceFingerprint: buildMeasurementEvidenceFingerprint({
+        comparison,
+        evaluatedAt: evaluatedAtIso,
+        evidence,
+        filter,
+        sufficiency,
+      }),
+      fingerprintAlgorithm: "SHA-256",
+      fingerprintBasis: "Selected failed-payment, message, sequence, provider-event, scope, boundary, and gate evidence.",
+    },
   };
 }
 
@@ -1162,6 +1261,7 @@ export function buildInsightsMetrics({
       dataSufficiency,
       resolvedCohortComparison,
       evaluatedAt,
+      { events, failedPayments, messages, sequences },
     ),
     sequenceSummary,
     segmentBreakdown,
