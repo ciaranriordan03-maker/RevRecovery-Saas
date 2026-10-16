@@ -32,8 +32,32 @@ export type InsightsMetrics = {
   emailRecovery: EmailRecoveryMetric[];
   funnel: InsightFunnelMetric[];
   measurementQuality: MeasurementQualityMetric;
+  measurementEvidence: MeasurementEvidenceMetric;
   sequenceSummary: SequenceSummaryMetric[];
   segmentBreakdown: SegmentMetric[];
+};
+
+export type MeasurementEvidenceMetric = {
+  boundaries: {
+    current: string;
+    previous: string;
+  };
+  definitions: {
+    label: string;
+    value: string;
+  }[];
+  evaluatedAt: string;
+  gateOutcomes: {
+    label: string;
+    passed: boolean;
+    value: string;
+  }[];
+  scope: {
+    audience: string;
+    environment: string;
+  };
+  summary: string;
+  title: string;
 };
 
 export type CohortComparisonMetric = {
@@ -845,6 +869,85 @@ export function buildCohortComparisonMetric(
   };
 }
 
+export function buildMeasurementEvidenceMetric(
+  filter: InsightsFilter,
+  sufficiency: DataSufficiencyMetric,
+  comparison: CohortComparisonMetric,
+  evaluatedAt = new Date(),
+): MeasurementEvidenceMetric {
+  const evaluatedAtIso = evaluatedAt.toISOString();
+  let currentBoundary = `created_at at or before ${evaluatedAtIso}`;
+  let previousBoundary = "Not defined for all-time evidence";
+
+  if (filter.period !== "all") {
+    const periodMs = Number.parseInt(filter.period, 10) * 24 * 60 * 60 * 1000;
+    const currentStart = new Date(evaluatedAt.getTime() - periodMs);
+    const previousStart = new Date(currentStart.getTime() - periodMs);
+    currentBoundary = `${currentStart.toISOString()} ≤ created_at ≤ ${evaluatedAtIso}`;
+    previousBoundary = `${previousStart.toISOString()} ≤ created_at < ${currentStart.toISOString()}`;
+  }
+
+  const environmentLabels: Record<InsightEnvironment, string> = {
+    live: "Live evidence (livemode = true)",
+    test: "Test evidence (livemode = false)",
+    unconfirmed: "Unconfirmed evidence (livemode is null or absent)",
+  };
+  const audienceLabels: Record<InsightSegment, string> = {
+    all: "All invoice audiences",
+    standalone: "Standalone invoices (audience_segment = standalone)",
+    subscription: "Subscription renewals (audience_segment = subscription)",
+    unknown: "Unknown invoice types (audience_segment is unknown or absent)",
+  };
+
+  return {
+    boundaries: {
+      current: currentBoundary,
+      previous: previousBoundary,
+    },
+    definitions: [
+      {
+        label: "Cohort inclusion",
+        value: "A failed-payment case is included when its created_at timestamp falls inside the selected boundary and its environment and audience match the selected scope.",
+      },
+      {
+        label: "Outcome maturity",
+        value: "Terminal cases ÷ selected cases. Terminal states are recovered, exhausted, canceled by merchant, and no longer applicable.",
+      },
+      {
+        label: "Terminal recovery share",
+        value: "Recorded recovered terminal cases ÷ all terminal cases. This is descriptive and does not establish causation.",
+      },
+      {
+        label: "Failure-time amount represented",
+        value: "Sum of amount_due recorded at failure, grouped and displayed separately by three-letter currency code. It is not confirmed collected or incremental revenue.",
+      },
+      {
+        label: "Observed period change",
+        value: "Current adjacent cohort value minus previous adjacent cohort value. It is not lift, attribution, or a counterfactual comparison.",
+      },
+    ],
+    evaluatedAt: evaluatedAtIso,
+    gateOutcomes: [
+      ...sufficiency.gates.map((gate) => ({
+        label: gate.label,
+        passed: gate.passed,
+        value: gate.value,
+      })),
+      {
+        label: "Adjacent comparison",
+        passed: comparison.available,
+        value: comparison.available ? "Both cohorts eligible" : comparison.title,
+      },
+    ],
+    scope: {
+      audience: audienceLabels[filter.segment],
+      environment: environmentLabels[filter.environment],
+    },
+    summary: "Generated read-only from the selected evidence at the evaluation timestamp. This is calculation context, not an immutable snapshot or a new performance claim.",
+    title: "Measurement evidence",
+  };
+}
+
 function describePeriod(period: InsightPeriod) {
   if (period === "all") {
     return "All recorded failure dates";
@@ -940,6 +1043,7 @@ export function buildMeasurementQualityMetric(
 
 export function buildInsightsMetrics({
   cohortComparison,
+  evaluatedAt = new Date(),
   events = [],
   failedPayments,
   filter = { environment: "unconfirmed", period: "30d", segment: "all" },
@@ -947,6 +1051,7 @@ export function buildInsightsMetrics({
   sequences,
 }: {
   cohortComparison?: CohortComparisonMetric;
+  evaluatedAt?: Date;
   events?: RecoveryMessageEventMetricRow[];
   failedPayments: FailedPaymentMetricRow[];
   filter?: InsightsFilter;
@@ -969,6 +1074,14 @@ export function buildInsightsMetrics({
   const emailEngagement = buildEmailEngagementMetric(events);
   const segmentBreakdown = buildSegmentMetrics(failedPayments, messages, events);
   const dataSufficiency = buildDataSufficiencyMetric(failedPayments, filter);
+  const resolvedCohortComparison = cohortComparison ?? {
+    available: false,
+    currentLabel: "Selected cohort",
+    previousLabel: "Comparison cohort",
+    rows: [],
+    summary: "Comparison evidence was not supplied. No comparison values are shown.",
+    title: "Cohort comparison withheld",
+  };
 
   return {
     baselineSummary: buildDescriptiveBaselineMetric(failedPayments, filter, dataSufficiency),
@@ -1012,14 +1125,7 @@ export function buildInsightsMetrics({
         title: "Recovery Outcomes",
       },
     ],
-    cohortComparison: cohortComparison ?? {
-      available: false,
-      currentLabel: "Selected cohort",
-      previousLabel: "Comparison cohort",
-      rows: [],
-      summary: "Comparison evidence was not supplied. No comparison values are shown.",
-      title: "Cohort comparison withheld",
-    },
+    cohortComparison: resolvedCohortComparison,
     dataSufficiency,
     deliveryHealth,
     emailEngagement,
@@ -1051,6 +1157,12 @@ export function buildInsightsMetrics({
       },
     ],
     measurementQuality: buildMeasurementQualityMetric(failedPayments, filter),
+    measurementEvidence: buildMeasurementEvidenceMetric(
+      filter,
+      dataSufficiency,
+      resolvedCohortComparison,
+      evaluatedAt,
+    ),
     sequenceSummary,
     segmentBreakdown,
   };
@@ -1094,12 +1206,15 @@ export function filterInsightsRows({
     ? null
     : now.getTime() - Number.parseInt(filter.period, 10) * 24 * 60 * 60 * 1000;
   const selectedPayments = failedPayments.filter((payment) => {
+    const createdAt = new Date(payment.created_at).getTime();
     const inEnvironment = filter.environment === "live"
       ? payment.livemode === true
       : filter.environment === "test"
         ? payment.livemode === false
         : payment.livemode === null || payment.livemode === undefined;
-    const inPeriod = cutoff === null || new Date(payment.created_at).getTime() >= cutoff;
+    const inPeriod = Number.isFinite(createdAt) &&
+      createdAt <= now.getTime() &&
+      (cutoff === null || createdAt >= cutoff);
     const inSegment = filter.segment === "all" || (payment.audience_segment ?? "unknown") === filter.segment;
     return inEnvironment && inPeriod && inSegment;
   });
@@ -1129,6 +1244,7 @@ export async function getInsightsMetrics(
   return buildInsightsMetrics({
     ...filterInsightsRows({ events, failedPayments, filter, messages, now, sequences }),
     cohortComparison: buildCohortComparisonMetric(failedPayments, filter, now),
+    evaluatedAt: now,
     filter,
   });
 }

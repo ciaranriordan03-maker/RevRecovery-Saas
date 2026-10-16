@@ -12,9 +12,80 @@ import type {
   InsightsMetrics,
   InsightsFilter,
   MeasurementQualityMetric,
+  MeasurementEvidenceMetric,
   SequenceSummaryMetric,
   SegmentMetric,
 } from "../../lib/server/insights-metrics";
+
+function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetric }) {
+  return (
+    <section
+      aria-labelledby="measurement-evidence-heading"
+      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Audit context</p>
+          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="measurement-evidence-heading">
+            {metric.title}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">Exact scope, boundaries, gates, and definitions for this view.</p>
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Evaluated at</p>
+          <time className="mt-1 block font-mono text-xs text-[var(--muted-strong)]" dateTime={metric.evaluatedAt}>
+            {metric.evaluatedAt}
+          </time>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Selected scope</p>
+          <dl className="mt-3 grid gap-3 text-sm">
+            <div><dt className="text-[var(--muted)]">Environment</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{metric.scope.environment}</dd></div>
+            <div><dt className="text-[var(--muted)]">Audience</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{metric.scope.audience}</dd></div>
+          </dl>
+        </div>
+        <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Exact cohort boundaries</p>
+          <dl className="mt-3 grid gap-3 text-sm">
+            <div><dt className="text-[var(--muted)]">Current</dt><dd className="mt-1 break-words font-mono text-xs text-[var(--foreground)]">{metric.boundaries.current}</dd></div>
+            <div><dt className="text-[var(--muted)]">Previous</dt><dd className="mt-1 break-words font-mono text-xs text-[var(--foreground)]">{metric.boundaries.previous}</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <h3 className="text-sm font-medium text-[var(--foreground)]">Gate outcomes</h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {metric.gateOutcomes.map((gate) => (
+            <div className="flex items-start justify-between gap-3 rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-3" key={gate.label}>
+              <div><p className="text-xs text-[var(--muted)]">{gate.label}</p><p className="mt-1 text-sm font-medium text-[var(--foreground)]">{gate.value}</p></div>
+              <span className={`rounded-[8px] px-2 py-1 text-xs font-medium ${gate.passed ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--warning-soft)] text-[var(--warning-text)]"}`}>
+                {gate.passed ? "Pass" : "Waiting"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <h3 className="text-sm font-medium text-[var(--foreground)]">Calculation definitions</h3>
+        <dl className="mt-3 grid gap-3">
+          {metric.definitions.map((definition) => (
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-3" key={definition.label}>
+              <dt className="text-xs font-medium text-[var(--foreground)]">{definition.label}</dt>
+              <dd className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{definition.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
+    </section>
+  );
+}
 
 function CohortComparisonPanel({ metric }: { metric: CohortComparisonMetric }) {
   return (
@@ -490,6 +561,7 @@ export function InsightsContent({ filter, insights }: { filter: InsightsFilter; 
         <DataSufficiencyPanel metric={insights.dataSufficiency} />
         <DescriptiveBaselinePanel metric={insights.baselineSummary} />
         <CohortComparisonPanel metric={insights.cohortComparison} />
+        <MeasurementEvidencePanel metric={insights.measurementEvidence} />
         <SequenceSummaryCard metrics={insights.sequenceSummary} />
 
         <SegmentBreakdown rows={insights.segmentBreakdown} />

@@ -53,4 +53,21 @@ describe("Phase 3 insight filters", () => {
     expect(select("test")).toEqual(["test"]);
     expect(select("unconfirmed")).toEqual(["legacy"]);
   });
+
+  it("keeps cohort membership inside the exact evaluation boundary", () => {
+    const result = filterInsightsRows({
+      events: [],
+      failedPayments: [
+        { created_at: "2026-09-10T00:00:00.000Z", id: "inside", last_event_type: "invoice.payment_failed", livemode: false, recovered_at: null, status: "active" },
+        { created_at: "2026-10-11T00:00:00.000Z", id: "future", last_event_type: "invoice.payment_failed", livemode: false, recovered_at: null, status: "active" },
+        { created_at: "not-a-date", id: "invalid", last_event_type: "invoice.payment_failed", livemode: false, recovered_at: null, status: "active" },
+      ],
+      filter: { environment: "test", period: "all", segment: "all" },
+      messages: [],
+      now: new Date("2026-10-10T00:00:00.000Z"),
+      sequences: [],
+    });
+
+    expect(result.failedPayments.map((payment) => payment.id)).toEqual(["inside"]);
+  });
 });

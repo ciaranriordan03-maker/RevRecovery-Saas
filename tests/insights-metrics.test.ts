@@ -4,6 +4,7 @@ import {
   buildDataSufficiencyMetric,
   buildDescriptiveBaselineMetric,
   buildCohortComparisonMetric,
+  buildMeasurementEvidenceMetric,
   buildInsightsMetrics,
   type FailedPaymentMetricRow,
   type RecoveryMessageEventMetricRow,
@@ -55,6 +56,55 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("records exact bounded cohort evidence without changing measurements", () => {
+    const filter = { environment: "test", period: "30d", segment: "subscription" } as const;
+    const sufficiency = buildDataSufficiencyMetric([], filter);
+    const comparison = buildCohortComparisonMetric([], filter, new Date("2026-10-16T12:00:00.000Z"));
+    const metric = buildMeasurementEvidenceMetric(
+      filter,
+      sufficiency,
+      comparison,
+      new Date("2026-10-16T12:00:00.000Z"),
+    );
+
+    expect(metric).toMatchObject({
+      boundaries: {
+        current: "2026-09-16T12:00:00.000Z ≤ created_at ≤ 2026-10-16T12:00:00.000Z",
+        previous: "2026-08-17T12:00:00.000Z ≤ created_at < 2026-09-16T12:00:00.000Z",
+      },
+      evaluatedAt: "2026-10-16T12:00:00.000Z",
+      scope: {
+        audience: "Subscription renewals (audience_segment = subscription)",
+        environment: "Test evidence (livemode = false)",
+      },
+      title: "Measurement evidence",
+    });
+    expect(metric.gateOutcomes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Sample size", passed: false }),
+      expect.objectContaining({ label: "Adjacent comparison", passed: false }),
+    ]));
+    expect(metric.definitions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Observed period change" }),
+    ]));
+  });
+
+  it("states that an all-time view has no preceding cohort boundary", () => {
+    const filter = { environment: "live", period: "all", segment: "all" } as const;
+    const sufficiency = buildDataSufficiencyMetric([], filter);
+    const comparison = buildCohortComparisonMetric([], filter, new Date("2026-10-16T12:00:00.000Z"));
+    const metric = buildMeasurementEvidenceMetric(
+      filter,
+      sufficiency,
+      comparison,
+      new Date("2026-10-16T12:00:00.000Z"),
+    );
+
+    expect(metric.boundaries).toEqual({
+      current: "created_at at or before 2026-10-16T12:00:00.000Z",
+      previous: "Not defined for all-time evidence",
+    });
+  });
+
   it("withholds adjacent-period comparisons unless both cohorts pass independently", () => {
     const metric = buildCohortComparisonMetric([
       failedPayment({ amount_due: 7900, case_status: "active", created_at: "2026-10-10T00:00:00.000Z", currency: "eur", livemode: false }),
