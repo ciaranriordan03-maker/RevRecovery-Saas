@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMeasurementQualityMetric,
   buildDataSufficiencyMetric,
+  buildDescriptiveBaselineMetric,
   buildInsightsMetrics,
   type FailedPaymentMetricRow,
   type RecoveryMessageEventMetricRow,
@@ -53,6 +54,46 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("withholds every descriptive baseline value when sufficiency gates are waiting", () => {
+    const metric = buildDescriptiveBaselineMetric([
+      failedPayment({ amount_due: 7900, case_status: "active", currency: "eur", livemode: false }),
+    ], { environment: "test", period: "30d", segment: "all" });
+
+    expect(metric).toMatchObject({
+      available: false,
+      rows: [],
+      title: "Descriptive baseline withheld",
+    });
+    expect(metric.summary).not.toContain("€79.00");
+  });
+
+  it("shows only descriptive cohort facts after every readiness gate passes", () => {
+    const payments = Array.from({ length: 30 }, (_, index) => failedPayment({
+      amount_due: 1000,
+      case_status: index < 12 ? "recovered" : index < 24 ? "exhausted" : "active",
+      currency: "eur",
+      id: `payment-${index}`,
+      livemode: false,
+      status: index < 12 ? "recovered" : "active",
+    }));
+    const metric = buildDescriptiveBaselineMetric(
+      payments,
+      { environment: "test", period: "all", segment: "subscription" },
+    );
+
+    expect(metric).toMatchObject({
+      available: true,
+      title: "Descriptive cohort baseline",
+    });
+    expect(metric.rows).toEqual([
+      expect.objectContaining({ label: "Selected cohort", value: "30 cases" }),
+      expect.objectContaining({ label: "Terminal outcomes", value: "24 cases" }),
+      expect.objectContaining({ label: "Observed terminal recovery share", value: "50%" }),
+      expect.objectContaining({ label: "Failure-time amount represented", value: "€300.00" }),
+    ]);
+    expect(metric.summary).toContain("not a control group or performance lift claim");
+  });
+
   it("withholds baseline eligibility until every sufficiency gate passes", () => {
     const metric = buildDataSufficiencyMetric([
       failedPayment({ amount_due: 7900, case_status: "active", currency: "eur", livemode: false }),

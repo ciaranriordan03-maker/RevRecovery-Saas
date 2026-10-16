@@ -23,6 +23,7 @@ export type InsightCardMetric = {
 };
 
 export type InsightsMetrics = {
+  baselineSummary: DescriptiveBaselineMetric;
   cards: InsightCardMetric[];
   dataSufficiency: DataSufficiencyMetric;
   deliveryHealth: DeliveryHealthMetric;
@@ -32,6 +33,17 @@ export type InsightsMetrics = {
   measurementQuality: MeasurementQualityMetric;
   sequenceSummary: SequenceSummaryMetric[];
   segmentBreakdown: SegmentMetric[];
+};
+
+export type DescriptiveBaselineMetric = {
+  available: boolean;
+  rows: {
+    detail: string;
+    label: string;
+    value: string;
+  }[];
+  summary: string;
+  title: string;
 };
 
 export type DataSufficiencyMetric = {
@@ -644,6 +656,62 @@ export function buildDataSufficiencyMetric(
   };
 }
 
+export function buildDescriptiveBaselineMetric(
+  failedPayments: FailedPaymentMetricRow[],
+  filter: InsightsFilter,
+  sufficiency = buildDataSufficiencyMetric(failedPayments, filter),
+): DescriptiveBaselineMetric {
+  if (!sufficiency.eligible) {
+    return {
+      available: false,
+      rows: [],
+      summary: "No baseline values are shown while any readiness gate is waiting. This avoids presenting a small, immature, incomplete, or uncertain cohort as a dependable benchmark.",
+      title: "Descriptive baseline withheld",
+    };
+  }
+
+  const terminalPayments = failedPayments.filter((payment) =>
+    TERMINAL_CASE_STATUSES.has(payment.case_status ?? ""),
+  );
+  const recoveredCount = terminalPayments.filter((payment) =>
+    payment.case_status === "recovered" || payment.status === "recovered",
+  ).length;
+  const failureTimeAmount = formatCurrencyAmounts(aggregateCurrencyAmounts(
+    failedPayments.map((payment) => ({
+      amount: payment.amount_due ?? 0,
+      currency: payment.currency,
+    })),
+  ));
+
+  return {
+    available: true,
+    rows: [
+      {
+        detail: "Cases matching the selected environment, failure period, and invoice audience.",
+        label: "Selected cohort",
+        value: `${failedPayments.length} cases`,
+      },
+      {
+        detail: "Cases with a recorded recovered, exhausted, canceled, or no-longer-applicable outcome.",
+        label: "Terminal outcomes",
+        value: `${terminalPayments.length} cases`,
+      },
+      {
+        detail: `${recoveredCount} recorded recoveries among ${terminalPayments.length} terminal outcomes. This is descriptive and does not establish causation.`,
+        label: "Observed terminal recovery share",
+        value: `${percent(recoveredCount, terminalPayments.length)}%`,
+      },
+      {
+        detail: "Sum of invoice amounts due when the selected failures were recorded, separated by currency. It is not confirmed collected or incremental revenue.",
+        label: "Failure-time amount represented",
+        value: failureTimeAmount,
+      },
+    ],
+    summary: `${filter.environment === "live" ? "Live" : "Test"} ${describeSegment(filter.segment)} · ${describePeriod(filter.period)}. This snapshot is a descriptive benchmark for the selected cohort, not a control group or performance lift claim.`,
+    title: "Descriptive cohort baseline",
+  };
+}
+
 function describePeriod(period: InsightPeriod) {
   if (period === "all") {
     return "All recorded failure dates";
@@ -765,8 +833,10 @@ export function buildInsightsMetrics({
   const deliveryHealth = buildDeliveryHealthMetric(messages);
   const emailEngagement = buildEmailEngagementMetric(events);
   const segmentBreakdown = buildSegmentMetrics(failedPayments, messages, events);
+  const dataSufficiency = buildDataSufficiencyMetric(failedPayments, filter);
 
   return {
+    baselineSummary: buildDescriptiveBaselineMetric(failedPayments, filter, dataSufficiency),
     cards: [
       {
         icon: "mail",
@@ -807,7 +877,7 @@ export function buildInsightsMetrics({
         title: "Recovery Outcomes",
       },
     ],
-    dataSufficiency: buildDataSufficiencyMetric(failedPayments, filter),
+    dataSufficiency,
     deliveryHealth,
     emailEngagement,
     emailRecovery,

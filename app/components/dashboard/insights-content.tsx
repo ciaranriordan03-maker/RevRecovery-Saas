@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "../ui-icon";
 import type {
+  DescriptiveBaselineMetric,
   EmailRecoveryMetric,
   DeliveryHealthMetric,
   DataSufficiencyMetric,
@@ -13,6 +14,50 @@ import type {
   SequenceSummaryMetric,
   SegmentMetric,
 } from "../../lib/server/insights-metrics";
+
+function DescriptiveBaselinePanel({ metric }: { metric: DescriptiveBaselineMetric }) {
+  return (
+    <section
+      aria-labelledby="descriptive-baseline-heading"
+      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+            Descriptive baseline
+          </p>
+          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="descriptive-baseline-heading">
+            {metric.title}
+          </h2>
+        </div>
+        <span className={`w-fit rounded-[8px] px-3 py-1.5 text-xs font-medium ${metric.available ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--surface-muted)] text-[var(--muted-strong)]"}`}>
+          {metric.available ? "Read only" : "Withheld"}
+        </span>
+      </div>
+
+      {metric.available ? (
+        <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+          {metric.rows.map((row) => (
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4" key={row.label}>
+              <dt className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">{row.label}</dt>
+              <dd className="mt-2 text-lg font-semibold text-[var(--foreground)]">{row.value}</dd>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{row.detail}</p>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <div className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] p-4">
+          <p className="text-sm font-medium text-[var(--foreground)]">No baseline values are displayed</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
+            Complete every Baseline readiness gate above before treating this cohort as a descriptive benchmark.
+          </p>
+        </div>
+      )}
+
+      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
+    </section>
+  );
+}
 
 function DataSufficiencyPanel({ metric }: { metric: DataSufficiencyMetric }) {
   return (
@@ -388,6 +433,7 @@ export function InsightsContent({ filter, insights }: { filter: InsightsFilter; 
         <InsightFilters filter={filter} />
         <MeasurementQualityPanel metric={insights.measurementQuality} />
         <DataSufficiencyPanel metric={insights.dataSufficiency} />
+        <DescriptiveBaselinePanel metric={insights.baselineSummary} />
         <SequenceSummaryCard metrics={insights.sequenceSummary} />
 
         <SegmentBreakdown rows={insights.segmentBreakdown} />
