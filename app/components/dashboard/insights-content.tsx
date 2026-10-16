@@ -18,6 +18,10 @@ import type {
 } from "../../lib/server/insights-metrics";
 
 function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetric }) {
+  const manifestJson = `${JSON.stringify(metric.exportManifest, null, 2)}\n`;
+  const manifestFilename = `revrecovery-insights-evidence-${metric.evaluatedAt.replace(/[:.]/g, "-")}.json`;
+  const manifestHref = `data:application/json;charset=utf-8,${encodeURIComponent(manifestJson)}`;
+
   return (
     <section
       aria-labelledby="measurement-evidence-heading"
@@ -76,6 +80,53 @@ function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetri
         </dl>
         <p className="mt-3 text-xs leading-5 text-[var(--muted-strong)]">
           {metric.traceability.fingerprintBasis} The fingerprint is generated server-side; no row identifiers or source values are displayed.
+        </p>
+      </div>
+
+      <div className="mt-5 rounded-[10px] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--primary-text)]">
+              Evidence export manifest
+            </p>
+            <h3 className="mt-1 text-sm font-medium text-[var(--foreground)]">Sanitized measurement record</h3>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-[var(--muted-strong)]">
+              Export the contract, fingerprint, evaluation timestamp, selected scope, cohort boundaries, gate outcomes, and calculation definitions for this view.
+            </p>
+          </div>
+          <a
+            className="inline-flex w-fit items-center justify-center rounded-[8px] border border-[var(--primary)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-white"
+            download={manifestFilename}
+            href={manifestHref}
+          >
+            Download JSON
+          </a>
+        </div>
+
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-[8px] bg-[var(--surface)] p-3">
+            <dt className="text-xs text-[var(--muted)]">Manifest version</dt>
+            <dd className="mt-1 break-all font-mono text-xs font-medium text-[var(--foreground)]">
+              {metric.exportManifest.manifestVersion}
+            </dd>
+          </div>
+          <div className="rounded-[8px] bg-[var(--surface)] p-3">
+            <dt className="text-xs text-[var(--muted)]">Included sections</dt>
+            <dd className="mt-1 text-xs leading-5 text-[var(--foreground)]">
+              Traceability, scope, boundaries, gates, definitions, and limitations
+            </dd>
+          </div>
+        </dl>
+
+        <details className="mt-3 rounded-[8px] bg-[var(--surface)] p-3">
+          <summary className="cursor-pointer text-xs font-medium text-[var(--primary)]">Preview sanitized JSON</summary>
+          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-5 text-[var(--muted-strong)]">
+            {manifestJson}
+          </pre>
+        </details>
+
+        <p className="mt-3 text-xs leading-5 text-[var(--muted-strong)]">
+          Read only. The manifest contains no case, customer, message, sequence, provider-event, or source-identifier rows and makes no new performance claim.
         </p>
       </div>
 

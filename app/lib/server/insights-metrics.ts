@@ -48,6 +48,7 @@ export type MeasurementEvidenceMetric = {
     value: string;
   }[];
   evaluatedAt: string;
+  exportManifest: MeasurementEvidenceExportManifest;
   gateOutcomes: {
     label: string;
     passed: boolean;
@@ -64,6 +65,34 @@ export type MeasurementEvidenceMetric = {
     evidenceFingerprint: string;
     fingerprintAlgorithm: "SHA-256";
     fingerprintBasis: string;
+  };
+};
+
+export type MeasurementEvidenceExportManifest = {
+  boundaries: {
+    current: string;
+    previous: string;
+  };
+  contractVersion: string;
+  definitions: {
+    label: string;
+    value: string;
+  }[];
+  evaluatedAt: string;
+  fingerprint: {
+    algorithm: "SHA-256";
+    value: string;
+  };
+  gates: {
+    label: string;
+    passed: boolean;
+    value: string;
+  }[];
+  limitations: string[];
+  manifestVersion: "revrecovery-insights-evidence-manifest-v1";
+  scope: {
+    audience: string;
+    environment: string;
   };
 };
 
@@ -985,62 +1014,86 @@ export function buildMeasurementEvidenceMetric(
     subscription: "Subscription renewals (audience_segment = subscription)",
     unknown: "Unknown invoice types (audience_segment is unknown or absent)",
   };
+  const boundaries = {
+    current: currentBoundary,
+    previous: previousBoundary,
+  };
+  const definitions = [
+    {
+      label: "Cohort inclusion",
+      value: "A failed-payment case is included when its created_at timestamp falls inside the selected boundary and its environment and audience match the selected scope.",
+    },
+    {
+      label: "Outcome maturity",
+      value: "Terminal cases ÷ selected cases. Terminal states are recovered, exhausted, canceled by merchant, and no longer applicable.",
+    },
+    {
+      label: "Terminal recovery share",
+      value: "Recorded recovered terminal cases ÷ all terminal cases. This is descriptive and does not establish causation.",
+    },
+    {
+      label: "Failure-time amount represented",
+      value: "Sum of amount_due recorded at failure, grouped and displayed separately by three-letter currency code. It is not confirmed collected or incremental revenue.",
+    },
+    {
+      label: "Observed period change",
+      value: "Current adjacent cohort value minus previous adjacent cohort value. It is not lift, attribution, or a counterfactual comparison.",
+    },
+  ];
+  const gateOutcomes = [
+    ...sufficiency.gates.map((gate) => ({
+      label: gate.label,
+      passed: gate.passed,
+      value: gate.value,
+    })),
+    {
+      label: "Adjacent comparison",
+      passed: comparison.available,
+      value: comparison.available ? "Both cohorts eligible" : comparison.title,
+    },
+  ];
+  const scope = {
+    audience: audienceLabels[filter.segment],
+    environment: environmentLabels[filter.environment],
+  };
+  const evidenceFingerprint = buildMeasurementEvidenceFingerprint({
+    comparison,
+    evaluatedAt: evaluatedAtIso,
+    evidence,
+    filter,
+    sufficiency,
+  });
+  const exportManifest: MeasurementEvidenceExportManifest = {
+    boundaries,
+    contractVersion: INSIGHTS_MEASUREMENT_CONTRACT_VERSION,
+    definitions,
+    evaluatedAt: evaluatedAtIso,
+    fingerprint: {
+      algorithm: "SHA-256",
+      value: evidenceFingerprint,
+    },
+    gates: gateOutcomes,
+    limitations: [
+      "Read-only export of the selected measurement context.",
+      "Contains no row-level cases, customers, messages, sequences, provider events, or source identifiers.",
+      "Does not establish causation, attribution, performance lift, confirmed collections, or incremental revenue.",
+    ],
+    manifestVersion: "revrecovery-insights-evidence-manifest-v1",
+    scope,
+  };
 
   return {
-    boundaries: {
-      current: currentBoundary,
-      previous: previousBoundary,
-    },
-    definitions: [
-      {
-        label: "Cohort inclusion",
-        value: "A failed-payment case is included when its created_at timestamp falls inside the selected boundary and its environment and audience match the selected scope.",
-      },
-      {
-        label: "Outcome maturity",
-        value: "Terminal cases ÷ selected cases. Terminal states are recovered, exhausted, canceled by merchant, and no longer applicable.",
-      },
-      {
-        label: "Terminal recovery share",
-        value: "Recorded recovered terminal cases ÷ all terminal cases. This is descriptive and does not establish causation.",
-      },
-      {
-        label: "Failure-time amount represented",
-        value: "Sum of amount_due recorded at failure, grouped and displayed separately by three-letter currency code. It is not confirmed collected or incremental revenue.",
-      },
-      {
-        label: "Observed period change",
-        value: "Current adjacent cohort value minus previous adjacent cohort value. It is not lift, attribution, or a counterfactual comparison.",
-      },
-    ],
+    boundaries,
+    definitions,
     evaluatedAt: evaluatedAtIso,
-    gateOutcomes: [
-      ...sufficiency.gates.map((gate) => ({
-        label: gate.label,
-        passed: gate.passed,
-        value: gate.value,
-      })),
-      {
-        label: "Adjacent comparison",
-        passed: comparison.available,
-        value: comparison.available ? "Both cohorts eligible" : comparison.title,
-      },
-    ],
-    scope: {
-      audience: audienceLabels[filter.segment],
-      environment: environmentLabels[filter.environment],
-    },
+    exportManifest,
+    gateOutcomes,
+    scope,
     summary: "Generated read-only from the selected evidence at the evaluation timestamp. This is calculation context, not an immutable snapshot or a new performance claim.",
     title: "Measurement evidence",
     traceability: {
       contractVersion: INSIGHTS_MEASUREMENT_CONTRACT_VERSION,
-      evidenceFingerprint: buildMeasurementEvidenceFingerprint({
-        comparison,
-        evaluatedAt: evaluatedAtIso,
-        evidence,
-        filter,
-        sufficiency,
-      }),
+      evidenceFingerprint,
       fingerprintAlgorithm: "SHA-256",
       fingerprintBasis: "Selected failed-payment, message, sequence, provider-event, scope, boundary, and gate evidence.",
     },

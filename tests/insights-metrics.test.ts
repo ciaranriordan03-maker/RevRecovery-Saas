@@ -73,6 +73,14 @@ describe("Insights metrics", () => {
         previous: "2026-08-17T12:00:00.000Z ≤ created_at < 2026-09-16T12:00:00.000Z",
       },
       evaluatedAt: "2026-10-16T12:00:00.000Z",
+      exportManifest: {
+        contractVersion: "revrecovery-insights-v1",
+        evaluatedAt: "2026-10-16T12:00:00.000Z",
+        fingerprint: {
+          algorithm: "SHA-256",
+        },
+        manifestVersion: "revrecovery-insights-evidence-manifest-v1",
+      },
       scope: {
         audience: "Subscription renewals (audience_segment = subscription)",
         environment: "Test evidence (livemode = false)",
@@ -84,6 +92,7 @@ describe("Insights metrics", () => {
       },
     });
     expect(metric.traceability.evidenceFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    expect(metric.exportManifest.fingerprint.value).toBe(metric.traceability.evidenceFingerprint);
     expect(metric.gateOutcomes).toEqual(expect.arrayContaining([
       expect.objectContaining({ label: "Sample size", passed: false }),
       expect.objectContaining({ label: "Adjacent comparison", passed: false }),
@@ -148,6 +157,34 @@ describe("Insights metrics", () => {
     expect(changed.traceability.evidenceFingerprint).not.toBe(first.traceability.evidenceFingerprint);
     expect(JSON.stringify(first)).not.toContain("private-case");
     expect(JSON.stringify(first)).not.toContain("private-message");
+    expect(JSON.stringify(first.exportManifest)).not.toContain("private-sequence");
+    expect(first.exportManifest).toMatchObject({
+      boundaries: first.boundaries,
+      contractVersion: first.traceability.contractVersion,
+      definitions: first.definitions,
+      evaluatedAt: first.evaluatedAt,
+      fingerprint: {
+        algorithm: first.traceability.fingerprintAlgorithm,
+        value: first.traceability.evidenceFingerprint,
+      },
+      gates: first.gateOutcomes,
+      scope: first.scope,
+    });
+    expect(Object.keys(first.exportManifest).sort()).toEqual([
+      "boundaries",
+      "contractVersion",
+      "definitions",
+      "evaluatedAt",
+      "fingerprint",
+      "gates",
+      "limitations",
+      "manifestVersion",
+      "scope",
+    ]);
+    expect(first.exportManifest.limitations).toEqual(expect.arrayContaining([
+      expect.stringContaining("no row-level"),
+      expect.stringContaining("Does not establish causation"),
+    ]));
   });
 
   it("withholds adjacent-period comparisons unless both cohorts pass independently", () => {
