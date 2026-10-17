@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "../ui-icon";
+import { MeasurementManifestVerification } from "./measurement-manifest-verification";
 import type {
   CohortComparisonMetric,
   DescriptiveBaselineMetric,
@@ -129,6 +130,11 @@ function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetri
           Read only. The manifest contains no case, customer, message, sequence, provider-event, or source-identifier rows and makes no new performance claim.
         </p>
       </div>
+
+      <MeasurementManifestVerification
+        currentManifest={metric.exportManifest}
+        key={`${metric.exportManifest.evaluatedAt}:${metric.exportManifest.fingerprint.value}`}
+      />
 
       <div className="mt-5">
         <h3 className="text-sm font-medium text-[var(--foreground)]">Gate outcomes</h3>

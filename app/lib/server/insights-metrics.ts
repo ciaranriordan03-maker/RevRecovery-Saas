@@ -3,6 +3,13 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { aggregateCurrencyAmounts, formatCurrencyAmounts } from "../currency";
+import {
+  INSIGHTS_MEASUREMENT_CONTRACT_VERSION,
+  INSIGHTS_MEASUREMENT_MANIFEST_VERSION,
+  type MeasurementEvidenceExportManifest,
+} from "../insights-evidence-manifest";
+
+export type { MeasurementEvidenceExportManifest } from "../insights-evidence-manifest";
 
 export type InsightFunnelMetric = {
   barClass: string;
@@ -65,34 +72,6 @@ export type MeasurementEvidenceMetric = {
     evidenceFingerprint: string;
     fingerprintAlgorithm: "SHA-256";
     fingerprintBasis: string;
-  };
-};
-
-export type MeasurementEvidenceExportManifest = {
-  boundaries: {
-    current: string;
-    previous: string;
-  };
-  contractVersion: string;
-  definitions: {
-    label: string;
-    value: string;
-  }[];
-  evaluatedAt: string;
-  fingerprint: {
-    algorithm: "SHA-256";
-    value: string;
-  };
-  gates: {
-    label: string;
-    passed: boolean;
-    value: string;
-  }[];
-  limitations: string[];
-  manifestVersion: "revrecovery-insights-evidence-manifest-v1";
-  scope: {
-    audience: string;
-    environment: string;
   };
 };
 
@@ -244,8 +223,6 @@ const FAILED_PAYMENTS_TABLE = "failed_payments";
 const RECOVERY_MESSAGE_EVENTS_TABLE = "recovery_message_events";
 const RECOVERY_MESSAGES_TABLE = "recovery_messages";
 const RECOVERY_SEQUENCES_TABLE = "recovery_sequences";
-const INSIGHTS_MEASUREMENT_CONTRACT_VERSION = "revrecovery-insights-v1";
-
 type MeasurementFingerprintEvidence = {
   events?: RecoveryMessageEventMetricRow[];
   failedPayments?: FailedPaymentMetricRow[];
@@ -1078,7 +1055,7 @@ export function buildMeasurementEvidenceMetric(
       "Contains no row-level cases, customers, messages, sequences, provider events, or source identifiers.",
       "Does not establish causation, attribution, performance lift, confirmed collections, or incremental revenue.",
     ],
-    manifestVersion: "revrecovery-insights-evidence-manifest-v1",
+    manifestVersion: INSIGHTS_MEASUREMENT_MANIFEST_VERSION,
     scope,
   };
 
