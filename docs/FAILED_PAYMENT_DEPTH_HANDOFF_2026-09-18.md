@@ -218,6 +218,10 @@ Primary outcome: a founder can adopt RevRecovery with less direct support.
 
 Primary outcome: the founder can improve recovery and judge whether RevRecovery is worth the proposed price.
 
+### D6 release-readiness status
+
+The approved Releases A–D feature-depth roadmap is complete on `codex/release-c-activation-readiness`. The 20 October 2026 [D6a whole-product release-readiness audit](./D6A_WHOLE_PRODUCT_RELEASE_READINESS_AUDIT_2026-10-20.md) confirms all ten approved depth items across Diagnose, Recover, Prioritise, and Prove. Remaining work is release-candidate smoke testing, final security and operational review, production rollout planning, and post-deploy verification; no further broad feature slice is required before the demo.
+
 ## Measurement rules
 
 - Stripe is authoritative for invoice, payment, subscription, amount, currency, and recovery state.
