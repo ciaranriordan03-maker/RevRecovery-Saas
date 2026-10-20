@@ -220,7 +220,7 @@ Primary outcome: the founder can improve recovery and judge whether RevRecovery 
 
 ### D6 release-readiness status
 
-The approved Releases A–D feature-depth roadmap is complete on `codex/release-c-activation-readiness`. The 20 October 2026 [D6a whole-product release-readiness audit](./D6A_WHOLE_PRODUCT_RELEASE_READINESS_AUDIT_2026-10-20.md) confirms all ten approved depth items across Diagnose, Recover, Prioritise, and Prove. Remaining work is release-candidate smoke testing, final security and operational review, production rollout planning, and post-deploy verification; no further broad feature slice is required before the demo.
+The approved Releases A–D feature-depth roadmap is complete on `codex/release-c-activation-readiness`. The 20 October 2026 [D6a whole-product release-readiness audit](./D6A_WHOLE_PRODUCT_RELEASE_READINESS_AUDIT_2026-10-20.md) confirms all ten approved depth items across Diagnose, Recover, Prioritise, and Prove. The [D6b exact-Preview smoke test](./D6B_RELEASE_CANDIDATE_SMOKE_2026-10-20.md) is also accepted: every planned surface passed within the no-customer-contact boundary, the missing visible Sign out path was fixed for desktop and mobile, and the full sign-out-to-login-to-dashboard transition passed without browser warnings or errors. Remaining work is the final security and operational review, production rollout planning, and post-deploy verification; no further broad feature slice is required before the demo.
 
 ## Measurement rules
 
