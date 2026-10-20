@@ -5,6 +5,7 @@ import { Icon } from "../ui-icon";
 import { dashboardNavItems, type DashboardNavItem } from "../../lib/data";
 import { getCurrentUserClaims } from "../../lib/auth";
 import { getOrCreateUserOnboardingProfile } from "../../lib/server/onboarding-store";
+import { SignOutForm } from "./sign-out-form";
 
 const navHref: Record<DashboardNavItem, string> = {
   Setup: "/onboarding",
@@ -111,13 +112,15 @@ export async function AppShell({
                 <p className="truncate text-xs text-[var(--muted)]">{accountEmail}</p>
               </div>
             </div>
+            <SignOutForm />
           </div>
         </aside>
 
         <section className="min-w-0 flex-1 lg:h-screen lg:overflow-y-auto">
           <header className="border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:px-8 lg:flex lg:h-20 lg:items-center lg:py-0">
-            <div className="lg:hidden">
+            <div className="flex items-center justify-between lg:hidden">
               <BrandMark />
+              <SignOutForm compact />
             </div>
             <div className="mt-4 lg:mt-0">
               <h1 className="text-xl font-medium tracking-[-0.02em]">{title}</h1>
