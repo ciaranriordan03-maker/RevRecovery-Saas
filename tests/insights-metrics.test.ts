@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { verifyMeasurementEvidenceManifest } from "../app/lib/insights-evidence-manifest";
 import {
   buildMeasurementQualityMetric,
   buildDataSufficiencyMetric,
@@ -6,6 +7,7 @@ import {
   buildCohortComparisonMetric,
   buildMeasurementEvidenceMetric,
   buildInsightsMetrics,
+  filterInsightsRows,
   type FailedPaymentMetricRow,
   type RecoveryMessageEventMetricRow,
   type RecoveryMessageMetricRow,
@@ -56,6 +58,106 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("keeps the complete D5 evidence chain isolated, gated, auditable, and non-causal", () => {
+    const evaluatedAt = new Date("2026-10-20T12:00:00.000Z");
+    const filter = { environment: "test", period: "30d", segment: "all" } as const;
+    const failedPayments = [
+      failedPayment({
+        amount_due: 7900,
+        case_status: "active",
+        created_at: "2026-10-10T12:00:00.000Z",
+        currency: "eur",
+        id: "test-case",
+        livemode: false,
+      }),
+      failedPayment({
+        amount_due: 14900,
+        case_status: "recovered",
+        created_at: "2026-10-10T12:00:00.000Z",
+        currency: "eur",
+        id: "live-case",
+        livemode: true,
+        status: "recovered",
+      }),
+      failedPayment({
+        amount_due: 9900,
+        case_status: "recovered",
+        created_at: "2026-10-10T12:00:00.000Z",
+        currency: "eur",
+        id: "unconfirmed-case",
+        livemode: null,
+        status: "recovered",
+      }),
+    ];
+    const messages = [
+      message({ failed_payment_id: "test-case", id: "test-message", sequence_id: "test-sequence" }),
+      message({ failed_payment_id: "live-case", id: "live-message", sequence_id: "live-sequence" }),
+      message({ failed_payment_id: "unconfirmed-case", id: "unconfirmed-message", sequence_id: "unconfirmed-sequence" }),
+    ];
+    const sequences = [
+      sequence({ failed_payment_id: "test-case", id: "test-sequence" }),
+      sequence({ failed_payment_id: "live-case", id: "live-sequence" }),
+      sequence({ failed_payment_id: "unconfirmed-case", id: "unconfirmed-sequence" }),
+    ];
+    const events = [
+      event({ recovery_message_id: "test-message" }),
+      event({ recovery_message_id: "live-message" }),
+      event({ recovery_message_id: "unconfirmed-message" }),
+    ];
+    const selected = filterInsightsRows({
+      events,
+      failedPayments,
+      filter,
+      messages,
+      now: evaluatedAt,
+      sequences,
+    });
+
+    expect(selected.failedPayments.map((payment) => payment.id)).toEqual(["test-case"]);
+    expect(selected.messages.map((selectedMessage) => selectedMessage.id)).toEqual(["test-message"]);
+    expect(selected.sequences.map((selectedSequence) => selectedSequence.id)).toEqual(["test-sequence"]);
+    expect(selected.events).toHaveLength(1);
+
+    const insights = buildInsightsMetrics({
+      ...selected,
+      cohortComparison: buildCohortComparisonMetric(failedPayments, filter, evaluatedAt),
+      evaluatedAt,
+      filter,
+    });
+
+    expect(insights.dataSufficiency.eligible).toBe(false);
+    expect(insights.baselineSummary).toMatchObject({
+      available: false,
+      rows: [],
+      title: "Descriptive baseline withheld",
+    });
+    expect(insights.cohortComparison).toMatchObject({
+      available: false,
+      rows: [],
+      title: "Cohort comparison withheld",
+    });
+    expect(insights.measurementQuality.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Test / live boundary", value: "Test evidence only" }),
+      expect.objectContaining({ label: "Evidence limitation", value: "Descriptive, not causal" }),
+    ]));
+    expect(insights.measurementEvidence).toMatchObject({
+      evaluatedAt: evaluatedAt.toISOString(),
+      scope: { environment: "Test evidence (livemode = false)" },
+      traceability: { fingerprintAlgorithm: "SHA-256" },
+    });
+    expect(insights.measurementEvidence.traceability.evidenceFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    expect(insights.measurementEvidence.exportManifest.limitations).toEqual(expect.arrayContaining([
+      expect.stringContaining("no row-level"),
+      expect.stringContaining("Does not establish causation"),
+    ]));
+    expect(JSON.stringify(insights.measurementEvidence.exportManifest)).not.toContain("test-case");
+    expect(JSON.stringify(insights.measurementEvidence.exportManifest)).not.toContain("live-case");
+    expect(verifyMeasurementEvidenceManifest(
+      JSON.parse(JSON.stringify(insights.measurementEvidence.exportManifest)),
+      insights.measurementEvidence.exportManifest,
+    )).toMatchObject({ status: "match", title: "Exact evidence match" });
+  });
+
   it("records exact bounded cohort evidence without changing measurements", () => {
     const filter = { environment: "test", period: "30d", segment: "subscription" } as const;
     const sufficiency = buildDataSufficiencyMetric([], filter);
