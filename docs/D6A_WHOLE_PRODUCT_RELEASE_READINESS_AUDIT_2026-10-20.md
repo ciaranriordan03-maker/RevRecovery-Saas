@@ -84,7 +84,7 @@ The audit found no obvious unauthenticated launch-blocking mutation in the revie
 
 - Dashboard mutation routes obtain authenticated user claims and validate request inputs.
 - Synthetic test-case creation revalidates eligibility on the server and requires the sandbox/Test-mode boundary.
-- Stripe Connect uses authenticated state and a signed state cookie; callback navigation is bounded to safe internal paths.
+- Stripe Connect binds OAuth state to an authenticated user and an HTTP-only state cookie. The later D6c review identified and documents a return-path validation edge case that must be fixed before merge.
 - Stripe and Resend webhooks verify provider signatures before processing.
 - The recovery processor requires its cron secret and uses a bounded processing limit.
 - Password updates require matching passwords, minimum length, a valid recovery session, and same-origin requests when an Origin header is present.
