@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureOperationalFailure } from "../../../lib/server/operational-alerts";
 import { persistRecoveryMessageEvent } from "../../../lib/server/recovery-message-events";
 import {
   ResendWebhookValidationError,
@@ -8,6 +9,11 @@ import {
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
   if (!secret) {
+    captureOperationalFailure({
+      code: "resend_webhook_failed",
+      context: { stage: "configuration" },
+      error: new Error("ResendWebhookConfigurationError"),
+    });
     return NextResponse.json({ error: "Webhook is not configured." }, { status: 500 });
   }
 
@@ -34,7 +40,12 @@ export async function POST(request: Request) {
       matched: result.matched,
       received: true,
     });
-  } catch {
+  } catch (error) {
+    captureOperationalFailure({
+      code: "resend_webhook_failed",
+      context: { stage: "persistence" },
+      error,
+    });
     return NextResponse.json({ error: "Webhook processing failed." }, { status: 500 });
   }
 }

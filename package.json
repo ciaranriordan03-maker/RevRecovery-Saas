@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "drill:operational-alert": "vitest run tests/operational-alerts.test.ts -t 'runs the safe non-delivery alert drill'",
     "start": "next start",
     "lint": "eslint",
     "preflight:delivery": "node scripts/delivery-preflight.mjs",

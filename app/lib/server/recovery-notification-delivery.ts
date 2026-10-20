@@ -4,6 +4,7 @@ import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "..
 import { isEnvironmentFlagEnabled } from "../recovery/environment-policy";
 import { evaluateNotificationDeliveryGate } from "../recovery/notification-delivery-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
+import { captureOperationalFailure } from "./operational-alerts";
 
 const EVENTS_TABLE = "recovery_notification_events";
 const ATTEMPTS_TABLE = "recovery_notification_delivery_attempts";
@@ -197,6 +198,11 @@ export async function deliverReservedTestNotification(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "provider_outcome_unknown";
+    captureOperationalFailure({
+      code: "notification_test_delivery_outcome_unknown",
+      context: { retryScheduled: false, stage: "provider" },
+      error,
+    });
     await recordAttempt({ event, outcome: "failed", reasonCode: reason, recipientEmail: decision.recipient });
     return { outcome: "failed", reason: "provider_outcome_unknown" };
   }
@@ -220,6 +226,11 @@ export async function deliverReservedTestNotification(
     },
   );
   if (acceptanceError) {
+    captureOperationalFailure({
+      code: "notification_reconciliation_required",
+      context: { retryScheduled: false, stage: "persistence" },
+      error: acceptanceError,
+    });
     await recordAttempt({
       event,
       outcome: "failed",
@@ -238,6 +249,11 @@ export async function deliverReservedTestNotification(
     },
   );
   if (finalizationError) {
+    captureOperationalFailure({
+      code: "notification_reconciliation_required",
+      context: { retryScheduled: false, stage: "finalization" },
+      error: finalizationError,
+    });
     await recordAttempt({
       event,
       outcome: "failed",

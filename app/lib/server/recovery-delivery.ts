@@ -19,6 +19,7 @@ import { getRecoveryRecipientSuppression } from "./recovery-recipient-suppressio
 import { getVerifiedSendingDomainForDelivery } from "./recovery-sending-domains";
 import { resolveRecoverySequenceForFailedPayment } from "./recovery-sequences";
 import { getStripeCustomerState } from "./stripe-customer-states";
+import { captureOperationalFailure } from "./operational-alerts";
 
 type FailedPaymentRecord = {
   amount_due: number;
@@ -833,6 +834,15 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
       });
 
       if (!recipientEmail) {
+        captureOperationalFailure({
+          code: "recovery_delivery_terminal_failed",
+          context: {
+            attemptCount: message.send_attempt_count + 1,
+            retryScheduled: false,
+            stage: "configuration",
+          },
+          error: new Error("RecoveryRecipientUnavailableError"),
+        });
         await completeRecoveryMessageDelivery({
           claimToken,
           errorCode:
@@ -912,8 +922,9 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
       });
       result.sent += 1;
     } catch (error) {
+      const unexpected = !(error instanceof RecoveryDeliveryError);
       const deliveryError =
-        error instanceof RecoveryDeliveryError
+        !unexpected
           ? error
           : new RecoveryDeliveryError({
               code: "delivery_unexpected_error",
@@ -924,6 +935,20 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
         deliveryError.disposition,
         message.send_attempt_count,
       );
+
+      if (unexpected || !retry) {
+        captureOperationalFailure({
+          code: unexpected
+            ? "recovery_delivery_unexpected_failed"
+            : "recovery_delivery_terminal_failed",
+          context: {
+            attemptCount: message.send_attempt_count + 1,
+            retryScheduled: retry,
+            stage: "delivery",
+          },
+          error,
+        });
+      }
 
       await completeRecoveryMessageDelivery({
         claimToken,

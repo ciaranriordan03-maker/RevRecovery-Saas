@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isRecoveryCronAuthorized } from "../../../lib/server/cron-authorization";
+import { captureOperationalFailure } from "../../../lib/server/operational-alerts";
 import { processPendingRecoveryMessages } from "../../../lib/server/recovery-delivery";
 
 export const runtime = "nodejs";
@@ -17,10 +18,13 @@ async function processRecoveryRequest(request: Request) {
     const result = await processPendingRecoveryMessages(limit);
     return NextResponse.json(result);
   } catch (error) {
+    captureOperationalFailure({
+      code: "recovery_cron_failed",
+      context: { batchLimit: limit, stage: "processing" },
+      error,
+    });
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Unable to process recovery messages.",
-      },
+      { error: "Recovery processing failed." },
       { status: 500 },
     );
   }

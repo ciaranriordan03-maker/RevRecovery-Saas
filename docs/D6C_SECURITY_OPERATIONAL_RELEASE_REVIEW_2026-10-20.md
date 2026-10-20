@@ -8,6 +8,8 @@
 
 > **D6c1 update:** The vulnerable production dependency graph and Stripe Connect return-path finding were remediated locally after this audit. See `D6C1_SECURITY_REMEDIATION_2026-10-20.md` for the exact versions, safeguards, tests, and remaining remote acceptance condition.
 
+> **D6c2–D6c3 update:** D6c2 is remotely accepted at commit `7022f66`. Recovery delivery and secret configuration now fail closed. D6c3 adds a redacted operational capture boundary, code-owned thresholds and role routes, a safe mocked-transport drill, and stop/inspect/forward-fix/replay guidance. See `D6C2_FAIL_CLOSED_DELIVERY_2026-10-20.md` and `D6C3_OPERATIONAL_OBSERVABILITY_2026-10-20.md`. D6c3 still requires exact-commit GitHub/Vercel acceptance; D6d and D6e continue to withhold merge and production approval.
+
 ## Review boundary
 
 This review examined the current 137-file branch diff, authentication and tenant boundaries, secret handling, dashboard write routes, Stripe and Resend webhooks, recovery cron processing, delivery gates, additive migrations, Sentry configuration, CI, and available rollback/replay evidence.

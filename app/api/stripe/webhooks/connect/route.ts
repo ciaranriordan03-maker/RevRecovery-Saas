@@ -12,6 +12,7 @@ import {
   recordSubscriptionState,
 } from "../../../../lib/server/stripe-customer-states";
 import { tryRecordPreviewRecoveryNotificationEvent } from "../../../../lib/server/recovery-notification-events";
+import { captureOperationalFailure } from "../../../../lib/server/operational-alerts";
 import {
   claimWebhookEvent,
   completeWebhookEvent,
@@ -134,8 +135,17 @@ export async function POST(request: Request) {
   const stripe = createStripeWebhookClient();
   const signature = request.headers.get("stripe-signature");
 
-  if (!webhookSecret || !stripe || !signature) {
+  if (!webhookSecret || !stripe) {
+    captureOperationalFailure({
+      code: "stripe_webhook_processing_failed",
+      context: { stage: "configuration" },
+      error: new Error("StripeWebhookConfigurationError"),
+    });
     return NextResponse.json({ error: "Webhook is not configured." }, { status: 500 });
+  }
+
+  if (!signature) {
+    return NextResponse.json({ error: "Invalid Stripe signature." }, { status: 400 });
   }
 
   const payload = await request.text();
@@ -143,13 +153,8 @@ export async function POST(request: Request) {
 
   try {
     event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Invalid Stripe signature.",
-      },
-      { status: 400 },
-    );
+  } catch {
+    return NextResponse.json({ error: "Invalid Stripe signature." }, { status: 400 });
   }
 
   const stripeAccountId = event.account ?? null;
@@ -277,6 +282,16 @@ export async function POST(request: Request) {
     const retryDelaySeconds = getWebhookRetryDelaySeconds(
       claimedEvent.processing_attempt_count,
     );
+
+    captureOperationalFailure({
+      code: "stripe_webhook_processing_failed",
+      context: {
+        attemptCount: claimedEvent.processing_attempt_count,
+        retryScheduled: true,
+        stage: "processing",
+      },
+      error,
+    });
 
     await completeWebhookEvent({
       claimToken,
