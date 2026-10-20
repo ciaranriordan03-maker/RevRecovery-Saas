@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ESSENTIAL_NOTIFICATION_RULES, type EssentialNotificationRule } from "../recovery/essential-notification-policy";
+import { isEnvironmentFlagEnabled } from "../recovery/environment-policy";
 import { evaluateNotificationDeliveryGate } from "../recovery/notification-delivery-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
@@ -36,7 +37,9 @@ export type NotificationDeliveryResult =
   | { outcome: "sent"; providerMessageId: string | null };
 
 function isGlobalDeliveryEnabled() {
-  return process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED === "true";
+  return isEnvironmentFlagEnabled(
+    process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED,
+  );
 }
 
 function getRule(ruleId: EssentialNotificationRule["id"]) {
@@ -122,7 +125,11 @@ export async function deliverReservedTestNotification(
   eventId: string,
   claimToken: string,
 ): Promise<NotificationDeliveryResult> {
-  if (process.env.ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED !== "true") {
+  if (
+    !isEnvironmentFlagEnabled(
+      process.env.ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED,
+    )
+  ) {
     return { outcome: "blocked", reason: "authorized_test_delivery_disabled" };
   }
 

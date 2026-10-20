@@ -7,6 +7,7 @@ import {
   type NotificationTestAuthorizationAction,
   type NotificationTestAuthorizationStatus,
 } from "../recovery/notification-test-authorization-policy";
+import { isEnvironmentFlagEnabled } from "../recovery/environment-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
 type AuthorizationRow = {
@@ -92,7 +93,9 @@ export async function updateNotificationTestAuthorizationForUser(
   const { error } = await supabase.rpc("review_notification_test_authorization", {
     requested_action: action,
     requested_authorization_id: action === "request" ? null : input.authorizationId,
-    requested_global_delivery_enabled: process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED === "true",
+    requested_global_delivery_enabled: isEnvironmentFlagEnabled(
+      process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED,
+    ),
     requested_user_id: userId,
   });
 

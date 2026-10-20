@@ -32,9 +32,9 @@ describe("recovery mode settings boundary", () => {
     expect(routeSource).not.toContain("stripeConnectionId?: unknown");
   });
 
-  it("keeps the legacy delivery behavior read-only before migration", () => {
-    expect(storeSource).toContain('mode: "live"');
-    expect(storeSource).toContain('source: "legacy_fallback"');
+  it("fails closed when persisted account delivery configuration is unavailable", () => {
+    expect(storeSource).toContain('mode: "off"');
+    expect(storeSource).toContain('source: "fail_closed_fallback"');
     expect(storeSource).toContain('editable: runtime.source === "persisted"');
   });
 

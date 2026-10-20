@@ -5,6 +5,7 @@ import {
   unavailableNotificationActivationReview,
   type NotificationActivationReview,
 } from "../recovery/notification-activation-review";
+import { isEnvironmentFlagEnabled } from "../recovery/environment-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
 type AccountRow = {
@@ -77,7 +78,9 @@ export async function getNotificationActivationReviewForUser(
       accountMode: account.essential_notifications_delivery_mode,
       approvedRecipient: account.essential_notification_test_recipient,
       blockedDrill,
-      globalEnabled: process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED === "true",
+      globalEnabled: isEnvironmentFlagEnabled(
+        process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED,
+      ),
       sendingDomain: domain?.domain ?? null,
       sendingDomainStatus: domain?.status ?? null,
     });

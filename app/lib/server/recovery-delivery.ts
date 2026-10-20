@@ -8,10 +8,8 @@ import {
   shouldRetryRecoveryDelivery,
   type DeliveryFailureDisposition,
 } from "../recovery/delivery-policy";
-import {
-  getRecoveryDeliveryRecipient,
-  isRecoveryDeliveryKillSwitchEnabled,
-} from "../recovery/mode-policy";
+import { evaluateRecoveryDeliveryEnvironment } from "../recovery/environment-policy";
+import { getRecoveryDeliveryRecipient } from "../recovery/mode-policy";
 import { RECOVERY_MESSAGE_COPY_VERSION } from "../recovery/message-templates";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { createStripePlatformClient } from "../stripe/server";
@@ -753,7 +751,12 @@ export async function processPendingRecoveryMessages(limit = 25): Promise<Proces
     sent: 0,
   };
 
-  if (isRecoveryDeliveryKillSwitchEnabled(process.env.RECOVERY_DELIVERY_KILL_SWITCH)) {
+  const environmentDecision = evaluateRecoveryDeliveryEnvironment({
+    deliveryEnabled: process.env.RECOVERY_DELIVERY_ENABLED,
+    killSwitch: process.env.RECOVERY_DELIVERY_KILL_SWITCH,
+  });
+
+  if (!environmentDecision.allowed) {
     return result;
   }
 

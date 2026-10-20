@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  evaluateRecoveryDeliveryEnvironment,
+  getEnvironmentFlagState,
+  isEnvironmentFlagEnabled,
+} from "../app/lib/recovery/environment-policy";
+import {
   canScheduleRecoveryMessages,
   getRecoveryModeInputError,
   getRecoveryDeliveryRecipient,
-  isRecoveryDeliveryKillSwitchEnabled,
   isRecoveryMode,
   normalizeApprovedTestRecipient,
 } from "../app/lib/recovery/mode-policy";
@@ -49,11 +53,55 @@ describe("recovery mode policy", () => {
     ).toBeNull();
   });
 
-  it("enables the emergency kill switch only for an explicit true value", () => {
-    expect(isRecoveryDeliveryKillSwitchEnabled(" true ")).toBe(true);
-    expect(isRecoveryDeliveryKillSwitchEnabled("TRUE")).toBe(true);
-    expect(isRecoveryDeliveryKillSwitchEnabled("1")).toBe(false);
-    expect(isRecoveryDeliveryKillSwitchEnabled(undefined)).toBe(false);
+  it("parses environment flags only from explicit lowercase booleans", () => {
+    expect(getEnvironmentFlagState(" true ")).toBe("enabled");
+    expect(getEnvironmentFlagState("false")).toBe("disabled");
+    expect(getEnvironmentFlagState(undefined)).toBe("missing");
+    expect(getEnvironmentFlagState("TRUE")).toBe("invalid");
+    expect(getEnvironmentFlagState("1")).toBe("invalid");
+    expect(isEnvironmentFlagEnabled("true")).toBe(true);
+    expect(isEnvironmentFlagEnabled("TRUE")).toBe(false);
+  });
+
+  it("fails recovery delivery closed unless enablement and kill-switch state are both explicit", () => {
+    expect(
+      evaluateRecoveryDeliveryEnvironment({
+        deliveryEnabled: undefined,
+        killSwitch: undefined,
+      }),
+    ).toMatchObject({
+      allowed: false,
+      deliveryEnabledState: "missing",
+      killSwitchState: "missing",
+      reason: "kill_switch_not_explicitly_disabled",
+    });
+    expect(
+      evaluateRecoveryDeliveryEnvironment({
+        deliveryEnabled: "true",
+        killSwitch: "true",
+      }),
+    ).toMatchObject({ allowed: false, reason: "kill_switch_enabled" });
+    expect(
+      evaluateRecoveryDeliveryEnvironment({
+        deliveryEnabled: "false",
+        killSwitch: "false",
+      }),
+    ).toMatchObject({ allowed: false, reason: "delivery_disabled" });
+    expect(
+      evaluateRecoveryDeliveryEnvironment({
+        deliveryEnabled: "TRUE",
+        killSwitch: "false",
+      }),
+    ).toMatchObject({
+      allowed: false,
+      reason: "delivery_not_explicitly_enabled",
+    });
+    expect(
+      evaluateRecoveryDeliveryEnvironment({
+        deliveryEnabled: "true",
+        killSwitch: "false",
+      }),
+    ).toMatchObject({ allowed: true, reason: "enabled" });
   });
 
   it("normalizes an explicitly approved test recipient", () => {

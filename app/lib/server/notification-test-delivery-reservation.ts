@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isEnvironmentFlagEnabled } from "../recovery/environment-policy";
 import { createSupabaseAdminClient } from "../supabase/admin";
 
 export type NotificationTestDeliveryReservation = {
@@ -34,7 +35,9 @@ export async function reserveNotificationTestDelivery({
   const { data, error } = await supabase.rpc("reserve_authorized_notification_test_delivery", {
     requested_authorization_id: authorizationId,
     requested_event_id: eventId,
-    requested_global_delivery_enabled: process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED === "true",
+    requested_global_delivery_enabled: isEnvironmentFlagEnabled(
+      process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED,
+    ),
     requested_user_id: userId,
   });
 

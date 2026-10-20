@@ -1,12 +1,9 @@
 import "server-only";
 
 import { evaluateAuthorizedTestDeliveryConnection } from "../recovery/authorized-test-delivery-policy";
+import { isEnvironmentFlagEnabled } from "../recovery/environment-policy";
 import { deliverReservedTestNotification, type NotificationDeliveryResult } from "./recovery-notification-delivery";
 import { reserveNotificationTestDelivery } from "./notification-test-delivery-reservation";
-
-function isEnabled(value: string | undefined) {
-  return value === "true";
-}
 
 /**
  * Dormant D4n orchestration boundary. It has no route, UI action, cron, or
@@ -23,8 +20,12 @@ export async function executeAuthorizedNotificationTestDelivery({
   userId: string;
 }): Promise<NotificationDeliveryResult> {
   const connection = evaluateAuthorizedTestDeliveryConnection({
-    authorizedTestEnabled: isEnabled(process.env.ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED),
-    globalEnabled: isEnabled(process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED),
+    authorizedTestEnabled: isEnvironmentFlagEnabled(
+      process.env.ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED,
+    ),
+    globalEnabled: isEnvironmentFlagEnabled(
+      process.env.ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED,
+    ),
   });
 
   if (!connection.allowed) return { outcome: "blocked", reason: connection.reason };

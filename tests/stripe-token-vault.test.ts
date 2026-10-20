@@ -34,9 +34,9 @@ describe("Stripe token vault", () => {
     expect(() => decryptStripeToken(encrypted)).toThrow();
   });
 
-  it("requires an encryption secret", () => {
+  it("requires a dedicated encryption secret instead of falling back to another credential", () => {
     vi.stubEnv("STRIPE_TOKEN_ENCRYPTION_KEY", "");
-    vi.stubEnv("SUPABASE_SECRET_KEY", "");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "supabase-secret-that-must-not-encrypt-stripe-tokens");
 
     expect(() => encryptStripeToken("oauth-access-token")).toThrow(
       "STRIPE_TOKEN_ENCRYPTION_KEY is required",

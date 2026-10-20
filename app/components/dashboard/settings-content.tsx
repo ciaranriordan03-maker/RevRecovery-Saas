@@ -43,7 +43,7 @@ type RecoveryModeSettings = {
   livemode: boolean | null;
   mode: RecoveryMode;
   scheduleId: RecoveryScheduleId;
-  source: "persisted" | "legacy_fallback" | "not_connected";
+  source: "persisted" | "fail_closed_fallback" | "not_connected";
   stripeAccountId: string | null;
   timezone: string;
 };
@@ -481,8 +481,8 @@ export function SettingsContent({
               <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4 text-xs leading-5 text-[var(--muted)]">
                 {!recoveryMode.connected
                   ? "Connect Stripe before configuring recovery delivery."
-                  : recoveryMode.source === "legacy_fallback"
-                    ? "Current delivery remains live for backward compatibility. These controls become editable only after the Phase 0 migration is separately approved."
+                  : recoveryMode.source === "fail_closed_fallback"
+                    ? "Recovery delivery is off because persisted account configuration is unavailable. Review the account setup before enabling delivery."
                     : `${recoveryMode.livemode ? "Live" : "Sandbox"} Stripe account ${recoveryMode.stripeAccountId ?? ""}.`}
               </div>
 

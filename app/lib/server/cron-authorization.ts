@@ -9,7 +9,7 @@ export function isRecoveryCronAuthorized(request: Request) {
   const cronSecrets = getCronSecrets();
 
   if (cronSecrets.length === 0) {
-    return process.env.NODE_ENV !== "production";
+    return false;
   }
 
   const authHeader = request.headers.get("authorization");

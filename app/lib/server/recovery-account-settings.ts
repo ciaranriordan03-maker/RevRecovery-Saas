@@ -34,7 +34,7 @@ export type RecoveryAccountRuntimeSettings = {
   mode: RecoveryMode;
   policyVersionId: string | null;
   schedule: RecoveryScheduleSnapshot;
-  source: "persisted" | "legacy_fallback";
+  source: "persisted" | "fail_closed_fallback";
   timezone: string;
 };
 
@@ -45,7 +45,7 @@ export type RecoveryModeSettings = {
   livemode: boolean | null;
   mode: RecoveryMode;
   scheduleId: RecoveryScheduleId;
-  source: "persisted" | "legacy_fallback" | "not_connected";
+  source: "persisted" | "fail_closed_fallback" | "not_connected";
   stripeAccountId: string | null;
   timezone: string;
 };
@@ -208,22 +208,22 @@ export async function getRecoveryAccountRuntimeSettings({
   livemode: boolean;
   stripeAccountId: string;
 }): Promise<RecoveryAccountRuntimeSettings> {
-  const legacyFallback: RecoveryAccountRuntimeSettings = {
+  const failClosedFallback: RecoveryAccountRuntimeSettings = {
     approvedTestRecipient: null,
     livemode,
-    mode: "live",
+    mode: "off",
     policyVersionId: null,
     schedule: buildRecoveryScheduleSnapshot({
       scheduleId: DEFAULT_RECOVERY_SCHEDULE_ID,
       timezone: "UTC",
     }),
-    source: "legacy_fallback",
+    source: "fail_closed_fallback",
     timezone: "UTC",
   };
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
-    return legacyFallback;
+    return failClosedFallback;
   }
 
   const { data, error } = await supabase
@@ -237,14 +237,14 @@ export async function getRecoveryAccountRuntimeSettings({
 
   if (error) {
     if (isMissingSettingsTableError(error)) {
-      return legacyFallback;
+      return failClosedFallback;
     }
 
     throw new Error(`Unable to load recovery mode: ${error.message}`);
   }
 
   if (!data) {
-    return legacyFallback;
+    return failClosedFallback;
   }
 
   if (!isRecoveryMode(data.recovery_mode)) {
