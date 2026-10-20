@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUserClaims } from "../../../lib/auth";
+import { sanitizeAppRedirect } from "../../../lib/safe-redirect";
 import {
   getStripeConnectClientId,
   getStripeConnectRedirectUri,
@@ -9,14 +10,7 @@ import {
 } from "../../../lib/stripe/env";
 
 const STRIPE_CONNECT_STATE_COOKIE = "stripe_connect_state";
-
-function sanitizeNext(value: string | null) {
-  if (!value || !value.startsWith("/")) {
-    return "/dashboard/settings";
-  }
-
-  return value;
-}
+const STRIPE_CONNECT_FALLBACK = "/dashboard/settings";
 
 function buildConnectRedirectUri(request: NextRequest) {
   if (process.env.NODE_ENV === "production") {
@@ -38,17 +32,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const next = sanitizeAppRedirect(
+    request.nextUrl.searchParams.get("next"),
+    STRIPE_CONNECT_FALLBACK,
+  );
   const claims = await getCurrentUserClaims();
 
   if (!claims || typeof claims.sub !== "string") {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", sanitizeNext(request.nextUrl.searchParams.get("next")));
+    loginUrl.searchParams.set("next", next);
     return NextResponse.redirect(loginUrl);
   }
 
   const state = Buffer.from(
     JSON.stringify({
-      next: sanitizeNext(request.nextUrl.searchParams.get("next")),
+      next,
       nonce: randomUUID(),
       userId: claims.sub,
     }),

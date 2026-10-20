@@ -6,6 +6,8 @@
 **Pull request:** `#1`  
 **Decision:** Demo-safe release candidate; not approved for merge or production yet
 
+> **D6c1 update:** The vulnerable production dependency graph and Stripe Connect return-path finding were remediated locally after this audit. See `D6C1_SECURITY_REMEDIATION_2026-10-20.md` for the exact versions, safeguards, tests, and remaining remote acceptance condition.
+
 ## Review boundary
 
 This review examined the current 137-file branch diff, authentication and tenant boundaries, secret handling, dashboard write routes, Stripe and Resend webhooks, recovery cron processing, delivery gates, additive migrations, Sentry configuration, CI, and available rollback/replay evidence.
