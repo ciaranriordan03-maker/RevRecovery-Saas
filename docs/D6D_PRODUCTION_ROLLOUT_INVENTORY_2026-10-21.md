@@ -10,7 +10,7 @@
 
 **Decision:** Read-only inventory complete; merge, migration, and production deployment remain withheld
 
-> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL and all four explicit fail-closed delivery gates. Read-only checks found that Sentry's real routing does not yet implement the code-owned operational routes/thresholds, and Production still has no available physical backup or PITR. Supabase auth redirect verification is pending a dashboard sign-in. Production rollout therefore remains withheld. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md).
+> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL and all four explicit fail-closed delivery gates. Read-only checks found that Sentry's real routing does not yet implement the code-owned operational routes/thresholds, Production still has no available physical backup or PITR, and its Supabase auth allow-list still contains a legacy localhost callback alongside the correct Production callback. Production rollout therefore remains withheld. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md).
 
 ## Boundary
 
