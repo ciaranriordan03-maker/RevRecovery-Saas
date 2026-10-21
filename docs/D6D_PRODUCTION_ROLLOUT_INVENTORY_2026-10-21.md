@@ -10,7 +10,7 @@
 
 **Decision:** Read-only inventory complete; merge, migration, and production deployment remain withheld
 
-> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. Sentry's real routing still does not implement the code-owned operational routes/thresholds, and Production still has no available physical backup or PITR. Production rollout therefore remains withheld. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md).
+> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. A password-protected logical Production backup has passed checksum verification and a disposable network-isolated restore drill; managed physical backup and PITR remain unavailable. Sentry's real routing still does not implement the code-owned operational routes/thresholds, so Production rollout remains withheld. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md) and [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md).
 
 ## Boundary
 
@@ -132,14 +132,9 @@ A DSN and route tag do not prove that a person will receive an alert. Production
 
 ## Backup and restore decision
 
-Production migration is blocked while the target reports no available physical backup and PITR is disabled.
+The second reviewed control has now been completed: an encrypted, access-controlled logical Production backup was created outside the repository and restored successfully into a disposable, network-isolated local target. All encrypted checksums passed, no plaintext dump remains, and only aggregate restore counts were emitted. See [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md).
 
-Before migration approval, choose and verify one of these controls:
-
-1. **Preferred:** enable an appropriate Supabase backup/PITR capability and verify that a restorable point exists; or
-2. create an encrypted, access-controlled logical backup and document a tested restore target and owner.
-
-A logical export may contain customer and authentication data. It must not be created casually, printed to chat, committed, or stored unencrypted. It requires separate approval and a declared secure destination.
+Production still reports no available physical backup and PITR is disabled. That remains an operational limitation and should be revisited as the product and data volume grow, but the verified logical snapshot now satisfies the current pre-migration backup gate. The backup should be refreshed if Production data changes materially before migration.
 
 Database rollback will use an additive forward fix rather than removing evidence-bearing tables, triggers, or migrations after they have been applied. Restore is an emergency path, not the normal response to an application defect.
 
@@ -213,7 +208,7 @@ Stop before or during rollout if any of the following is true:
 - Preview and Production still share the same database unintentionally;
 - a Vercel public URL, publishable key, and secret key do not identify the same approved project;
 - the production migration dry run differs from the reviewed nine-file list;
-- no restorable backup evidence exists;
+- no current, verified restorable backup evidence exists;
 - any delivery gate is absent, invalid, or enabled;
 - the app URL or Supabase auth redirect target does not match the intended environment;
 - Sentry operational routing is absent or unverified;

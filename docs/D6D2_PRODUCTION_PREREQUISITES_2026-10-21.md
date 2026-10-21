@@ -4,13 +4,13 @@
 
 **Branch:** `codex/release-c-activation-readiness`
 
-**Application head:** `4473bf2` (`Record production auth redirect evidence`)
+**Application evidence base:** `be29cde` (`Record production callback isolation`)
 
 **Decision:** Production remains fail-closed; D6d2 is partially complete and release approval remains withheld
 
 ## Boundary
 
-This step was explicitly approved to change Production configuration prerequisites. It did not deploy the application, merge the branch, apply a database migration, enable a delivery path, send an email, contact a provider, export customer data, or change a paid backup plan.
+This work was explicitly approved to change Production configuration prerequisites and to create a secure logical backup. It did not deploy the application, merge the branch, apply a database migration, enable a delivery path, send an email, contact a provider or customer, or change a paid backup plan. The approved logical export was encrypted before durable storage outside the repository, and no plaintext dump remains.
 
 Secret values were neither printed nor written to this repository. Verification output was limited to variable names, scopes, configuration types, safe boolean values, public origins, and sanitized operational metadata.
 
@@ -25,7 +25,7 @@ Secret values were neither printed nor written to this repository. Verification 
 | Production authorized-test gate | Pass | `ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED=false`. |
 | Supabase auth site and redirect allow-list | Pass | Site URL is `https://revrecovery.io`; the sole Production callback is `https://revrecovery.io/auth/confirm`. The legacy localhost callback was removed after Development was verified to retain its local and Preview callbacks. |
 | Sentry routing and thresholds | Not ready | Real rules were inspected read-only. A general high-priority issue workflow exists, but the code-owned operational routes and thresholds are not mapped to explicit destinations. The uptime detector also has no action workflow. |
-| Restorable backup evidence | Blocked | Production reports no available physical backup and PITR is disabled. No export or paid-plan change was performed. |
+| Restorable backup evidence | Pass (logical) | A password-protected logical backup was created outside the repository, all encrypted checksums passed, and a network-isolated disposable restore drill succeeded. Managed physical backup and PITR remain unavailable. See [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md). |
 | Redacted Production preflight | Partial only | Public URL and all four gates passed. A local CLI run could not retrieve Vercel Secret-type values and could have inherited local values, so it is not accepted as complete Production evidence. |
 
 ## Vercel configuration applied
@@ -80,14 +80,18 @@ No Sentry rule or destination was changed. Enabling or changing operator notific
 
 ## Backup and restore verification
 
-The Production Supabase backup inventory reported:
+The Production Supabase inventory still reports no available physical backup and PITR disabled. Under separate explicit approval, the logical-control alternative was completed:
 
-- no available physical backup;
-- PITR disabled;
-- WAL-G available at the platform layer; and
-- region `eu-west-1`.
+- four compressed archives covering roles, application schema, Production Auth/Storage schema definitions, and database rows were encrypted with AES-256-CBC and PBKDF2;
+- the backup is outside the repository with owner-only directory and file permissions;
+- the encryption key is held in macOS Keychain and was not printed or committed;
+- all four SHA-256 checksums passed;
+- no plaintext or partial dump remains; and
+- a network-isolated disposable restore drill passed with 18 public tables, 5 authentication users, and 0 failed-payment rows.
 
-This is not restorable-point evidence. Production database migration remains blocked until one of the reviewed backup controls is explicitly selected, established, and tested. A paid backup/PITR change or a logical export containing customer/authentication data requires its own exact approval and secure destination.
+Only aggregate restore counts were emitted, and the disposable restore container was removed. The full scope, restore accommodations, and limitations are recorded in [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md).
+
+This satisfies the reviewed pre-migration logical restore requirement. It does not create Supabase-managed physical backup or PITR, and it does not include Supabase Storage object binaries.
 
 ## Preflight interpretation
 
@@ -101,8 +105,8 @@ A CLI argument-parsing error created a separate empty helper project named `revr
 
 ## Acceptance state
 
-D6d2 has improved Production safety by making the canonical origin and every delivery gate explicit and by isolating the Production auth callback from localhost and Preview. It is **not complete** because alert routing is incomplete and a restorable backup is unavailable. Production migration, merge, deployment, and customer delivery remain withheld.
+D6d2 has improved Production safety by making the canonical origin and every delivery gate explicit, isolating the Production auth callback from localhost and Preview, and establishing a verified encrypted logical backup. It is **not complete** because alert routing is incomplete and the redacted preflight has not yet run in an authoritative Production deployment context. Production migration, merge, deployment, and customer delivery remain withheld.
 
 Repository verification passed `npm run lint` and `npm run build -- --webpack`. The ordinary Turbopack build was also attempted, but this restricted host denied its temporary internal parser port before source parsing; the webpack production build compiled, type-checked, and generated all application routes successfully.
 
-**Next logical step:** establish and verify a restorable Production backup control under separate approval. Sentry operational routing remains a separate approval before Production rollout.
+**Next logical step:** complete Sentry operational route and destination mapping under separate approval, then run the redacted preflight in an authoritative Production deployment context before requesting any Production migration approval.
