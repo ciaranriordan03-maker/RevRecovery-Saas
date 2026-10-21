@@ -10,7 +10,7 @@
 
 **Decision:** Read-only inventory complete; merge, migration, and production deployment remain withheld
 
-> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. A password-protected logical Production backup has passed checksum verification and a disposable network-isolated restore drill; managed physical backup and PITR remain unavailable. Sentry's real routing still does not implement the code-owned operational routes/thresholds, so Production rollout remains withheld. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md) and [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md).
+> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. A password-protected logical Production backup passed checksum verification and a disposable network-isolated restore drill; managed physical backup and PITR remain unavailable. Sentry now implements the reviewed Production monitor filters, thresholds, logical routes, uptime destination, and duplicate safeguard. Production rollout remains withheld until the redacted preflight passes in an authoritative Production deployment context. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md), [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md), and [D6d2 Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md).
 
 ## Boundary
 
@@ -126,9 +126,11 @@ These migrations are additive foundations and guarded transitions, but that does
 - Vercel contains both `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_AUTH_TOKEN` for Production and Preview.
 - Source-map upload configuration names the `rev-recovery` organization and `rev-recovery-saas` project.
 - D6c3's redacted operational capture, stable fingerprints, thresholds, role tags, and mocked no-network drill are accepted.
-- The Sentry organization redirected to login during this audit. Alert rules and real destinations for `engineering` and `operator_and_engineering` therefore remain **unverified**.
+- Eight live metric detectors now match the code-owned `alert_code`, `alert_route`, `customer_contact:none`, environment, time-window, and threshold contract.
+- Enabled workflows route `engineering` and `operator_and_engineering` conditions to the available Sentry member, and the Production uptime detector is attached to the latter.
+- General Production errors remain covered through the default Error Monitor, while the former project-wide high-priority workflow is disabled to prevent duplicate mail.
 
-A DSN and route tag do not prove that a person will receive an alert. Production deployment remains withheld until the real Sentry rule and destination mapping is inspected without changing it, or is deliberately configured under separate approval.
+The routing prerequisite now passes. Because the organization has one member, logical route separation does not yet provide human responder redundancy. See [D6d2 Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md).
 
 ## Backup and restore decision
 
@@ -223,4 +225,4 @@ D6d's read-only inventory and rollout design are complete. Production readiness 
 
 Repository verification for this documentation slice passed `npm run lint` and `npm run build -- --webpack`. The ordinary local Turbopack build was also attempted, but this host denied the temporary internal parser port before source parsing; the exact audited application head independently passed the ordinary GitHub and Vercel production builds.
 
-**Next logical step:** D6d1—under explicit approval, isolate Vercel Preview onto RevRecovery Development, split the Preview app URL, add the four explicit disabled delivery gates to Preview, redeploy, and repeat the no-customer-contact Preview smoke before touching Production.
+**Next logical step:** run the redacted preflight in an authoritative, separately approved Production deployment context. If it passes without exposing values, request the exact-target D6d3 migration approval separately.

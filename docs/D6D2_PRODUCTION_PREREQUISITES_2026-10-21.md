@@ -4,13 +4,13 @@
 
 **Branch:** `codex/release-c-activation-readiness`
 
-**Application evidence base:** `be29cde` (`Record production callback isolation`)
+**Application evidence base:** `8c32b28` (`Record verified production backup`)
 
-**Decision:** Production remains fail-closed; D6d2 is partially complete and release approval remains withheld
+**Decision:** Production remains fail-closed; the Sentry and backup prerequisites pass, while release approval remains withheld pending the authoritative redacted Production preflight
 
 ## Boundary
 
-This work was explicitly approved to change Production configuration prerequisites and to create a secure logical backup. It did not deploy the application, merge the branch, apply a database migration, enable a delivery path, send an email, contact a provider or customer, or change a paid backup plan. The approved logical export was encrypted before durable storage outside the repository, and no plaintext dump remains.
+This work was explicitly approved to change Production configuration prerequisites, create a secure logical backup, and configure Sentry's operational routes. It did not deploy the application, merge the branch, apply a database migration, enable an application delivery path, send a customer email, contact Stripe or Resend, or change a paid backup plan. One explicitly approved Sentry operator test notification was issued; it was not a RevRecovery delivery. The approved logical export was encrypted before durable storage outside the repository, and no plaintext dump remains.
 
 Secret values were neither printed nor written to this repository. Verification output was limited to variable names, scopes, configuration types, safe boolean values, public origins, and sanitized operational metadata.
 
@@ -24,7 +24,7 @@ Secret values were neither printed nor written to this repository. Verification 
 | Production essential-notification gate | Pass | `ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED=false`. |
 | Production authorized-test gate | Pass | `ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED=false`. |
 | Supabase auth site and redirect allow-list | Pass | Site URL is `https://revrecovery.io`; the sole Production callback is `https://revrecovery.io/auth/confirm`. The legacy localhost callback was removed after Development was verified to retain its local and Preview callbacks. |
-| Sentry routing and thresholds | Not ready | Real rules were inspected read-only. A general high-priority issue workflow exists, but the code-owned operational routes and thresholds are not mapped to explicit destinations. The uptime detector also has no action workflow. |
+| Sentry routing and thresholds | Pass | Eight Production-only metric detectors implement the code-owned alert filters, 5/10/15-minute thresholds, and logical routes. Two enabled workflows reach the available Sentry member, Production uptime is attached to the operator route, the default Error Monitor retains scoped general coverage, and the legacy broad alert is disabled. See [Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md). |
 | Restorable backup evidence | Pass (logical) | A password-protected logical backup was created outside the repository, all encrypted checksums passed, and a network-isolated disposable restore drill succeeded. Managed physical backup and PITR remain unavailable. See [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md). |
 | Redacted Production preflight | Partial only | Public URL and all four gates passed. A local CLI run could not retrieve Vercel Secret-type values and could have inherited local values, so it is not accepted as complete Production evidence. |
 
@@ -64,19 +64,22 @@ Supabase reported `Successfully removed URL(s)` and `Total URLs: 1`. Development
 
 ## Sentry routing verification
 
-The Sentry organization and `rev-recovery-saas` project were inspected through read-only API calls.
+Under separate explicit approval, the Sentry organization and `rev-recovery-saas` project were configured and then verified through authenticated read-only API calls.
 
-Observed configuration:
+The saved topology now includes:
 
-- the default error monitor is enabled;
-- the issue stream is enabled and connected to an active workflow;
-- the Production uptime monitor for `https://revrecovery.io` is enabled with a 60-second interval, a 10-second timeout, a three-failure downtime threshold, and a one-success recovery threshold;
-- a Production workflow sends first-seen high-priority issue notifications to active members or issue owners; and
-- the uptime monitor has no attached notification action.
+- eight enabled Production metric detectors using exact `alert_code`, `alert_route`, and `customer_contact:none` filters;
+- first-event 5-minute thresholds for the urgent single-event conditions;
+- second-event 10-minute handling for stale claims;
+- third-event 15-minute handling for repeated delivery and webhook failures;
+- separate `engineering` and `operator_and_engineering` workflows;
+- the Production uptime monitor attached to the operator-and-engineering workflow;
+- a Production-only general-error workflow attached solely to the default Error Monitor; and
+- the former project-wide high-priority workflow disabled to prevent duplicate mail.
 
-This is useful baseline monitoring, but it does not satisfy D6c3's operational contract. No explicit Sentry workflow currently maps the redacted `alert_code` and `alert_route` tags to the required `engineering` and `operator_and_engineering` destinations or enforces the code-owned 5-, 10-, and 15-minute thresholds.
+Both logical operational routes currently reach the same organization member because no second Sentry member or connector is available. That is sufficient for the current founder-operated release boundary, but it is not responder redundancy.
 
-No Sentry rule or destination was changed. Enabling or changing operator notifications requires separate approval because it can contact people outside the application.
+One explicitly approved Sentry operator test notification was requested. No customer-delivery path, Stripe action, Resend action, or application gate was enabled. Full identifiers, thresholds, limitations, and duplicate controls are recorded in [D6d2 Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md).
 
 ## Backup and restore verification
 
@@ -105,8 +108,8 @@ A CLI argument-parsing error created a separate empty helper project named `revr
 
 ## Acceptance state
 
-D6d2 has improved Production safety by making the canonical origin and every delivery gate explicit, isolating the Production auth callback from localhost and Preview, and establishing a verified encrypted logical backup. It is **not complete** because alert routing is incomplete and the redacted preflight has not yet run in an authoritative Production deployment context. Production migration, merge, deployment, and customer delivery remain withheld.
+D6d2 has improved Production safety by making the canonical origin and every delivery gate explicit, isolating the Production auth callback from localhost and Preview, establishing a verified encrypted logical backup, and implementing the reviewed Sentry route and threshold contract. It is **not complete** because the redacted preflight has not yet run in an authoritative Production deployment context. Production migration, merge, deployment, and customer delivery remain withheld.
 
 Repository verification passed `npm run lint` and `npm run build -- --webpack`. The ordinary Turbopack build was also attempted, but this restricted host denied its temporary internal parser port before source parsing; the webpack production build compiled, type-checked, and generated all application routes successfully.
 
-**Next logical step:** complete Sentry operational route and destination mapping under separate approval, then run the redacted preflight in an authoritative Production deployment context before requesting any Production migration approval.
+**Next logical step:** run the redacted preflight in an authoritative, separately approved Production deployment context before requesting any Production migration approval.
