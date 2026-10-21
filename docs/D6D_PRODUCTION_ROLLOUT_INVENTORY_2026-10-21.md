@@ -12,6 +12,8 @@
 
 > **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. A password-protected logical Production backup passed checksum verification and a disposable network-isolated restore drill; managed physical backup and PITR remain unavailable. Sentry implements the reviewed Production monitor filters, thresholds, logical routes, uptime destination, and duplicate safeguard. A separately approved, fail-closed Vercel Production build probe passed every configuration and delivery-gate check, then stopped before runtime or domain promotion. D6d2 is complete; Production rollout remains withheld pending D6d3 migration review and later merge/deployment approvals. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md), [D6d2 Authoritative Production Preflight Evidence](./D6D2_PRODUCTION_PREFLIGHT_2026-10-21.md), [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md), and [D6d2 Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md).
 
+> **D6d3 read-only update — 21 October 2026:** GitHub test/lint/build, Vercel, and Vercel Preview checks passed for exact head `f341768`. A fresh migration listing against exact Production project `keddusmowpdqrxooveiz` reported 23 of 32 local migrations applied. The non-mutating `db push --dry-run --skip-vault` proposed exactly the previously reviewed nine migrations, in the same order, with no seeds or roles. A second listing proved the database remained at 23 applied and nine pending. D6d3's review gate passes; application remains withheld pending separate exact-target approval. See [D6d3 Production Migration Listing and Dry-Run Evidence](./D6D3_PRODUCTION_MIGRATION_DRY_RUN_2026-10-21.md).
+
 ## Boundary
 
 This was a read-only release inventory. It inspected names, scopes, project identity, migration versions, backup availability, domains, and check status without copying secret values into the repository or review output.
@@ -180,6 +182,8 @@ Under a separate, exact-target migration approval:
 5. Re-list migrations and confirm 32 of 32.
 6. Keep every delivery gate explicitly disabled throughout.
 
+Steps 1–3 are now complete. The current logical backup/restore evidence is accepted, and the fresh listing and dry run match the reviewed nine-file set exactly. Steps 4–6 remain withheld pending separate explicit approval to apply that exact set to `keddusmowpdqrxooveiz`.
+
 ### D6d4 — merge and production deployment
 
 Vercel is connected to GitHub, so merging to `main` is expected to trigger a production build and deployment. Treat that as one coupled execution with two explicit decisions:
@@ -221,8 +225,8 @@ Stop before or during rollout if any of the following is true:
 
 ## Acceptance state
 
-D6d's inventory and rollout design are complete, and D6d2's prerequisites now pass. Production rollout remains **withheld**, not failed: D6d3 migration review and application, the exact merge/deployment decisions, and the D6e zero-customer-contact proof remain outstanding.
+D6d's inventory and rollout design are complete, D6d2's prerequisites pass, and D6d3's fresh Production listing and dry-run review pass. Production rollout remains **withheld**, not failed: D6d3 migration application, the exact merge/deployment decisions, and the D6e zero-customer-contact proof remain outstanding.
 
 Repository verification for this documentation slice passed `npm run lint` and `npm run build -- --webpack`. The ordinary local Turbopack build was also attempted, but this host denied the temporary internal parser port before source parsing; the exact audited application head independently passed the ordinary GitHub and Vercel production builds.
 
-**Next logical step:** begin D6d3 with a fresh read-only Production migration listing and dry run against Supabase project `keddusmowpdqrxooveiz`. Stop if the pending set differs from the reviewed nine migrations, and request separate exact-target approval before applying anything.
+**Next logical step:** request separate explicit approval to apply only the reviewed nine migrations, in order, to Production Supabase project `keddusmowpdqrxooveiz`. Re-list afterward and require 32 of 32 before considering any merge or Production deployment.
