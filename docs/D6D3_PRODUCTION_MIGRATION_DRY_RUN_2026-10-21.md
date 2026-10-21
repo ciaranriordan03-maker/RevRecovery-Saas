@@ -8,11 +8,11 @@
 
 **Production Supabase project:** `keddusmowpdqrxooveiz`
 
-**Decision:** Read-only migration review passes; migration application remains withheld
+**Decision:** Production migration application and post-write verification pass; merge and deployment remain withheld
 
 ## Boundary
 
-This step re-read the Production migration history and generated a non-mutating migration plan for the exact Production project. It did not apply or repair a migration, update Vault, include seed data or roles, relink the repository, change application configuration, merge or deploy code, enable delivery, send a message, or contact a customer.
+This step first re-read the Production migration history and generated a non-mutating migration plan for the exact Production project. After separate explicit approval, it applied only that reviewed nine-file set and verified the resulting migration history. It did not repair migration history, update Vault, include seed data or roles, relink the repository, change application configuration, merge or deploy code, enable delivery, send a message, or contact a customer.
 
 No database password, access token, secret, row-level data, or environment-variable value was printed or stored in this evidence.
 
@@ -58,6 +58,25 @@ This exactly matches the previously reviewed D6d inventory. There are no unexpec
 
 The post-dry-run listing remained 23 applied and nine pending. Therefore the read-only review made no database change.
 
+## Approved application and post-write proof
+
+The user separately approved applying the exact nine-file set to Production Supabase project `keddusmowpdqrxooveiz`. Immediately before the write, the migration listing and dry run were repeated. Both still reported the same 23 applied and nine pending migrations, in the reviewed order, with no drift.
+
+The approved push used the exact Production project reference and `--skip-vault`. It did not include seed or role flags. Supabase applied all nine reviewed files in order and reported no SQL error.
+
+Post-write verification then established:
+
+- all 32 local migration versions are present remotely;
+- every local and remote migration version matches;
+- a sequential `db push --dry-run --skip-vault` reports `upToDate: true`;
+- no migration remains pending;
+- no seed or role change remains pending; and
+- the repository remains linked to Development rather than being relinked to Production.
+
+The first post-write dry-run process was started concurrently with the migration listing and stalled before obtaining its read-only connection. It was interrupted without output or mutation and rerun sequentially, where it completed successfully with the up-to-date result above.
+
+Application delivery configuration was not changed. The four independently reviewed Production delivery gates remain in their fail-closed Vercel configuration, and the migrated notification foundations are disabled by default.
+
 ## Repository verification
 
 - `npm run lint` passed.
@@ -66,8 +85,8 @@ The post-dry-run listing remained 23 applied and nine pending. Therefore the rea
 
 ## Acceptance state
 
-D6d3's listing and dry-run gate passes. The nine-file Production migration set is stable and ready for a separate exact-target application decision.
+D6d3 is complete. Its listing and dry-run gate passed, the exact approved nine-file set was applied successfully, and Production now records 32 of 32 migrations with an empty post-write plan.
 
-Migration application, merge, Production runtime deployment, delivery enablement, and customer contact remain withheld. Any change to the project identity, pending set, backup state, or fail-closed delivery state invalidates this approval basis and requires the review to be repeated.
+Merge, Production runtime deployment, delivery enablement, and customer contact remain withheld. Any change to the project identity, backup state, or fail-closed delivery state invalidates this approval basis and requires the relevant review to be repeated.
 
-**Next logical step:** request separate explicit approval to apply only the nine migrations listed above, in order, to Production Supabase project `keddusmowpdqrxooveiz`. After application, re-list migration history and require 32 of 32 before considering any merge or Production deployment.
+**Next logical step:** preserve this application evidence on the existing GitHub branch and require exact-head checks. After they pass, begin D6d4 with a separate approval covering the exact merge head and its resulting Production deployment.
