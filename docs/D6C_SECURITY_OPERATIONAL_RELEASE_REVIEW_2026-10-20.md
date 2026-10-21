@@ -8,7 +8,7 @@
 
 > **D6c1 update:** The vulnerable production dependency graph and Stripe Connect return-path finding were remediated locally after this audit. See `D6C1_SECURITY_REMEDIATION_2026-10-20.md` for the exact versions, safeguards, tests, and remaining remote acceptance condition.
 
-> **D6c2–D6c3 update:** D6c2 is remotely accepted at commit `7022f66`. Recovery delivery and secret configuration now fail closed. D6c3 adds a redacted operational capture boundary, code-owned thresholds and role routes, a safe mocked-transport drill, and stop/inspect/forward-fix/replay guidance. See `D6C2_FAIL_CLOSED_DELIVERY_2026-10-20.md` and `D6C3_OPERATIONAL_OBSERVABILITY_2026-10-20.md`. D6c3 still requires exact-commit GitHub/Vercel acceptance; D6d and D6e continue to withhold merge and production approval.
+> **D6c2–D6d update:** D6c2 is remotely accepted at commit `7022f66`, and D6c3 is remotely accepted at commit `74a42d4`. Recovery delivery and secret configuration now fail closed; unexpected operational failures use a redacted capture boundary with code-owned thresholds, route tags, and safe replay guidance. See `D6C2_FAIL_CLOSED_DELIVERY_2026-10-20.md`, `D6C3_OPERATIONAL_OBSERVABILITY_2026-10-20.md`, and `D6D_PRODUCTION_ROLLOUT_INVENTORY_2026-10-21.md`. D6d's read-only inventory is complete, but Preview/Production data isolation, explicit disabled Vercel gate values, production migration/backup evidence, and real Sentry destination verification continue to withhold merge and production approval.
 
 ## Review boundary
 
@@ -182,6 +182,6 @@ Only after D6c1–D6c3 pass should D6d inventory production configuration and pl
 
 ## Acceptance state
 
-D6c review is complete as an audit, but the release is not accepted for production. The branch remains safe to demonstrate on the exact development Preview under the D6b boundary. No user-facing Preview check is required for this documentation-only review.
+D6c review and remediation are complete, including exact-commit GitHub and Vercel acceptance for D6c3. The branch remains safe to demonstrate under the D6b no-customer-contact boundary, but the release is not accepted for production.
 
-The next logical step is **D6c1: apply the reviewed dependency updates and close the Stripe Connect redirect edge case in one focused security patch, then rerun every local and remote release check before any merge is considered**.
+The next logical step is **D6d1: under explicit approval, isolate Vercel Preview onto RevRecovery Development, split its app URL from Production, add the four explicit disabled delivery gates, redeploy, and repeat the no-customer-contact Preview smoke before touching Production**.
