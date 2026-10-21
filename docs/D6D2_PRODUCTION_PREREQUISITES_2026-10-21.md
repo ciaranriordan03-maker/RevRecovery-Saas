@@ -4,7 +4,7 @@
 
 **Branch:** `codex/release-c-activation-readiness`
 
-**Application head:** `f869662` (`Record D6d rollout inventory`)
+**Application head:** `4473bf2` (`Record production auth redirect evidence`)
 
 **Decision:** Production remains fail-closed; D6d2 is partially complete and release approval remains withheld
 
@@ -23,7 +23,7 @@ Secret values were neither printed nor written to this repository. Verification 
 | Production recovery kill switch | Pass | `RECOVERY_DELIVERY_KILL_SWITCH=true`. |
 | Production essential-notification gate | Pass | `ESSENTIAL_NOTIFICATION_DELIVERY_ENABLED=false`. |
 | Production authorized-test gate | Pass | `ESSENTIAL_NOTIFICATION_AUTHORIZED_TEST_DELIVERY_ENABLED=false`. |
-| Supabase auth site and redirect allow-list | Needs remediation | Site URL is `https://revrecovery.io` and the Production callback is allow-listed, but `http://localhost:3000/auth/confirm` remains in the Production allow-list. No Preview URL is present. |
+| Supabase auth site and redirect allow-list | Pass | Site URL is `https://revrecovery.io`; the sole Production callback is `https://revrecovery.io/auth/confirm`. The legacy localhost callback was removed after Development was verified to retain its local and Preview callbacks. |
 | Sentry routing and thresholds | Not ready | Real rules were inspected read-only. A general high-priority issue workflow exists, but the code-owned operational routes and thresholds are not mapped to explicit destinations. The uptime detector also has no action workflow. |
 | Restorable backup evidence | Blocked | Production reports no available physical backup and PITR is disabled. No export or paid-plan change was performed. |
 | Redacted Production preflight | Partial only | Public URL and all four gates passed. A local CLI run could not retrieve Vercel Secret-type values and could have inherited local values, so it is not accepted as complete Production evidence. |
@@ -44,17 +44,23 @@ No Production redeployment was triggered. The running application therefore rema
 
 ## Supabase auth verification
 
-The intended Production project, **Rev Recovery Saas** (`keddusmowpdqrxooveiz`), was inspected directly in the authenticated Supabase dashboard without changing it.
+The intended Production project, **Rev Recovery Saas** (`keddusmowpdqrxooveiz`), and the separate **RevRecovery Development** project (`xkumdvlmmqyybavylibi`) were inspected directly in the authenticated Supabase dashboard.
 
-Observed configuration:
+Development was verified first with:
+
+- Site URL: `https://rev-recovery-saas-git-co-ebaa19-ciaranriordan03-makers-projects.vercel.app`;
+- local callback: `http://localhost:3000/auth/confirm`; and
+- Preview allow-list entry: `https://rev-recovery-saas-git-co-ebaa19-ciaranriordan03-makers-projects.vercel.app/**`.
+
+After separate explicit approval, the legacy `http://localhost:3000/auth/confirm` entry was removed from Production. The saved Production configuration is now:
 
 - Site URL: `https://revrecovery.io`;
-- approved Production callback: `https://revrecovery.io/auth/confirm`;
-- legacy local callback: `http://localhost:3000/auth/confirm`;
+- sole redirect URL: `https://revrecovery.io/auth/confirm`;
+- no localhost callback;
 - no Preview deployment URL; and
 - no wildcard redirect.
 
-The canonical Production values are correct, but the local callback weakens strict environment separation. Now that local and Preview work target the separate Development Supabase project, the Production `localhost` entry should be removed under separate configuration approval after confirming the Development project retains the local callback it needs.
+Supabase reported `Successfully removed URL(s)` and `Total URLs: 1`. Development was not changed. This closes the Production auth environment-separation finding without affecting local or Preview authentication.
 
 ## Sentry routing verification
 
@@ -95,8 +101,8 @@ A CLI argument-parsing error created a separate empty helper project named `revr
 
 ## Acceptance state
 
-D6d2 has improved Production safety by making the canonical origin and every delivery gate explicit. It is **not complete** because the Production auth allow-list still contains a local callback, alert routing is incomplete, and a restorable backup is unavailable. Production migration, merge, deployment, and customer delivery remain withheld.
+D6d2 has improved Production safety by making the canonical origin and every delivery gate explicit and by isolating the Production auth callback from localhost and Preview. It is **not complete** because alert routing is incomplete and a restorable backup is unavailable. Production migration, merge, deployment, and customer delivery remain withheld.
 
 Repository verification passed `npm run lint` and `npm run build -- --webpack`. The ordinary Turbopack build was also attempted, but this restricted host denied its temporary internal parser port before source parsing; the webpack production build compiled, type-checked, and generated all application routes successfully.
 
-**Next logical step:** verify that the Development Supabase project retains `http://localhost:3000/auth/confirm`, then separately approve removing that callback from the Production allow-list. Sentry operational routing and a backup/restore control remain separate approvals.
+**Next logical step:** establish and verify a restorable Production backup control under separate approval. Sentry operational routing remains a separate approval before Production rollout.
