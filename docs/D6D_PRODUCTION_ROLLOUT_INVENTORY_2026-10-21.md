@@ -10,7 +10,7 @@
 
 **Decision:** Read-only inventory complete; merge, migration, and production deployment remain withheld
 
-> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. A password-protected logical Production backup passed checksum verification and a disposable network-isolated restore drill; managed physical backup and PITR remain unavailable. Sentry now implements the reviewed Production monitor filters, thresholds, logical routes, uptime destination, and duplicate safeguard. Production rollout remains withheld until the redacted preflight passes in an authoritative Production deployment context. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md), [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md), and [D6d2 Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md).
+> **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. A password-protected logical Production backup passed checksum verification and a disposable network-isolated restore drill; managed physical backup and PITR remain unavailable. Sentry implements the reviewed Production monitor filters, thresholds, logical routes, uptime destination, and duplicate safeguard. A separately approved, fail-closed Vercel Production build probe passed every configuration and delivery-gate check, then stopped before runtime or domain promotion. D6d2 is complete; Production rollout remains withheld pending D6d3 migration review and later merge/deployment approvals. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md), [D6d2 Authoritative Production Preflight Evidence](./D6D2_PRODUCTION_PREFLIGHT_2026-10-21.md), [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md), and [D6d2 Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md).
 
 ## Boundary
 
@@ -221,8 +221,8 @@ Stop before or during rollout if any of the following is true:
 
 ## Acceptance state
 
-D6d's read-only inventory and rollout design are complete. Production readiness is **withheld**, not failed: the evidence has identified the exact remaining prerequisites without changing any environment or customer-facing system.
+D6d's inventory and rollout design are complete, and D6d2's prerequisites now pass. Production rollout remains **withheld**, not failed: D6d3 migration review and application, the exact merge/deployment decisions, and the D6e zero-customer-contact proof remain outstanding.
 
 Repository verification for this documentation slice passed `npm run lint` and `npm run build -- --webpack`. The ordinary local Turbopack build was also attempted, but this host denied the temporary internal parser port before source parsing; the exact audited application head independently passed the ordinary GitHub and Vercel production builds.
 
-**Next logical step:** run the redacted preflight in an authoritative, separately approved Production deployment context. If it passes without exposing values, request the exact-target D6d3 migration approval separately.
+**Next logical step:** begin D6d3 with a fresh read-only Production migration listing and dry run against Supabase project `keddusmowpdqrxooveiz`. Stop if the pending set differs from the reviewed nine migrations, and request separate exact-target approval before applying anything.

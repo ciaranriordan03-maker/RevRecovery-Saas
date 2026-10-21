@@ -4,13 +4,13 @@
 
 **Branch:** `codex/release-c-activation-readiness`
 
-**Application evidence base:** `8c32b28` (`Record verified production backup`)
+**Application evidence base:** `5cdfd6c` (`Record production Sentry routing`)
 
-**Decision:** Production remains fail-closed; the Sentry and backup prerequisites pass, while release approval remains withheld pending the authoritative redacted Production preflight
+**Decision:** D6d2 prerequisites pass and Production remains fail-closed; release approval remains withheld pending D6d3 migration review and the later merge/deployment decisions
 
 ## Boundary
 
-This work was explicitly approved to change Production configuration prerequisites, create a secure logical backup, and configure Sentry's operational routes. It did not deploy the application, merge the branch, apply a database migration, enable an application delivery path, send a customer email, contact Stripe or Resend, or change a paid backup plan. One explicitly approved Sentry operator test notification was issued; it was not a RevRecovery delivery. The approved logical export was encrypted before durable storage outside the repository, and no plaintext dump remains.
+This work was explicitly approved to change Production configuration prerequisites, create a secure logical backup, configure Sentry's operational routes, and run one fail-closed Production-context preflight. It did not promote or replace the Production application runtime, merge the branch, apply a database migration, enable an application delivery path, send a customer email, contact Stripe or Resend, or change a paid backup plan. One explicitly approved Sentry operator test notification was issued; it was not a RevRecovery delivery. The approved logical export was encrypted before durable storage outside the repository, and no plaintext dump remains.
 
 Secret values were neither printed nor written to this repository. Verification output was limited to variable names, scopes, configuration types, safe boolean values, public origins, and sanitized operational metadata.
 
@@ -26,7 +26,7 @@ Secret values were neither printed nor written to this repository. Verification 
 | Supabase auth site and redirect allow-list | Pass | Site URL is `https://revrecovery.io`; the sole Production callback is `https://revrecovery.io/auth/confirm`. The legacy localhost callback was removed after Development was verified to retain its local and Preview callbacks. |
 | Sentry routing and thresholds | Pass | Eight Production-only metric detectors implement the code-owned alert filters, 5/10/15-minute thresholds, and logical routes. Two enabled workflows reach the available Sentry member, Production uptime is attached to the operator route, the default Error Monitor retains scoped general coverage, and the legacy broad alert is disabled. See [Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md). |
 | Restorable backup evidence | Pass (logical) | A password-protected logical backup was created outside the repository, all encrypted checksums passed, and a network-isolated disposable restore drill succeeded. Managed physical backup and PITR remain unavailable. See [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md). |
-| Redacted Production preflight | Partial only | Public URL and all four gates passed. A local CLI run could not retrieve Vercel Secret-type values and could have inherited local values, so it is not accepted as complete Production evidence. |
+| Redacted Production preflight | Pass | A separately approved Vercel Production build probe passed the execution-context check, all 13 required configuration checks, encryption-key separation, and all three delivery-gate checks. The build then exited deliberately before promotion. See [Authoritative Production Preflight Evidence](./D6D2_PRODUCTION_PREFLIGHT_2026-10-21.md). |
 
 ## Vercel configuration applied
 
@@ -40,7 +40,7 @@ The following Production-only Config entries are now explicit:
 
 `NEXT_PUBLIC_APP_URL` previously used Vercel's Secret type. Vercel does not support converting that entry directly to Config, so the exact Production entry was removed and immediately recreated as a Production-only Config value. Existing Production secrets and their scopes were left unchanged.
 
-No Production redeployment was triggered. The running application therefore remains on its previous deployment until a later, separately approved rollout step.
+No Production runtime was promoted. A separately approved Production-targeted preflight build was staged with `--skip-domain`, emitted only redacted evidence, and deliberately failed after the PASS result. The running application therefore remains on its previous deployment until a later, separately approved rollout step.
 
 ## Supabase auth verification
 
@@ -98,9 +98,9 @@ This satisfies the reviewed pre-migration logical restore requirement. It does n
 
 ## Preflight interpretation
 
-The redacted preflight passed the public application URL and all four explicit delivery-gate checks. It could not provide authoritative proof for every private Production prerequisite because Vercel's CLI does not pull Secret-type values for this workflow. The command also reported missing `RESEND_WEBHOOK_SECRET` and `CRON_SECRET`, even though Vercel metadata shows those names in Production, demonstrating why this run cannot be treated as deployment-context proof.
+The initial isolated local run confirmed the public configuration and all four explicit fail-closed Config values, but Vercel correctly refused to export Secret-type values. It was retained only as diagnostic evidence and was not treated as authoritative.
 
-A complete preflight must run inside a separately approved Production deployment or another execution context that has the real Production secrets without copying them to disk or output.
+The separately approved cloud-build probe then ran inside the real Vercel Production build context. It passed the context assertion, all 13 required configuration checks, Stripe-token-key separation, and all three delivery-path checks without printing values. The probe used `--skip-domain` and deliberately exited with code `78` after the PASS result, so Vercel recorded an error-only staged build and did not promote a runtime or assign a custom domain. Full method and result evidence is recorded in [D6d2 Authoritative Production Preflight Evidence](./D6D2_PRODUCTION_PREFLIGHT_2026-10-21.md).
 
 ## Safety and cleanup evidence
 
@@ -108,8 +108,8 @@ A CLI argument-parsing error created a separate empty helper project named `revr
 
 ## Acceptance state
 
-D6d2 has improved Production safety by making the canonical origin and every delivery gate explicit, isolating the Production auth callback from localhost and Preview, establishing a verified encrypted logical backup, and implementing the reviewed Sentry route and threshold contract. It is **not complete** because the redacted preflight has not yet run in an authoritative Production deployment context. Production migration, merge, deployment, and customer delivery remain withheld.
+D6d2 is complete. Production safety now has explicit canonical-origin and delivery-gate evidence, an isolated Production auth callback, a verified encrypted logical restore control, reviewed Sentry routes and thresholds, and an authoritative redacted Production preflight PASS. Production migration, merge, runtime deployment, and customer delivery remain withheld.
 
 Repository verification passed `npm run lint` and `npm run build -- --webpack`. The ordinary Turbopack build was also attempted, but this restricted host denied its temporary internal parser port before source parsing; the webpack production build compiled, type-checked, and generated all application routes successfully.
 
-**Next logical step:** run the redacted preflight in an authoritative, separately approved Production deployment context before requesting any Production migration approval.
+**Next logical step:** begin D6d3 with a fresh read-only migration listing and dry run against Production Supabase project `keddusmowpdqrxooveiz`. Stop if the pending set differs from the reviewed nine migrations, and request separate exact-target approval before applying anything.
