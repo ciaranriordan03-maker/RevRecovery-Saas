@@ -36,10 +36,6 @@ export function getRecoveryModeInputError({
   return null;
 }
 
-export function isRecoveryDeliveryKillSwitchEnabled(value: string | undefined) {
-  return value?.trim().toLowerCase() === "true";
-}
-
 export function canScheduleRecoveryMessages(mode: RecoveryMode) {
   return mode !== "off";
 }

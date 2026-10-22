@@ -2,11 +2,19 @@ import "server-only";
 
 import { createSupabaseAdminClient } from "../supabase/admin";
 import type { VerifiedResendWebhookEvent } from "./resend-webhooks";
+import { tryRecordPreviewRecoveryNotificationEvent } from "./recovery-notification-events";
 
 export type PersistRecoveryMessageEventResult = {
   inserted: boolean;
   matched: boolean;
 };
+
+const ATTENTION_DELIVERY_EVENTS = new Set([
+  "bounced",
+  "complained",
+  "failed",
+  "suppressed",
+]);
 
 export async function persistRecoveryMessageEvent(
   event: VerifiedResendWebhookEvent,
@@ -39,5 +47,31 @@ export async function persistRecoveryMessageEvent(
     throw new Error("Recovery message event storage returned an invalid result.");
   }
 
-  return { inserted: data.inserted, matched: data.matched };
+  const result = { inserted: data.inserted, matched: data.matched };
+
+  if (result.inserted && result.matched && ATTENTION_DELIVERY_EVENTS.has(event.eventType)) {
+    const { data: message } = await supabase
+      .from("recovery_messages")
+      .select("failed_payment_id, user_id")
+      .eq("provider_message_id", event.providerMessageId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ failed_payment_id: string; user_id: string }>();
+
+    if (message) {
+      await tryRecordPreviewRecoveryNotificationEvent({
+        fingerprint: message.user_id,
+        occurredAt: event.occurredAt,
+        payload: {
+          caseId: message.failed_payment_id,
+          deliveryEvent: event.eventType,
+          providerEventId: event.providerEventId,
+        },
+        ruleId: "attention_digest",
+        userId: message.user_id,
+      });
+    }
+  }
+
+  return result;
 }

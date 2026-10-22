@@ -14,7 +14,7 @@ describe("Phase 3 segment analytics", () => {
     });
     expect(metrics.segmentBreakdown[0]).toMatchObject({
       label: "Recurring subscriptions", recoveredCount: 1, recoveryRate: 50, totalCount: 2,
-      recoveredRevenue: "€25.00",
+      amountDueOnRecoveredInvoices: "€25.00",
     });
     expect(metrics.segmentBreakdown[1]).toMatchObject({ totalCount: 1, recoveryRate: 0 });
   });

@@ -11,6 +11,8 @@ import {
 import {
   RECOVERY_SCHEDULES,
   RECOVERY_TIMEZONES,
+  getRecoverySchedule,
+  getRecoveryScheduleWindowDays,
   type RecoveryScheduleId,
 } from "../../lib/recovery/schedule-policy";
 import { getRecoveryMessageTemplatesForTone } from "../../lib/recovery/message-templates";
@@ -74,6 +76,8 @@ export function RecoverySettingsForm({
   const [savingEmail, setSavingEmail] = useState(false);
 
   const recoveryChanged = JSON.stringify(recovery) !== JSON.stringify(savedRecovery);
+  const selectedSchedule = getRecoverySchedule(recovery.scheduleId);
+  const recoveryWindowDays = getRecoveryScheduleWindowDays(recovery.scheduleId);
   const emailChanged =
     JSON.stringify({ email: settings.email, recovery: settings.recovery }) !==
     JSON.stringify({
@@ -164,6 +168,7 @@ export function RecoverySettingsForm({
     <div className="grid gap-5 lg:grid-cols-2">
       <form
         className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+        id="recovery-delivery"
         onSubmit={saveRecovery}
       >
         <h2 className="text-base font-medium text-[var(--foreground)]">Recovery delivery</h2>
@@ -244,6 +249,19 @@ export function RecoverySettingsForm({
           </select>
         </label>
 
+        <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Window and exhaustion preview</p>
+          <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
+            Three messages over {recoveryWindowDays} {recoveryWindowDays === 1 ? "day" : "days"}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
+            Messages are scheduled at {selectedSchedule.label.toLowerCase()}. If the invoice remains unpaid after the final message is delivered, the sequence is marked exhausted for manual review.
+          </p>
+          <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
+            Saving a different schedule applies to future recovery cases only. Existing cases keep the schedule snapshot they started with.
+          </p>
+        </div>
+
         <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
           Timezone
           <select
@@ -270,6 +288,7 @@ export function RecoverySettingsForm({
 
       <form
         className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
+        id="email-identity"
         onSubmit={saveEmailSettings}
       >
         <h2 className="text-base font-medium text-[var(--foreground)]">Email identity and messages</h2>
@@ -482,6 +501,17 @@ export function RecoverySettingsForm({
           </Button>
         </div>
       </form>
+      <section
+        className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)] lg:col-span-2"
+        id="stripe-overlap-guidance"
+      >
+        <h2 className="text-base font-medium text-[var(--foreground)]">
+          Stripe communication overlap
+        </h2>
+        <p className="mt-2 max-w-3xl text-sm leading-5 text-[var(--muted-strong)]">
+          Before going live, review the failed-payment emails enabled in Stripe Billing. Avoid sending materially identical reminders from Stripe and RevRecovery at the same time. Stripe retry settings remain authoritative and RevRecovery does not change them.
+        </p>
+      </section>
       <SendingDomainSettings />
     </div>
   );

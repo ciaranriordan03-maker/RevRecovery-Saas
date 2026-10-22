@@ -21,6 +21,7 @@ export type RecoveryCaseTimelineEvent = {
   occurredAt: string;
   recordedAt: string;
   source: RecoveryCaseEventSource;
+  sourceEventId?: string;
 };
 
 type RecoveryCaseEventRow = {
@@ -31,6 +32,7 @@ type RecoveryCaseEventRow = {
   occurred_at: string;
   recorded_at: string;
   source: RecoveryCaseEventSource;
+  source_event_id?: string;
 };
 
 const RECOVERY_CASE_EVENTS_TABLE = "recovery_case_events";
@@ -66,6 +68,7 @@ export function buildRecoveryCaseTimeline(
     occurredAt: row.occurred_at,
     recordedAt: row.recorded_at,
     source: row.source,
+    ...(row.source_event_id ? { sourceEventId: row.source_event_id } : {}),
   }));
 }
 
@@ -84,7 +87,7 @@ export async function getRecoveryCaseTimeline({
 
   const { data, error } = await supabase
     .from(RECOVERY_CASE_EVENTS_TABLE)
-    .select("id, event_type, source, occurred_at, recorded_at, livemode, metadata")
+    .select("id, event_type, source, source_event_id, occurred_at, recorded_at, livemode, metadata")
     .eq("user_id", userId)
     .eq("failed_payment_id", failedPaymentId)
     .order("occurred_at", { ascending: true })

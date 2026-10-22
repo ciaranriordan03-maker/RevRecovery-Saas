@@ -1,14 +1,13 @@
 import "server-only";
 
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { getSupabaseSecretKey } from "../supabase/env";
 
 const TOKEN_PREFIX = "enc:v1:";
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
 
 function getEncryptionSecret() {
-  return process.env.STRIPE_TOKEN_ENCRYPTION_KEY?.trim() ?? getSupabaseSecretKey();
+  return process.env.STRIPE_TOKEN_ENCRYPTION_KEY?.trim() || null;
 }
 
 function getEncryptionKey() {

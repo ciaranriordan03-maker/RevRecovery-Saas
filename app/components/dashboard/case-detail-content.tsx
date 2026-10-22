@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { RecoveryCaseListItem } from "../../lib/server/recovery-cases";
 import type { RecoveryCaseTimelineEvent } from "../../lib/server/recovery-case-events";
 import { buildRecoveryCaseTimelineView } from "../../lib/recovery/case-timeline-view";
+import { buildFailureSpecificEmailPreview } from "../../lib/recovery/failure-specific-email-preview";
+import { evaluateRetryEmailOverlap } from "../../lib/recovery/retry-email-overlap";
 import { CaseManualActions } from "./case-manual-actions";
 
 function formatCurrency(amount: number, currency: string | null) {
@@ -61,7 +63,24 @@ export function CaseDetailContent({
     "exhausted",
     "no_longer_applicable",
     "recovered",
-  ].includes(recoveryCase.caseStatus);
+  ].includes(recoveryCase.caseStatus) && recoveryCase.caseStatus !== "detected";
+  const emailStageDetail = recoveryCase.manuallyPausedAt
+    ? "Recovery emails manually paused"
+    : recoveryCase.nextEmailAt === null && recoveryCase.caseStatus === "detected"
+      ? "No recovery email has been scheduled"
+      : `Current stage: ${formatLabel(recoveryCase.recoveryStage)}`;
+  const emailPreview = buildFailureSpecificEmailPreview({
+    category: recoveryCase.failureCategory,
+    nextRetryLabel: recoveryCase.nextPaymentAttemptAt
+      ? formatDate(recoveryCase.nextPaymentAttemptAt)
+      : null,
+  });
+  const retryEmailOverlap = evaluateRetryEmailOverlap({
+    nextEmailAt: recoveryCase.nextEmailAt,
+    nextPaymentAttemptAt: recoveryCase.nextPaymentAttemptAt,
+  });
+  const hasRecoverySequence = recoveryCase.scheduledMessageCount > 0;
+  const isRecoverySequenceExhausted = recoveryCase.caseStatus === "exhausted";
 
   return (
     <div className="px-5 py-8 sm:px-8">
@@ -84,12 +103,45 @@ export function CaseDetailContent({
           <SummaryCard
             label="Next RevRecovery email"
             value={formatDate(recoveryCase.nextEmailAt)}
-            detail={
-              recoveryCase.manuallyPausedAt
-                ? "Recovery emails manually paused"
-                : `Current stage: ${formatLabel(recoveryCase.recoveryStage)}`
-            }
+            detail={emailStageDetail}
           />
+        </section>
+
+        <section className={`rounded-[var(--radius-card)] border-l-4 p-5 ${retryEmailOverlap.status === "review" ? "border-[var(--warning-text)] bg-[var(--warning-soft)]" : retryEmailOverlap.status === "clear" ? "border-[var(--success)] bg-[var(--success-soft)]" : "border-[var(--border-strong)] bg-[var(--surface)] shadow-[var(--shadow-card)]"}`} aria-labelledby="retry-coordination-heading">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Stripe coordination</p>
+              <h2 className="mt-2 text-base font-medium text-[var(--foreground)]" id="retry-coordination-heading">{retryEmailOverlap.title}</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-5 text-[var(--muted-strong)]">{retryEmailOverlap.detail}</p>
+            </div>
+            <span className="w-fit rounded bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Read only</span>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-[var(--muted)]">RevRecovery has not changed the email schedule or Stripe&apos;s retry configuration.</p>
+        </section>
+
+        <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]" aria-labelledby="recovery-window-heading">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Recovery window</p>
+              <h2 className="mt-2 text-base font-medium text-[var(--foreground)]" id="recovery-window-heading">
+                {hasRecoverySequence
+                  ? `${recoveryCase.remainingMessageCount} of ${recoveryCase.scheduledMessageCount} messages remaining`
+                  : "No recovery sequence scheduled"}
+              </h2>
+              <p className="mt-1 text-sm leading-5 text-[var(--muted-strong)]">
+                {hasRecoverySequence
+                  ? `The configured sequence window ends ${formatDate(recoveryCase.recoveryWindowEndsAt)}.`
+                  : "This case has no recorded recovery messages, so there is no sequence window to measure."}
+              </p>
+            </div>
+            <span className="w-fit rounded bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Read only</span>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
+            {isRecoverySequenceExhausted
+              ? "The case is marked exhausted after its recorded recovery sequence completed."
+              : "The case is not marked exhausted."}
+            {" "}RevRecovery has not changed this case&apos;s schedule or status.
+          </p>
         </section>
 
         {recoveryCase.attentionFlags.length > 0 ? (
@@ -106,6 +158,56 @@ export function CaseDetailContent({
             ))}
           </section>
         ) : null}
+
+        <section className="rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-5" aria-labelledby="communication-guidance-heading">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--primary-text)]">Recover</p>
+            <h2 className="mt-2 text-base font-medium text-[var(--foreground)]" id="communication-guidance-heading">Communication guidance</h2>
+            <p className="mt-1 text-sm leading-5 text-[var(--muted-strong)]">Use Stripe&apos;s reported failure reason to communicate clearly without guessing or overpromising.</p>
+          </div>
+          <dl className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-[var(--radius-control)] border border-[var(--primary-border)] bg-[var(--surface)] p-4">
+              <dt className="text-xs font-medium text-[var(--muted)]">What the customer should do</dt>
+              <dd className="mt-2 text-sm leading-5 text-[var(--foreground)]">{recoveryCase.customerAction}</dd>
+            </div>
+            <div className="rounded-[var(--radius-control)] border border-[var(--primary-border)] bg-[var(--surface)] p-4">
+              <dt className="text-xs font-medium text-[var(--muted)]">What your team should do</dt>
+              <dd className="mt-2 text-sm leading-5 text-[var(--foreground)]">{recoveryCase.merchantAction}</dd>
+            </div>
+            <div className="rounded-[var(--radius-control)] border border-[var(--primary-border)] bg-[var(--surface)] p-4">
+              <dt className="text-xs font-medium text-[var(--muted)]">How to describe the retry</dt>
+              <dd className="mt-2 text-sm leading-5 text-[var(--foreground)]">{recoveryCase.retryGuidance}</dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-xs leading-5 text-[var(--muted)]">Advisory only. RevRecovery has not changed this case&apos;s saved message copy or Stripe retry schedule.</p>
+        </section>
+
+        <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]" aria-labelledby="email-recommendation-heading">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Preview only</p>
+              <h2 className="mt-2 text-base font-medium text-[var(--foreground)]" id="email-recommendation-heading">Suggested first-email treatment</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-5 text-[var(--muted-strong)]">Recommended wording for this failure category. Review it before deciding whether it should influence automated messages.</p>
+            </div>
+            <span className="w-fit rounded bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">Not saved</span>
+          </div>
+          <div className="mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-5">
+            <p className="text-xs text-[var(--muted)]">Suggested subject</p>
+            <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{emailPreview.subject}</p>
+            <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted-strong)]">
+              <p>Hi [customer first name],</p>
+              <p>{emailPreview.contextLine}</p>
+              <p>{emailPreview.actionLine}</p>
+              <p>{emailPreview.retryLine}</p>
+              <p>[Secure Stripe invoice link]</p>
+            </div>
+          </div>
+          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+            <p className="text-xs font-medium text-[var(--foreground)]">Why this treatment</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{emailPreview.rationale}</p>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-[var(--muted)]">This preview does not modify the account template, this case&apos;s sequence, or email delivery.</p>
+        </section>
 
         {canControlEmails ? (
           <CaseManualActions

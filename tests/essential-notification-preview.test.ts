@@ -1,0 +1,47 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const source = readFileSync(
+  new URL("../app/components/dashboard/essential-notification-preview.tsx", import.meta.url),
+  "utf8",
+);
+
+describe("essential notification preview", () => {
+  it("is visibly non-operational", () => {
+    expect(source).toContain("Proposed alert policy");
+    expect(source).toContain("Preview only");
+    expect(source).toContain("Noise protection");
+    expect(source).toContain("No notifications are enabled or sent");
+    expect(source).toContain("Recorded preview events");
+    expect(source).toContain("Preview only — nothing sent");
+    expect(source).toContain("No preview events recorded yet");
+    expect(source).toContain("Duplicates ignored until");
+    expect(source).toContain("Delivery reconciliation");
+    expect(source).toContain("No retry actions");
+    expect(source).toContain("This view never retries a message or contacts the email provider.");
+    expect(source).toContain("View audit evidence");
+    expect(source).toContain("Evidence only. No resolution, retry, or provider action is available here.");
+    expect(source).toContain("D4r · Reviewed resolution plan");
+    expect(source).toContain("Policy preview only");
+    expect(source).toContain("No resolution action is implemented or authorized by this preview.");
+    expect(source).toContain("D4s · Reviewed request workflow");
+    expect(source).toContain("Audit preview only");
+    expect(source).toContain("No request action, approval action, retry, or provider contact is available in D4s.");
+    expect(source).toContain("D4u · Recorded review evidence");
+    expect(source).toContain("Real audit-only resolution review");
+    expect(source).toContain("Confirmed — requester and reviewer are separate identities.");
+    expect(source).toContain("Read only. No mutation, retry, or delivery control is exposed.");
+    expect(source).toContain("D4w · Final quarantine evidence");
+    expect(source).toContain("Single-use resolution completed");
+    expect(source).toContain("Quarantined and non-retryable");
+    expect(source).toContain("Immutable outcome. No retry, delivery, provider-contact, or mutation control is exposed.");
+    expect(source).toContain("D4x · Quarantine register");
+    expect(source).toContain("Quarantine health and evidence");
+    expect(source).toContain("Quarantined and non-retryable");
+    expect(source).toContain("D4y · Evidence integrity monitor");
+    expect(source).toContain("Checkpoint verified");
+    expect(source).toContain("Evidence changed");
+    expect(source).toContain("Checkpoint verified against the live quarantine and ordered audit ledger.");
+    expect(source).toContain("Permanent safety boundary: this monitor is read only and exposes no restore, retry, deletion, delivery, or provider-contact control.");
+  });
+});

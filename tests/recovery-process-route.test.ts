@@ -48,4 +48,16 @@ describe("recovery processor authorization", () => {
       ),
     ).toBe(false);
   });
+
+  it("rejects all requests when cron secrets are missing in every environment", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("RECOVERY_EMAIL_CRON_SECRET", "");
+    vi.stubEnv("CRON_SECRET", "");
+
+    expect(
+      isRecoveryCronAuthorized(
+        new Request("http://localhost:3000/api/recovery/process"),
+      ),
+    ).toBe(false);
+  });
 });

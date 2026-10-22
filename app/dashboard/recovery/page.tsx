@@ -6,6 +6,13 @@ import { getAtRiskCustomers } from "../../lib/server/at-risk-customers";
 import { getRecoveryModeSettingsForUser } from "../../lib/server/recovery-account-settings";
 import { getUserSettings } from "../../lib/server/settings-store";
 import { buildRecoveryFlowView } from "../../lib/recovery/recovery-view";
+import { getActivationReadinessForUser, getControlledTestEligibility } from "../../lib/server/activation-readiness";
+import { getStripeConnectionSummary } from "../../lib/server/stripe-connections";
+import { buildRecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
+import { getPreviewRecoveryNotificationHistory } from "../../lib/server/recovery-notification-events";
+import { evaluateNotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
+import { unavailableNotificationActivationReview } from "../../lib/recovery/notification-activation-review";
+import { getNotificationActivationReviewForUser } from "../../lib/server/notification-activation-review";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
@@ -13,24 +20,13 @@ export const metadata: Metadata = {
 };
 
 type RecoveryPageProps = {
-  searchParams?: Promise<{
-    step?: string;
-  }>;
+  searchParams?: Promise<{ step?: string }>;
 };
 
 const pageCopy = {
-  review: {
-    subtitle: "Confirm how automated recovery operates",
-    title: "Review Recovery Flow",
-  },
-  customize: {
-    subtitle: "Review the settings currently used for recovery",
-    title: "Recovery Settings",
-  },
-  sequence: {
-    subtitle: "Automated email sequence for failed payments",
-    title: "Recovery Flow",
-  },
+  review: { subtitle: "Confirm how automated recovery operates", title: "Review Recovery Flow" },
+  customize: { subtitle: "Review the settings currently used for recovery", title: "Recovery Settings" },
+  sequence: { subtitle: "Automated email sequence for failed payments", title: "Recovery Flow" },
 } as const;
 
 export default async function RecoveryPage({ searchParams }: RecoveryPageProps) {
@@ -42,15 +38,37 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       : params?.step === "customize"
         ? "customize"
         : "sequence";
-  const [settingsRecord, recoverySettings, atRiskCustomers] = await Promise.all([
+  const [settingsRecord, recoverySettings, atRiskCustomers, stripeConnection, notificationHistory, notificationActivationReview] = await Promise.all([
     getUserSettings(claims.sub),
     getRecoveryModeSettingsForUser(claims.sub),
     mode === "sequence" ? getAtRiskCustomers(claims.sub) : Promise.resolve([]),
+    getStripeConnectionSummary(claims.sub),
+    mode === "sequence"
+      ? getPreviewRecoveryNotificationHistory(claims.sub)
+      : Promise.resolve({ deliveries: [], events: [], state: "ready" as const }),
+    mode === "sequence"
+      ? getNotificationActivationReviewForUser(claims.sub)
+      : Promise.resolve(unavailableNotificationActivationReview()),
   ]);
   const recoveryView = buildRecoveryFlowView(
     settingsRecord.settings,
     recoverySettings,
   );
+  const activationReadiness = await getActivationReadinessForUser({
+    recoverySettings,
+    userId: claims.sub,
+    userSettings: settingsRecord.settings,
+  });
+  const controlledTestEligibility = getControlledTestEligibility({
+    recoverySettings,
+    userSettings: settingsRecord.settings,
+  });
+  const accountEmail = typeof claims.email === "string" ? claims.email : "Account owner email unavailable";
+  const notificationReadiness = evaluateNotificationActivationReadiness({
+    accountEmail,
+    activationReadiness,
+    notificationHistory,
+  });
 
   return (
     <AppShell
@@ -59,8 +77,15 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
       title={pageCopy[mode].title}
     >
       <RecoveryContent
+        accountEmail={accountEmail}
+        activationReadiness={activationReadiness}
+        controlledTestEligibility={controlledTestEligibility}
         atRiskCustomers={atRiskCustomers}
         mode={mode}
+        notificationHistory={notificationHistory}
+        notificationActivationReview={notificationActivationReview}
+        notificationReadiness={notificationReadiness}
+        opportunityReport={buildRecoveryOpportunityReport(stripeConnection)}
         recoveryView={recoveryView}
         userSettings={settingsRecord.settings}
       />
