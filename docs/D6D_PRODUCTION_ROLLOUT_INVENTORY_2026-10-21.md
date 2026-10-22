@@ -8,11 +8,13 @@
 
 **Pull request:** `#1`
 
-**Decision:** Read-only inventory complete; merge, migration, and production deployment remain withheld
+**Decision:** Rollout complete through the accepted D6e zero-customer-contact Production proof; customer delivery remains disabled
 
 > **D6d2 update — 21 October 2026:** Production now has a Production-only canonical app URL, all four explicit fail-closed delivery gates, and a Supabase auth allow-list containing only the canonical Production callback. Development retains the localhost and Preview callbacks. A password-protected logical Production backup passed checksum verification and a disposable network-isolated restore drill; managed physical backup and PITR remain unavailable. Sentry implements the reviewed Production monitor filters, thresholds, logical routes, uptime destination, and duplicate safeguard. A separately approved, fail-closed Vercel Production build probe passed every configuration and delivery-gate check, then stopped before runtime or domain promotion. D6d2 is complete; Production rollout remains withheld pending D6d3 migration review and later merge/deployment approvals. See [D6d2 Production Prerequisite Evidence](./D6D2_PRODUCTION_PREREQUISITES_2026-10-21.md), [D6d2 Authoritative Production Preflight Evidence](./D6D2_PRODUCTION_PREFLIGHT_2026-10-21.md), [D6d2 Production Logical Backup Evidence](./D6D2_PRODUCTION_BACKUP_2026-10-21.md), and [D6d2 Sentry Operational Routing Evidence](./D6D2_SENTRY_ROUTING_2026-10-21.md).
 
 > **D6d3 update — 21 October 2026:** GitHub test/lint/build and the previously accepted Vercel application build passed before migration. A fresh listing against exact Production project `keddusmowpdqrxooveiz` reported 23 of 32 local migrations applied, and `db push --dry-run --skip-vault` proposed exactly the reviewed nine migrations with no seeds or roles. After separate explicit approval, those nine files applied successfully in order. The post-write listing reports 32 of 32, and a sequential dry run reports the remote database up to date with an empty plan. Delivery configuration was not changed. D6d3 is complete; merge and Production deployment remain withheld pending D6d4 approval. See [D6d3 Production Migration Listing, Application, and Verification Evidence](./D6D3_PRODUCTION_MIGRATION_DRY_RUN_2026-10-21.md).
+
+> **D6d4–D6e update — 22 October 2026:** After explicit approval of both coupled decisions, pull request `#1` was merged at exact head `0cdd03c` into merge commit `b8bed2b`. Main-branch tests, lint, and build passed, and Vercel reported the exact Production deployment complete. The subsequent zero-customer-contact proof passed public and protected routes, authenticated read-only Live-environment surfaces, generic invalid-signature rejection for Stripe and Resend, and unauthorised cron rejection. No customer contact, provider mutation, data mutation, or delivery-gate change occurred. Customer recovery and notification delivery remain explicitly disabled. See [D6d4 Production Merge and Deployment Evidence](./D6D4_PRODUCTION_DEPLOYMENT_2026-10-22.md) and [D6e Zero-Customer-Contact Production Proof](./D6E_PRODUCTION_SMOKE_2026-10-22.md).
 
 ## Boundary
 
@@ -195,6 +197,8 @@ Vercel is connected to GitHub, so merging to `main` is expected to trigger a pro
 
 If those decisions must occur at different times, first introduce an approved deployment hold. Do not merge and assume production can be considered later.
 
+Both decisions were explicitly approved and completed. Pull request `#1` merged exact head `0cdd03c` as `b8bed2b`; exact-merge GitHub CI passed and Vercel reported the Production deployment complete. No administrative bypass, branch deletion, environment change, or delivery enablement occurred.
+
 ### D6e — zero-customer-contact production proof
 
 Immediately after deployment:
@@ -208,6 +212,8 @@ Immediately after deployment:
 7. stop the rollout on any unexpected `5xx`, auth redirect, migration, tenant-isolation, or delivery-gate anomaly.
 
 Pilot activation remains a later, separately reviewed decision.
+
+D6e passed. Public auth pages and protected redirects behaved as expected; invalid Stripe and Resend signatures returned generic `400` responses; an unsigned cron request returned `401`; and authenticated read-only Production pages rendered Live-environment evidence with zero cases, messages, or revenue values and no browser warnings or errors. Every request was read-only or rejected before mutation. The deployment-level recovery and notification gates remained disabled throughout.
 
 ## Hard stop conditions
 
@@ -227,8 +233,8 @@ Stop before or during rollout if any of the following is true:
 
 ## Acceptance state
 
-D6d's inventory and rollout design are complete, D6d2's prerequisites pass, and D6d3's exact Production migration application is verified at 32 of 32. Production rollout remains **withheld**, not failed: the exact D6d4 merge/deployment decisions and the D6e zero-customer-contact proof remain outstanding.
+D6d and D6e are complete. D6d2's prerequisites passed, D6d3 applied and verified all 32 migrations, D6d4 merged and deployed the exact approved release candidate, and D6e passed the zero-customer-contact Production proof. The runtime is safely deployed but customer delivery remains explicitly disabled.
 
 Repository verification for this documentation slice passed `npm run lint` and `npm run build -- --webpack`. The ordinary local Turbopack build was also attempted, but this host denied the temporary internal parser port before source parsing; the exact audited application head independently passed the ordinary GitHub and Vercel production builds.
 
-**Next logical step:** preserve the D6d3 application evidence on the existing GitHub branch and require exact-head checks. After they pass, begin D6d4 with a separate approval covering the exact merge head and its resulting Production deployment.
+**Next logical step:** preserve the D6d4/D6e evidence through normal review, then prepare the separately reviewed first-pilot readiness plan. Do not enable a delivery gate until the sending domain, webhook health, approved recipient, controlled test, monitoring, and rollback evidence all pass.
