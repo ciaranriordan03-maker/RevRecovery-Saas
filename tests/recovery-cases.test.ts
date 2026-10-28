@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+  getCasesEnvironmentLabel,
+  getCasesHref,
+} from "../app/lib/cases-query";
 import { normalizeRecoveryCaseFilters } from "../app/lib/server/recovery-cases";
 
 describe("recovery cases workspace", () => {
@@ -90,5 +94,54 @@ describe("recovery cases workspace", () => {
     expect(source).toContain("getRecoveryDeclineDiagnostic");
     expect(content).toContain("Review what Stripe reported");
     expect(content).not.toMatch(/caused (the )?recovery/i);
+  });
+
+  it("preserves active filters in pagination and removable-filter links", () => {
+    const filters = normalizeRecoveryCaseFilters({
+      currency: "EUR",
+      environment: "test",
+      minimumAmount: "500",
+      page: "2",
+      segment: "subscription",
+      status: "attention",
+    });
+
+    expect(getCasesHref(filters, { page: 3 })).toBe(
+      "/dashboard/cases?status=attention&segment=subscription&environment=test&currency=EUR&minimumAmount=500&page=3",
+    );
+    expect(getCasesHref(filters, {
+      currency: null,
+      minimumAmountInput: "",
+      page: 1,
+    })).toBe(
+      "/dashboard/cases?status=attention&segment=subscription&environment=test",
+    );
+  });
+
+  it("uses a canonical unfiltered Cases URL and clear environment labels", () => {
+    const filters = normalizeRecoveryCaseFilters();
+
+    expect(getCasesHref(filters)).toBe("/dashboard/cases");
+    expect(getCasesEnvironmentLabel("all")).toBe("All environments");
+    expect(getCasesEnvironmentLabel("test")).toBe("Test");
+    expect(getCasesEnvironmentLabel("unknown")).toBe("Unknown");
+  });
+
+  it("keeps mobile filtering staged and case details collapsed by default", () => {
+    const filtersSource = readFileSync(
+      new URL("../app/components/dashboard/cases-filters.tsx", import.meta.url),
+      "utf8",
+    );
+    const contentSource = readFileSync(
+      new URL("../app/components/dashboard/cases-content.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(filtersSource).toContain("Changes apply when you confirm.");
+    expect(filtersSource).toContain('role="dialog"');
+    expect(filtersSource).toContain("getAppliedDraft(filters)");
+    expect(contentSource).toContain("<details");
+    expect(contentSource).toContain("Show fields");
+    expect(contentSource).toContain("Review case");
   });
 });

@@ -227,6 +227,37 @@ export function Icon({ name, className = "" }: IconProps) {
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
         </svg>
       );
+    case "sliders":
+      return (
+        <svg {...common}>
+          <path d="M4 6h16" />
+          <path d="M4 12h16" />
+          <path d="M4 18h16" />
+          <circle cx="9" cy="6" r="2" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="12" r="2" fill="currentColor" stroke="none" />
+          <circle cx="7" cy="18" r="2" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "x":
+      return (
+        <svg {...common}>
+          <path d="m6 6 12 12" />
+          <path d="M18 6 6 18" />
+        </svg>
+      );
+    case "chevron-down":
+      return (
+        <svg {...common}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      );
+    case "inbox":
+      return (
+        <svg {...common}>
+          <path d="M4 4h16l2 10v6H2v-6L4 4Z" />
+          <path d="M2 14h5l2 3h6l2-3h5" />
+        </svg>
+      );
     default:
       return (
         <svg {...common}>
