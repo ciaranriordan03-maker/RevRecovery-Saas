@@ -3,9 +3,11 @@ import { AppShell } from "../components/dashboard/app-shell";
 import { DashboardContent } from "../components/dashboard/dashboard-content";
 import { requireCompletedOnboarding } from "../lib/auth";
 import { getDashboardMetrics } from "../lib/server/dashboard-metrics";
-import { getOptimizeRecommendations } from "../lib/server/optimize-recommendations";
 import { getRecoveryModeSettingsForUser } from "../lib/server/recovery-account-settings";
-import { buildRecoveryStatusSummary } from "../lib/recovery/recovery-view";
+import {
+  getRecoveryCasesPage,
+  normalizeRecoveryCaseFilters,
+} from "../lib/server/recovery-cases";
 
 export const metadata: Metadata = {
   title: "Dashboard | RevRecovery",
@@ -14,22 +16,43 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const { claims } = await requireCompletedOnboarding();
-  const [dashboardMetrics, optimizeRecommendations, recoverySettings] = await Promise.all([
-    getDashboardMetrics(claims.sub),
-    getOptimizeRecommendations(claims.sub),
-    getRecoveryModeSettingsForUser(claims.sub),
+  const recoverySettings = await getRecoveryModeSettingsForUser(claims.sub);
+  const environment = recoverySettings.livemode === null
+    ? "all"
+    : recoverySettings.livemode
+      ? "live"
+      : "test";
+  const [dashboardMetrics, openCasesPage, attentionCasesPage] = await Promise.all([
+    getDashboardMetrics(claims.sub, environment),
+    getRecoveryCasesPage(
+      claims.sub,
+      normalizeRecoveryCaseFilters({ environment, status: "open" }),
+    ),
+    getRecoveryCasesPage(
+      claims.sub,
+      normalizeRecoveryCaseFilters({ environment, status: "attention" }),
+    ),
   ]);
+  const contextEnvironment = recoverySettings.connected
+    ? recoverySettings.livemode
+      ? "Live"
+      : "Test"
+    : "Not connected";
 
   return (
     <AppShell
       active="Dashboard"
-      subtitle="Here's what we found in your Stripe account"
-      title="Instant Insights"
+      contextLabel={`Stripe · ${contextEnvironment}`}
+      showPageHeading={false}
+      subtitle="Your failed payments and next actions"
+      title="Dashboard"
     >
       <DashboardContent
-        metrics={dashboardMetrics.metricCards}
-        optimizeRecommendations={optimizeRecommendations}
-        recoverySummary={buildRecoveryStatusSummary(recoverySettings)}
+        attentionCases={attentionCasesPage.cases}
+        attentionCount={attentionCasesPage.totalCount}
+        metrics={dashboardMetrics}
+        openCases={openCasesPage.cases}
+        recoverySettings={recoverySettings}
       />
     </AppShell>
   );

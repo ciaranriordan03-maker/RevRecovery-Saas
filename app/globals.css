@@ -1,24 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f9fafb;
-  --foreground: #101828;
+  --background: #f6f7fa;
+  --foreground: #202434;
   --surface: #ffffff;
-  --surface-muted: #f3f4f6;
-  --border: #e5e7eb;
+  --surface-muted: #f6f7fa;
+  --border: #e5e7ee;
   --border-strong: #d1d5dc;
-  --primary: #4f39f6;
-  --primary-hover: #432dd7;
-  --primary-soft: #eef2ff;
-  --primary-text: #312c85;
-  --primary-border: #e0e7ff;
-  --muted: #6a7282;
-  --muted-strong: #4a5565;
+  --primary: #5546d9;
+  --primary-hover: #4738c8;
+  --primary-soft: #f0eeff;
+  --primary-text: #4033a6;
+  --primary-border: #e1dcfc;
+  --muted: #687083;
+  --muted-strong: #485064;
   --text-subtle: #364153;
-  --success: #00a63e;
-  --success-soft: #f0fdf4;
-  --success-badge: #dcfce7;
-  --success-badge-text: #008236;
+  --success: #277453;
+  --success-soft: #edf8f2;
+  --success-badge: #dff3e9;
+  --success-badge-text: #277453;
   --danger: #e7000b;
   --danger-soft: #fef2f2;
   --danger-dot: #fb2c36;
@@ -37,8 +37,8 @@
   --purple-badge: #f3e8ff;
   --purple-badge-text: #8200db;
   --purple-border: #e9d4ff;
-  --warning-soft: #ffedd4;
-  --warning-text: #ca3500;
+  --warning-soft: #fff7e9;
+  --warning-text: #966117;
   --token-soft: #f5f3ff;
   --token-text: #4f39f6;
   --token-warning-soft: #ffedd4;
@@ -63,6 +63,9 @@
   --auth-avatar-three: #b4bcff;
   --radius-control: 8px;
   --radius-card: 14px;
+  --radius-dashboard-card: 12px;
+  --dashboard-sidebar-width: 224px;
+  --dashboard-page-padding: 40px;
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
@@ -75,14 +78,14 @@
   --color-primary: var(--primary);
   --color-primary-soft: var(--primary-soft);
   --color-muted: var(--muted);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 button,

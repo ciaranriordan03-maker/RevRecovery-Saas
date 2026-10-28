@@ -56,7 +56,10 @@ describe("Phase 0 currency-safe metrics", () => {
     ]);
     expect(metrics.metricCards[0]?.value).toBe("€10.00 + $20.00");
     expect(metrics.atRiskCustomersCount).toBe(2);
+    expect(metrics.eligiblePaymentsCount).toBe(3);
+    expect(metrics.recoveredPaymentsCount).toBe(1);
     expect(metrics.recoveryRate).toBe(33);
+    expect(metrics.sentMessagesCount).toBe(1);
   });
 
   it("uses the same state and currency rules for Optimize", () => {

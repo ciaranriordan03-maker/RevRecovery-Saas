@@ -50,6 +50,21 @@ export function Icon({ name, className = "" }: IconProps) {
           <path d="m13 6 6 6-6 6" />
         </svg>
       );
+    case "menu":
+      return (
+        <svg {...common}>
+          <path d="M4 7h16" />
+          <path d="M4 12h16" />
+          <path d="M4 17h16" />
+        </svg>
+      );
+    case "shield-check":
+      return (
+        <svg {...common}>
+          <path d="M12 3 5 6v5c0 5 3.5 9.7 7 11 3.5-1.3 7-6 7-11V6l-7-3Z" />
+          <path d="m9 12 2 2 4-5" />
+        </svg>
+      );
     case "trend-up":
       return (
         <svg {...common}>

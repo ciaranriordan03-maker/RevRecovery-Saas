@@ -53,14 +53,55 @@ function getDisplayName({
     .join(" ");
 }
 
+function Navigation({
+  active,
+  navItems,
+}: {
+  active: DashboardNavItem;
+  navItems: readonly DashboardNavItem[];
+}) {
+  return (
+    <nav aria-label="Dashboard navigation" className="flex flex-col gap-1">
+      {navItems.map((item) => (
+        <Link
+          aria-current={item === active ? "page" : undefined}
+          className={`flex h-[42px] items-center gap-3 rounded-[8px] px-3 text-sm font-medium transition-colors ${
+            item === active
+              ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+              : "text-[var(--muted-strong)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+          }`}
+          href={navHref[item]}
+          key={item}
+        >
+          <Icon className="size-[18px]" name={navIcon[item]} />
+          {item}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function ContextBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--primary)]">
+      <span aria-hidden className="size-[5px] rounded-full bg-[var(--primary)]" />
+      {label}
+    </span>
+  );
+}
+
 export async function AppShell({
   active,
   children,
+  contextLabel,
+  showPageHeading = true,
   subtitle,
   title,
 }: {
   active: DashboardNavItem;
   children: React.ReactNode;
+  contextLabel?: string;
+  showPageHeading?: boolean;
   subtitle: string;
   title: string;
 }) {
@@ -82,34 +123,31 @@ export async function AppShell({
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] lg:h-screen lg:overflow-hidden">
       <div className="flex min-h-screen lg:h-screen lg:min-h-0">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] lg:flex lg:flex-col">
-          <div className="flex h-20 items-center border-b border-[var(--border)] px-6">
-            <BrandMark />
+        <aside className="sticky top-0 hidden h-screen w-[var(--dashboard-sidebar-width)] shrink-0 border-r border-[var(--border)] bg-[var(--surface)] lg:flex lg:flex-col">
+          <div className="flex h-[68px] items-center border-b border-[var(--border)] px-5">
+            <BrandMark variant="dashboard" />
           </div>
-          <nav className="flex flex-1 flex-col gap-1 px-4 py-4">
-            {navItems.map((item) => (
-              <Link
-                className={`flex h-9 items-center gap-3 rounded-[10px] px-3 text-sm font-medium transition ${
-                  item === active
-                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                    : "text-[var(--muted-strong)] hover:bg-[var(--background)]"
-                }`}
-                href={navHref[item]}
-                key={item}
-              >
-                <Icon name={navIcon[item]} />
-                {item}
-              </Link>
-            ))}
-          </nav>
-          <div className="border-t border-[var(--border)] p-4">
-            <div className="flex items-center gap-3 px-3 py-2">
-              <DiceBearAvatar alt="Account avatar" className="size-8" seed={avatarSeed} size={32} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[var(--foreground)]">
+          <div className="flex-1 px-3 py-4">
+            <Navigation active={active} navItems={navItems} />
+          </div>
+          <div className="border-t border-[var(--border)] p-3">
+            <div className="flex items-center gap-2.5 rounded-[8px] px-2 py-2">
+              <DiceBearAvatar
+                alt="Account avatar"
+                className="size-8"
+                seed={avatarSeed}
+                size={32}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-[var(--foreground)]">
                   {displayName}
                 </p>
-                <p className="truncate text-xs text-[var(--muted)]">{accountEmail}</p>
+                <Link
+                  className="mt-0.5 block truncate text-[11px] text-[var(--muted)] hover:text-[var(--primary)]"
+                  href="/dashboard/settings"
+                >
+                  Account settings
+                </Link>
               </div>
             </div>
             <SignOutForm />
@@ -117,16 +155,55 @@ export async function AppShell({
         </aside>
 
         <section className="min-w-0 flex-1 lg:h-screen lg:overflow-y-auto">
-          <header className="border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:px-8 lg:flex lg:h-20 lg:items-center lg:py-0">
-            <div className="flex items-center justify-between lg:hidden">
-              <BrandMark />
-              <SignOutForm compact />
-            </div>
-            <div className="mt-4 lg:mt-0">
-              <h1 className="text-xl font-medium tracking-[-0.02em]">{title}</h1>
-              <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
-            </div>
+          <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-5 lg:hidden">
+            <BrandMark variant="mobile" />
+            <details className="group relative">
+              <summary className="flex list-none items-center gap-1.5 text-xs text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
+                <Icon className="size-[18px]" name="menu" />
+                Menu
+              </summary>
+              <div className="fixed inset-x-0 top-16 z-50 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
+                <Navigation active={active} navItems={navItems} />
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <div className="mb-3 flex items-center gap-3">
+                    <DiceBearAvatar
+                      alt="Account avatar"
+                      className="size-9"
+                      seed={avatarSeed}
+                      size={36}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                        {displayName}
+                      </p>
+                      <p className="truncate text-xs text-[var(--muted)]">{accountEmail}</p>
+                    </div>
+                  </div>
+                  <SignOutForm compact />
+                </div>
+              </div>
+            </details>
           </header>
+
+          <div className="hidden h-[68px] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-8 lg:flex xl:px-10">
+            <p className="text-xs text-[var(--muted)]">
+              <Link className="hover:text-[var(--primary)]" href="/dashboard">
+                RevRecovery
+              </Link>
+              <span className="px-2 text-[var(--border-strong)]">/</span>
+              <span className="font-medium text-[var(--foreground)]">{title}</span>
+            </p>
+            {contextLabel ? <ContextBadge label={contextLabel} /> : null}
+          </div>
+
+          {showPageHeading ? (
+            <header className="px-5 pt-7 sm:px-8 lg:px-8 lg:pt-8 xl:px-10">
+              <h1 className="text-2xl font-semibold tracking-[-0.025em] text-[var(--foreground)]">
+                {title}
+              </h1>
+              <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
+            </header>
+          ) : null}
           {children}
         </section>
       </div>
