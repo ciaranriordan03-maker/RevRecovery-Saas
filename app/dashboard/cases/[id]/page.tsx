@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AppShell } from "../../../components/dashboard/app-shell";
 import { CaseDetailContent } from "../../../components/dashboard/case-detail-content";
 import { requireCompletedOnboarding } from "../../../lib/auth";
 import { getRecoveryCaseTimeline } from "../../../lib/server/recovery-case-events";
@@ -35,13 +34,5 @@ export default async function RecoveryCasePage({ params }: RecoveryCasePageProps
     userId: claims.sub,
   });
 
-  return (
-    <AppShell
-      active="Cases"
-      subtitle="Review the complete failed-payment recovery history"
-      title="Case details"
-    >
-      <CaseDetailContent recoveryCase={recoveryCase} timeline={timeline} />
-    </AppShell>
-  );
+  return <CaseDetailContent recoveryCase={recoveryCase} timeline={timeline} />;
 }
