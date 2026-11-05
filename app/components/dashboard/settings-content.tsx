@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { DiceBearAvatar } from "../avatar";
+import { useEffect, useState } from "react";
+import { AVATAR_PRESETS, DiceBearAvatar } from "../avatar";
 import { Button } from "../button";
 import { Icon } from "../ui-icon";
 import {
@@ -75,12 +75,6 @@ const recoveryModeCopy: Record<
   },
 };
 
-function buildAvatarOptions(identifier: string) {
-  const baseSeed = identifier.trim().toLowerCase() || "revrecovery-user";
-
-  return Array.from({ length: 8 }, (_, index) => `${baseSeed}:avatar-${index + 1}`);
-}
-
 function SettingsSection({
   children,
   icon,
@@ -115,20 +109,15 @@ export function SettingsContent({
   accountEmail,
   initialAvatarSeed,
   initialFullName,
-  userId,
 }: {
   accountEmail: string;
   initialAvatarSeed: string | null;
   initialFullName: string | null;
-  userId: string;
 }) {
   const router = useRouter();
   const [settings, setSettings] = useState<UserSettings>(defaultUserSettings);
-  const avatarOptions = useMemo(
-    () => buildAvatarOptions(accountEmail || userId),
-    [accountEmail, userId],
-  );
-  const initialSeed = initialAvatarSeed ?? avatarOptions[0];
+  const avatarOptions = AVATAR_PRESETS;
+  const initialSeed = initialAvatarSeed ?? avatarOptions[0].id;
   const [avatarSeed, setAvatarSeed] = useState(initialSeed);
   const [savedAvatarSeed, setSavedAvatarSeed] = useState(initialSeed);
   const [fullName, setFullName] = useState(initialFullName ?? "");
@@ -265,7 +254,7 @@ export function SettingsContent({
         throw new Error(payload.error ?? "Unable to save avatar.");
       }
 
-      const nextAvatarSeed = payload.profile.avatarSeed ?? avatarOptions[0];
+      const nextAvatarSeed = payload.profile.avatarSeed ?? avatarOptions[0].id;
       const nextFullName = payload.profile.fullName ?? "";
       setAvatarSeed(nextAvatarSeed);
       setSavedAvatarSeed(nextAvatarSeed);
@@ -311,21 +300,35 @@ export function SettingsContent({
         </div>
 
         <SettingsSection icon="users" title="Profile">
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center gap-4">
-              <DiceBearAvatar
-                alt="Selected account avatar"
-                className="size-14"
-                seed={avatarSeed}
-                size={56}
-              />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--foreground)]">Account profile</p>
-                <p className="mt-1 truncate text-xs text-[var(--muted)]">{accountEmail}</p>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                <DiceBearAvatar
+                  alt="Selected account avatar"
+                  className="size-16"
+                  seed={avatarSeed}
+                  size={64}
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-base font-medium text-[var(--foreground)]">
+                    {fullName.trim() || "Account profile"}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-[var(--muted)]">
+                    {accountEmail}
+                  </p>
+                </div>
               </div>
+              <Button
+                className="h-9 shrink-0 px-4 text-sm"
+                disabled={isSavingAvatar || !hasAvatarChanges}
+                onClick={() => void saveAvatar()}
+                variant="secondary"
+              >
+                {isSavingAvatar ? "Saving..." : "Save profile"}
+              </Button>
             </div>
 
-            <label className="block">
+            <label className="block max-w-xl">
               <span className="mb-2 block text-sm text-[var(--foreground)]">Full name</span>
               <input
                 className="h-11 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm outline-none transition focus:border-[var(--primary)]"
@@ -336,38 +339,43 @@ export function SettingsContent({
               />
             </label>
 
-            <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
-              {avatarOptions.map((option) => {
-                const selected = option === avatarSeed;
-
-                return (
-                  <button
-                    aria-label="Choose account avatar"
-                    aria-pressed={selected}
-                    className={`flex aspect-square items-center justify-center rounded-[12px] border bg-[var(--background)] transition ${
-                      selected
-                        ? "border-[var(--primary)] ring-2 ring-[var(--primary-border)]"
-                        : "border-[var(--border)] hover:border-[var(--border-strong)]"
-                    }`}
-                    key={option}
-                    onClick={() => setAvatarSeed(option)}
-                    type="button"
-                  >
-                    <DiceBearAvatar alt="" className="size-10" seed={option} size={40} />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end">
-              <Button
-                className="h-9 px-4 text-sm"
-                disabled={isSavingAvatar || !hasAvatarChanges}
-                onClick={() => void saveAvatar()}
-                variant="secondary"
+            <div>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[var(--foreground)]">Profile picture</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    Choose a look that feels like you.
+                  </p>
+                </div>
+                <p className="hidden text-xs text-[var(--muted)] sm:block">8 choices</p>
+              </div>
+              <div
+                aria-label="Profile picture choices"
+                className="mt-3 flex gap-2 overflow-x-auto pb-2"
+                role="radiogroup"
               >
-                {isSavingAvatar ? "Saving..." : "Save Avatar"}
-              </Button>
+                {avatarOptions.map((option) => {
+                  const selected = option.id === avatarSeed;
+
+                  return (
+                    <button
+                      aria-checked={selected}
+                      aria-label={`Choose ${option.label} avatar`}
+                      className={`flex size-14 shrink-0 items-center justify-center rounded-full border bg-[var(--background)] transition ${
+                        selected
+                          ? "border-[var(--primary)] ring-2 ring-[var(--primary-border)]"
+                          : "border-[var(--border)] hover:border-[var(--border-strong)]"
+                      }`}
+                      key={option.id}
+                      onClick={() => setAvatarSeed(option.id)}
+                      role="radio"
+                      type="button"
+                    >
+                      <DiceBearAvatar alt="" className="size-11" seed={option.id} size={44} />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </SettingsSection>

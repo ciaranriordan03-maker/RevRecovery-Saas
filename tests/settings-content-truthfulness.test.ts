@@ -7,6 +7,14 @@ const source = readFileSync(
 );
 
 describe("settings content truthfulness", () => {
+  it("uses a compact, accessible profile picture chooser", () => {
+    expect(source).toContain("AVATAR_PRESETS");
+    expect(source).toContain('role="radiogroup"');
+    expect(source).toContain('role="radio"');
+    expect(source).toContain("Save profile");
+    expect(source).not.toContain("grid-cols-4");
+  });
+
   it("keeps recovery configuration editing in the Recovery workspace", () => {
     expect(source).toContain('title="Recovery Configuration"');
     expect(source).toContain('href="/dashboard/recovery?step=customize"');
