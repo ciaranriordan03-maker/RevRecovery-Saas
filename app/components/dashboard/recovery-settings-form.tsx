@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Button } from "../button";
-import { SendingDomainSettings } from "./sending-domain-settings";
 import {
   RECOVERY_MODES,
   type RecoveryMode,
@@ -165,7 +164,7 @@ export function RecoverySettingsForm({
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="flex flex-col gap-5">
       <form
         className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
         id="recovery-delivery"
@@ -296,67 +295,89 @@ export function RecoverySettingsForm({
           Set the sender customers see, reply addresses, and recovery message wording.
         </p>
 
-        <fieldset className="mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4" disabled={savingEmail}>
-          <legend className="px-1 text-sm font-medium text-[var(--foreground)]">
-            Audience segmentation
-          </legend>
-          <label className="mt-2 flex items-start gap-3 text-sm text-[var(--foreground)]">
-            <input
-              checked={settings.recovery.segmentation.enabled}
-              className="mt-1"
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  recovery: {
-                    ...current.recovery,
-                    segmentation: {
-                      ...current.recovery.segmentation,
-                      enabled: event.target.checked,
-                    },
-                  },
-                }))
-              }
-              type="checkbox"
-            />
+        <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
+            <dt className="text-xs text-[var(--muted)]">Tone</dt>
+            <dd className="mt-1 text-sm font-medium text-[var(--foreground)]">{settings.recovery.defaultEmailTone}</dd>
+          </div>
+          <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
+            <dt className="text-xs text-[var(--muted)]">Sender</dt>
+            <dd className="mt-1 truncate text-sm font-medium text-[var(--foreground)]">{settings.email.senderName}</dd>
+          </div>
+          <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
+            <dt className="text-xs text-[var(--muted)]">Audience rules</dt>
+            <dd className="mt-1 text-sm font-medium text-[var(--foreground)]">{settings.recovery.segmentation.enabled ? "Enabled" : "One shared schedule"}</dd>
+          </div>
+        </dl>
+
+        <details className="group mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)]">
+          <summary className="flex list-none cursor-pointer items-center justify-between gap-3 px-4 py-4 text-sm font-medium text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
             <span>
-              Use different recovery schedules for subscription renewals, standalone invoices,
-              and invoices Stripe cannot classify.
+              Audience rules
+              <span className="ml-2 rounded-[6px] bg-[var(--surface)] px-2 py-1 text-xs font-normal text-[var(--muted)]">Optional</span>
             </span>
-          </label>
-          {settings.recovery.segmentation.enabled ? (
-            <div className="mt-4 grid gap-4">
-              {([
-                ["subscriptionScheduleId", "Recurring subscriptions"],
-                ["standaloneScheduleId", "Standalone invoices"],
-                ["unknownScheduleId", "Unknown invoice type"],
-              ] as const).map(([key, label]) => (
-                <label className="text-xs font-medium text-[var(--foreground)]" key={key}>
-                  {label}
-                  <select
-                    className={`${fieldClassName} mt-2`}
-                    onChange={(event) =>
-                      setSettings((current) => ({
-                        ...current,
-                        recovery: {
-                          ...current.recovery,
-                          segmentation: {
-                            ...current.recovery.segmentation,
-                            [key]: event.target.value,
+            <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">⌄</span>
+          </summary>
+          <fieldset className="border-t border-[var(--border)] p-4" disabled={savingEmail}>
+            <legend className="sr-only">Audience segmentation</legend>
+            <label className="mt-2 flex items-start gap-3 text-sm text-[var(--foreground)]">
+              <input
+                checked={settings.recovery.segmentation.enabled}
+                className="mt-1"
+                onChange={(event) =>
+                  setSettings((current) => ({
+                    ...current,
+                    recovery: {
+                      ...current.recovery,
+                      segmentation: {
+                        ...current.recovery.segmentation,
+                        enabled: event.target.checked,
+                      },
+                    },
+                  }))
+                }
+                type="checkbox"
+              />
+              <span>
+                Use different recovery schedules for subscription renewals, standalone invoices,
+                and invoices Stripe cannot classify.
+              </span>
+            </label>
+            {settings.recovery.segmentation.enabled ? (
+              <div className="mt-4 grid gap-4">
+                {([
+                  ["subscriptionScheduleId", "Recurring subscriptions"],
+                  ["standaloneScheduleId", "Standalone invoices"],
+                  ["unknownScheduleId", "Unknown invoice type"],
+                ] as const).map(([key, label]) => (
+                  <label className="text-xs font-medium text-[var(--foreground)]" key={key}>
+                    {label}
+                    <select
+                      className={`${fieldClassName} mt-2`}
+                      onChange={(event) =>
+                        setSettings((current) => ({
+                          ...current,
+                          recovery: {
+                            ...current.recovery,
+                            segmentation: {
+                              ...current.recovery.segmentation,
+                              [key]: event.target.value,
+                            },
                           },
-                        },
-                      }))
-                    }
-                    value={settings.recovery.segmentation[key]}
-                  >
-                    {RECOVERY_SCHEDULES.map((schedule) => (
-                      <option key={schedule.id} value={schedule.id}>{schedule.label}</option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
-          ) : null}
-        </fieldset>
+                        }))
+                      }
+                      value={settings.recovery.segmentation[key]}
+                    >
+                      {RECOVERY_SCHEDULES.map((schedule) => (
+                        <option key={schedule.id} value={schedule.id}>{schedule.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+          </fieldset>
+        </details>
 
         <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
           Email tone
@@ -383,116 +404,123 @@ export function RecoverySettingsForm({
           </span>
         </label>
 
-        <div className="mt-6 border-t border-[var(--border)] pt-6">
-          <h3 className="text-sm font-medium text-[var(--foreground)]">Recovery messages</h3>
-          <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
-            Edit the subject and main message. RevRecovery securely adds the customer greeting,
-            outstanding amount, Stripe payment button, and footer when each email is sent.
-          </p>
-          <div className="mt-4 grid gap-5">
-            {settings.recovery.messageTemplates.map((template, index) => (
-              <fieldset
-                className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"
-                disabled={savingEmail}
-                key={template.messageKey}
-              >
-                <legend className="px-1 text-sm font-medium text-[var(--foreground)]">
-                  Email {index + 1}
-                </legend>
-                <label className="mt-2 block text-xs font-medium text-[var(--foreground)]">
-                  Subject
-                  <input
-                    className={`${fieldClassName} mt-2`}
-                    maxLength={120}
-                    onChange={(event) =>
-                      setSettings((current) => ({
-                        ...current,
-                        recovery: {
-                          ...current.recovery,
-                          messageTemplates: current.recovery.messageTemplates.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, subject: event.target.value } : item,
-                          ),
-                        },
-                      }))
-                    }
-                    required
-                    value={template.subject}
-                  />
-                </label>
-                <label className="mt-4 block text-xs font-medium text-[var(--foreground)]">
-                  Message
-                  <textarea
-                    className="mt-2 min-h-32 w-full resize-y rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-sm leading-5 text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:bg-[var(--background)] disabled:text-[var(--muted)]"
-                    maxLength={1000}
-                    onChange={(event) =>
-                      setSettings((current) => ({
-                        ...current,
-                        recovery: {
-                          ...current.recovery,
-                          messageTemplates: current.recovery.messageTemplates.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, bodyPreview: event.target.value } : item,
-                          ),
-                        },
-                      }))
-                    }
-                    required
-                    value={template.bodyPreview}
-                  />
-                </label>
-              </fieldset>
-            ))}
+        <details className="group mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)]">
+          <summary className="flex list-none cursor-pointer items-center justify-between gap-3 px-4 py-4 text-sm font-medium text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
+            <span>Recovery message templates</span>
+            <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">⌄</span>
+          </summary>
+          <div className="border-t border-[var(--border)] p-4">
+            <p className="text-xs leading-5 text-[var(--muted)]">
+              Edit the subject and main message. RevRecovery securely adds the customer greeting,
+              outstanding amount, Stripe payment button, and footer when each email is sent.
+            </p>
+            <div className="mt-4 grid gap-5">
+              {settings.recovery.messageTemplates.map((template, index) => (
+                <fieldset
+                  className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"
+                  disabled={savingEmail}
+                  key={template.messageKey}
+                >
+                  <legend className="px-1 text-sm font-medium text-[var(--foreground)]">
+                    Email {index + 1}
+                  </legend>
+                  <label className="mt-2 block text-xs font-medium text-[var(--foreground)]">
+                    Subject
+                    <input
+                      className={`${fieldClassName} mt-2`}
+                      maxLength={120}
+                      onChange={(event) =>
+                        setSettings((current) => ({
+                          ...current,
+                          recovery: {
+                            ...current.recovery,
+                            messageTemplates: current.recovery.messageTemplates.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, subject: event.target.value } : item,
+                            ),
+                          },
+                        }))
+                      }
+                      required
+                      value={template.subject}
+                    />
+                  </label>
+                  <label className="mt-4 block text-xs font-medium text-[var(--foreground)]">
+                    Message
+                    <textarea
+                      className="mt-2 min-h-32 w-full resize-y rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-sm leading-5 text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:bg-[var(--background)] disabled:text-[var(--muted)]"
+                      maxLength={1000}
+                      onChange={(event) =>
+                        setSettings((current) => ({
+                          ...current,
+                          recovery: {
+                            ...current.recovery,
+                            messageTemplates: current.recovery.messageTemplates.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, bodyPreview: event.target.value } : item,
+                            ),
+                          },
+                        }))
+                      }
+                      required
+                      value={template.bodyPreview}
+                    />
+                  </label>
+                </fieldset>
+              ))}
+            </div>
           </div>
+        </details>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Sender name
+            <input
+              className={`${fieldClassName} mt-2`}
+              disabled={savingEmail}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  email: { ...current.email, senderName: event.target.value },
+                }))
+              }
+              required
+              value={settings.email.senderName}
+            />
+          </label>
+
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Reply-to email
+            <input
+              className={`${fieldClassName} mt-2`}
+              disabled={savingEmail}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  email: { ...current.email, replyToEmail: event.target.value },
+                }))
+              }
+              required
+              type="email"
+              value={settings.email.replyToEmail}
+            />
+          </label>
+
+          <label className="block text-sm font-medium text-[var(--foreground)]">
+            Support email
+            <input
+              className={`${fieldClassName} mt-2`}
+              disabled={savingEmail}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  email: { ...current.email, supportEmail: event.target.value },
+                }))
+              }
+              required
+              type="email"
+              value={settings.email.supportEmail}
+            />
+          </label>
         </div>
-
-        <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
-          Sender name
-          <input
-            className={`${fieldClassName} mt-2`}
-            disabled={savingEmail}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                email: { ...current.email, senderName: event.target.value },
-              }))
-            }
-            required
-            value={settings.email.senderName}
-          />
-        </label>
-
-        <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
-          Reply-to email
-          <input
-            className={`${fieldClassName} mt-2`}
-            disabled={savingEmail}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                email: { ...current.email, replyToEmail: event.target.value },
-              }))
-            }
-            required
-            type="email"
-            value={settings.email.replyToEmail}
-          />
-        </label>
-
-        <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
-          Support email
-          <input
-            className={`${fieldClassName} mt-2`}
-            disabled={savingEmail}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                email: { ...current.email, supportEmail: event.target.value },
-              }))
-            }
-            required
-            type="email"
-            value={settings.email.supportEmail}
-          />
-        </label>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p aria-live="polite" className="text-sm text-[var(--muted-strong)]">{emailStatus}</p>
@@ -501,18 +529,6 @@ export function RecoverySettingsForm({
           </Button>
         </div>
       </form>
-      <section
-        className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)] lg:col-span-2"
-        id="stripe-overlap-guidance"
-      >
-        <h2 className="text-base font-medium text-[var(--foreground)]">
-          Stripe communication overlap
-        </h2>
-        <p className="mt-2 max-w-3xl text-sm leading-5 text-[var(--muted-strong)]">
-          Before going live, review the failed-payment emails enabled in Stripe Billing. Avoid sending materially identical reminders from Stripe and RevRecovery at the same time. Stripe retry settings remain authoritative and RevRecovery does not change them.
-        </p>
-      </section>
-      <SendingDomainSettings />
     </div>
   );
 }

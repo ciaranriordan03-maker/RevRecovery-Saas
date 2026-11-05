@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
 
 type AtRiskCustomersTableProps = {
@@ -58,15 +59,15 @@ function getCustomerLabel(customer: AtRiskCustomer) {
 
 export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
-      <div className="border-b border-[var(--border)] px-6 py-5">
+    <section className="overflow-hidden rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]">
+      <div className="border-b border-[var(--border)] px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-base font-medium tracking-[-0.02em]">
-              At-Risk Customers
+            <h2 className="text-base font-semibold tracking-[-0.02em]">
+              Open failed-payment cases
             </h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Open failed-payment cases, including any that need attention.
+              Customers currently in the recovery workflow.
             </p>
           </div>
           <p className="text-sm text-[var(--muted-strong)]">
@@ -77,24 +78,24 @@ export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
 
       {customers.length === 0 ? (
         <div className="px-6 py-10 text-center">
-          <p className="text-sm font-medium text-[var(--foreground)]">
-            No at-risk customers right now
+          <p className="text-sm font-semibold text-[var(--foreground)]">
+            No open failed-payment cases
           </p>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Failed payments will appear here once Stripe sends recovery events.
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-[1080px] w-full border-collapse text-left">
+        <>
+          <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[920px] border-collapse text-left">
             <thead>
               <tr className="border-b border-[var(--border)] text-xs font-medium text-[var(--muted)]">
                 <th className="px-6 py-3">Customer</th>
                 <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Invoice</th>
                 <th className="px-4 py-3">Failure Reason</th>
-                <th className="px-4 py-3">Recovery Stage</th>
-                <th className="px-4 py-3">Next Email</th>
+                <th className="px-4 py-3">Recovery</th>
+                <th className="px-4 py-3">Next action</th>
                 <th className="px-6 py-3">Status</th>
               </tr>
             </thead>
@@ -106,19 +107,11 @@ export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
                       {getCustomerLabel(customer)}
                     </p>
                     <p className="mt-1 max-w-[220px] truncate text-xs text-[var(--muted)]">
-                      {customer.customerId ?? customer.invoiceId}
+                      {customer.invoiceId} · {formatLabel(customer.invoiceStatus)}
                     </p>
                   </td>
                   <td className="px-4 py-4 text-sm text-[var(--foreground)]">
                     {formatCurrency(customer.amountDue, customer.currency ?? "usd")}
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="max-w-[160px] truncate text-sm text-[var(--foreground)]">
-                      {customer.invoiceId}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                      {formatLabel(customer.invoiceStatus)}
-                    </p>
                   </td>
                   <td className="px-4 py-4">
                     <p className="max-w-[200px] text-sm font-medium text-[var(--foreground)]">
@@ -150,12 +143,63 @@ export function AtRiskCustomersTable({ customers }: AtRiskCustomersTableProps) {
                     >
                       {formatLabel(customer.caseStatus)}
                     </span>
+                    <Link
+                      className="mt-2 block text-xs font-medium text-[var(--primary)] hover:text-[var(--primary-hover)]"
+                      href={`/dashboard/cases/${customer.failedPaymentId}`}
+                    >
+                      View case
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+
+          <ul className="divide-y divide-[var(--border)] md:hidden">
+            {customers.map((customer) => (
+              <li className="p-5" key={customer.failedPaymentId}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                      {getCustomerLabel(customer)}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-[var(--muted)]">
+                      {customer.invoiceId} · {formatLabel(customer.invoiceStatus)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-[var(--foreground)]">
+                    {formatCurrency(customer.amountDue, customer.currency ?? "usd")}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-3 rounded-[var(--radius-control)] bg-[var(--surface-muted)] p-4 text-xs sm:grid-cols-2">
+                  <div>
+                    <p className="text-[var(--muted)]">Failure</p>
+                    <p className="mt-1 font-medium text-[var(--foreground)]">{customer.failureDiagnostic.title}</p>
+                  </div>
+                  <div>
+                    <p className="text-[var(--muted)]">Recovery</p>
+                    <p className="mt-1 font-medium text-[var(--foreground)]">{formatLabel(customer.recoveryStage)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[var(--muted)]">Next email</p>
+                    <p className="mt-1 font-medium text-[var(--foreground)]">{formatDateTime(customer.nextEmailAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[var(--muted)]">Status</p>
+                    <p className="mt-1 font-medium text-[var(--foreground)]">{formatLabel(customer.caseStatus)}</p>
+                  </div>
+                </div>
+                <Link
+                  className="mt-4 inline-flex text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)]"
+                  href={`/dashboard/cases/${customer.failedPaymentId}`}
+                >
+                  View case
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );

@@ -81,7 +81,7 @@ export function NotificationTestAuthorization() {
     <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]" id="notification-test-authorization">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">D4k · Controlled authorization</p>
+          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Controlled notification test</p>
           <h2 className="mt-2 text-base font-medium text-[var(--foreground)]">One-time test-email approval</h2>
           <p className="mt-2 max-w-3xl text-sm leading-5 text-[var(--muted-strong)]">
             Request a review record, then approve that exact record separately. Approval expires after 15 minutes and cannot enable general delivery.

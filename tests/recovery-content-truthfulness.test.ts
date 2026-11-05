@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync(
-  new URL("../app/components/dashboard/recovery-content.tsx", import.meta.url),
-  "utf8",
-);
+const source = [
+  "../app/components/dashboard/recovery-content.tsx",
+  "../app/components/dashboard/recovery-settings-workspace.tsx",
+]
+  .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+  .join("\n");
 
 describe("recovery content truthfulness", () => {
   it("describes message editing and active-sequence snapshots accurately", () => {

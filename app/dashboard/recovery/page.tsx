@@ -2,17 +2,11 @@ import type { Metadata } from "next";
 import { AppShell } from "../../components/dashboard/app-shell";
 import { RecoveryContent } from "../../components/dashboard/recovery-content";
 import { requireCompletedOnboarding } from "../../lib/auth";
-import { getAtRiskCustomers } from "../../lib/server/at-risk-customers";
-import { getRecoveryModeSettingsForUser } from "../../lib/server/recovery-account-settings";
-import { getUserSettings } from "../../lib/server/settings-store";
-import { buildRecoveryFlowView } from "../../lib/recovery/recovery-view";
-import { getActivationReadinessForUser, getControlledTestEligibility } from "../../lib/server/activation-readiness";
-import { getStripeConnectionSummary } from "../../lib/server/stripe-connections";
-import { buildRecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
-import { getPreviewRecoveryNotificationHistory } from "../../lib/server/recovery-notification-events";
-import { evaluateNotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
-import { unavailableNotificationActivationReview } from "../../lib/recovery/notification-activation-review";
-import { getNotificationActivationReviewForUser } from "../../lib/server/notification-activation-review";
+import {
+  getRecoveryPageMode,
+  getRecoveryWorkspaceView,
+  loadRecoveryPageData,
+} from "../../lib/server/recovery-page-data";
 
 export const metadata: Metadata = {
   title: "Recovery Flow | RevRecovery",
@@ -20,75 +14,35 @@ export const metadata: Metadata = {
 };
 
 type RecoveryPageProps = {
-  searchParams?: Promise<{ step?: string }>;
+  searchParams?: Promise<{ step?: string; view?: string }>;
 };
 
 const pageCopy = {
   review: { subtitle: "Confirm how automated recovery operates", title: "Review Recovery Flow" },
   customize: { subtitle: "Review the settings currently used for recovery", title: "Recovery Settings" },
-  sequence: { subtitle: "Automated email sequence for failed payments", title: "Recovery Flow" },
+  sequence: { subtitle: "Monitor failed-payment recovery", title: "Recovery" },
 } as const;
 
 export default async function RecoveryPage({ searchParams }: RecoveryPageProps) {
   const { claims } = await requireCompletedOnboarding();
   const params = await searchParams;
-  const mode =
-    params?.step === "review" || params?.step === "activate"
-      ? "review"
-      : params?.step === "customize"
-        ? "customize"
-        : "sequence";
-  const [settingsRecord, recoverySettings, atRiskCustomers, stripeConnection, notificationHistory, notificationActivationReview] = await Promise.all([
-    getUserSettings(claims.sub),
-    getRecoveryModeSettingsForUser(claims.sub),
-    mode === "sequence" ? getAtRiskCustomers(claims.sub) : Promise.resolve([]),
-    getStripeConnectionSummary(claims.sub),
-    mode === "sequence"
-      ? getPreviewRecoveryNotificationHistory(claims.sub)
-      : Promise.resolve({ deliveries: [], events: [], state: "ready" as const }),
-    mode === "sequence"
-      ? getNotificationActivationReviewForUser(claims.sub)
-      : Promise.resolve(unavailableNotificationActivationReview()),
-  ]);
-  const recoveryView = buildRecoveryFlowView(
-    settingsRecord.settings,
-    recoverySettings,
-  );
-  const activationReadiness = await getActivationReadinessForUser({
-    recoverySettings,
-    userId: claims.sub,
-    userSettings: settingsRecord.settings,
-  });
-  const controlledTestEligibility = getControlledTestEligibility({
-    recoverySettings,
-    userSettings: settingsRecord.settings,
-  });
+  const mode = getRecoveryPageMode(params?.step);
+  const view = getRecoveryWorkspaceView(params?.view);
   const accountEmail = typeof claims.email === "string" ? claims.email : "Account owner email unavailable";
-  const notificationReadiness = evaluateNotificationActivationReadiness({
+  const content = await loadRecoveryPageData({
     accountEmail,
-    activationReadiness,
-    notificationHistory,
+    mode,
+    userId: claims.sub,
   });
 
   return (
     <AppShell
       active="Recovery"
+      showPageHeading={mode !== "sequence"}
       subtitle={pageCopy[mode].subtitle}
       title={pageCopy[mode].title}
     >
-      <RecoveryContent
-        accountEmail={accountEmail}
-        activationReadiness={activationReadiness}
-        controlledTestEligibility={controlledTestEligibility}
-        atRiskCustomers={atRiskCustomers}
-        mode={mode}
-        notificationHistory={notificationHistory}
-        notificationActivationReview={notificationActivationReview}
-        notificationReadiness={notificationReadiness}
-        opportunityReport={buildRecoveryOpportunityReport(stripeConnection)}
-        recoveryView={recoveryView}
-        userSettings={settingsRecord.settings}
-      />
+      <RecoveryContent {...content} view={view} />
     </AppShell>
   );
 }
