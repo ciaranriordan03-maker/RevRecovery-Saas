@@ -75,6 +75,13 @@ const recoveryModeCopy: Record<
   },
 };
 
+const recoveryModeBadgeClass: Record<RecoveryMode, string> = {
+  live: "bg-[var(--success-badge)] text-[var(--success-badge-text)]",
+  off: "bg-[var(--surface-muted)] text-[var(--muted-strong)]",
+  paused: "bg-[var(--warning-soft)] text-[var(--warning-text)]",
+  test: "bg-[var(--primary-soft)] text-[var(--primary-text)]",
+};
+
 function SettingsSection({
   children,
   icon,
@@ -427,84 +434,138 @@ export function SettingsContent({
         </SettingsSection>
         </div>
 
-        <SettingsSection icon="refresh" title="Recovery Configuration">
+        <SettingsSection icon="refresh" title="Recovery setup">
           {isLoadingRecoveryMode ? (
             <p className="text-sm text-[var(--muted)]">Loading recovery configuration...</p>
           ) : recoveryMode ? (
-            <div className="flex flex-col gap-5">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                    Delivery mode
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
-                    {recoveryModeCopy[recoveryMode.mode].label}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-base font-medium text-[var(--foreground)]">
+                      Recovery delivery
+                    </p>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${recoveryModeBadgeClass[recoveryMode.mode]}`}
+                    >
+                      {recoveryModeCopy[recoveryMode.mode].label}
+                    </span>
+                  </div>
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted)]">
                     {recoveryModeCopy[recoveryMode.mode].description}
                   </p>
-                  {recoveryMode.mode === "test" ? (
-                    <p className="mt-2 text-xs text-[var(--muted-strong)]">
-                      Test recipient: {recoveryMode.approvedTestRecipient || "Not set"}
-                    </p>
-                  ) : null}
                 </div>
-
-                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                    Schedule
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
-                    {getRecoverySchedule(recoveryMode.scheduleId).label}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-                    Times use {recoveryMode.timezone}.
-                  </p>
-                </div>
-
-                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                    Email identity
-                  </p>
-                  <dl className="mt-2 space-y-1 text-xs leading-5 text-[var(--muted)]">
-                    <div><dt className="inline text-[var(--muted-strong)]">Sender: </dt><dd className="inline">{settings.email.senderName}</dd></div>
-                    <div><dt className="inline text-[var(--muted-strong)]">Reply-to: </dt><dd className="inline">{settings.email.replyToEmail}</dd></div>
-                    <div><dt className="inline text-[var(--muted-strong)]">Support: </dt><dd className="inline">{settings.email.supportEmail}</dd></div>
-                  </dl>
-                </div>
-
-                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                    Default email tone
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
-                    {settings.recovery.defaultEmailTone}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-                    Applied to recovery messages unless a message is customized.
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4 text-xs leading-5 text-[var(--muted)]">
-                {!recoveryMode.connected
-                  ? "Connect Stripe before configuring recovery delivery."
-                  : recoveryMode.source === "fail_closed_fallback"
-                    ? "Recovery delivery is off because persisted account configuration is unavailable. Review the account setup before enabling delivery."
-                    : `${recoveryMode.livemode ? "Live" : "Sandbox"} Stripe account ${recoveryMode.stripeAccountId ?? ""}.`}
-              </div>
-
-              <div className="flex flex-col gap-3 rounded-[10px] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm leading-6 text-[var(--muted-strong)]">
-                  Recovery delivery, schedule, sender identity, and tone are managed in one place.
-                </p>
                 <Link
-                  className="inline-flex h-10 shrink-0 items-center justify-center rounded-[8px] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-foreground)] transition hover:opacity-90"
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)]"
                   href="/dashboard/recovery?step=customize"
                 >
-                  Customize recovery
+                  Manage recovery
+                  <Icon className="size-4" name="arrow-right" />
                 </Link>
               </div>
+
+              <dl className="grid overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--background)] sm:grid-cols-3 sm:divide-x sm:divide-[var(--border)]">
+                <div className="border-b border-[var(--border)] p-4 sm:border-b-0">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    Schedule
+                  </dt>
+                  <dd className="mt-1.5 text-sm font-medium text-[var(--foreground)]">
+                    {getRecoverySchedule(recoveryMode.scheduleId).label}
+                  </dd>
+                </div>
+                <div className="border-b border-[var(--border)] p-4 sm:border-b-0">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    Sender
+                  </dt>
+                  <dd className="mt-1.5 truncate text-sm font-medium text-[var(--foreground)]">
+                    {settings.email.senderName || "Not set"}
+                  </dd>
+                </div>
+                <div className="p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    {recoveryMode.mode === "test" ? "Test recipient" : "Email tone"}
+                  </dt>
+                  <dd className="mt-1.5 truncate text-sm font-medium text-[var(--foreground)]">
+                    {recoveryMode.mode === "test"
+                      ? recoveryMode.approvedTestRecipient || "Not set"
+                      : settings.recovery.defaultEmailTone || "Not set"}
+                  </dd>
+                </div>
+              </dl>
+
+              {!recoveryMode.connected || recoveryMode.source === "fail_closed_fallback" ? (
+                <div
+                  className={`flex gap-3 rounded-[10px] border p-4 text-sm leading-6 ${
+                    recoveryMode.source === "fail_closed_fallback"
+                      ? "border-[var(--danger)]/20 bg-[var(--danger-soft)] text-[var(--danger)]"
+                      : "border-[var(--warning-text)]/20 bg-[var(--warning-soft)] text-[var(--warning-text)]"
+                  }`}
+                  role="status"
+                >
+                  <Icon className="mt-0.5 size-4 shrink-0" name="alert" />
+                  <p>
+                    {!recoveryMode.connected
+                      ? "Connect Stripe before configuring recovery delivery."
+                      : "Recovery delivery is off because persisted account configuration is unavailable. Review the account setup before enabling delivery."}
+                  </p>
+                </div>
+              ) : null}
+
+              <details className="group rounded-[10px] border border-[var(--border)] bg-[var(--surface)]">
+                <summary className="flex list-none cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-[var(--muted-strong)] [&::-webkit-details-marker]:hidden">
+                  View details
+                  <Icon
+                    className="size-4 transition group-open:rotate-180"
+                    name="chevron-down"
+                  />
+                </summary>
+                <dl className="grid gap-x-6 gap-y-4 border-t border-[var(--border)] px-4 py-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <dt className="text-xs text-[var(--muted)]">Reply-to</dt>
+                    <dd className="mt-1 break-all text-[var(--foreground)]">
+                      {settings.email.replyToEmail || "Not set"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[var(--muted)]">Support email</dt>
+                    <dd className="mt-1 break-all text-[var(--foreground)]">
+                      {settings.email.supportEmail || "Not set"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[var(--muted)]">Default email tone</dt>
+                    <dd className="mt-1 text-[var(--foreground)]">
+                      {settings.recovery.defaultEmailTone || "Not set"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[var(--muted)]">Time zone</dt>
+                    <dd className="mt-1 text-[var(--foreground)]">{recoveryMode.timezone}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[var(--muted)]">Stripe environment</dt>
+                    <dd className="mt-1 text-[var(--foreground)]">
+                      {recoveryMode.livemode === null
+                        ? "Unavailable"
+                        : recoveryMode.livemode
+                          ? "Live"
+                          : "Sandbox"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[var(--muted)]">Stripe account</dt>
+                    <dd className="mt-1 break-all text-[var(--foreground)]">
+                      {recoveryMode.stripeAccountId || "Not available"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[var(--muted)]">Approved test recipient</dt>
+                    <dd className="mt-1 break-all text-[var(--foreground)]">
+                      {recoveryMode.approvedTestRecipient || "Not set"}
+                    </dd>
+                  </div>
+                </dl>
+              </details>
             </div>
           ) : (
             <p className="text-sm text-[var(--danger)]">

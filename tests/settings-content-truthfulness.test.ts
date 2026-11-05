@@ -16,9 +16,11 @@ describe("settings content truthfulness", () => {
   });
 
   it("keeps recovery configuration editing in the Recovery workspace", () => {
-    expect(source).toContain('title="Recovery Configuration"');
+    expect(source).toContain('title="Recovery setup"');
     expect(source).toContain('href="/dashboard/recovery?step=customize"');
-    expect(source).toContain("Customize recovery");
+    expect(source).toContain("Manage recovery");
+    expect(source).toContain("View details");
+    expect(source).toContain("recoveryMode.approvedTestRecipient");
     expect(source).toContain("settings.recovery.defaultEmailTone");
     expect(source).toContain("settings.email.senderName");
     expect(source).toContain("getRecoverySchedule");
