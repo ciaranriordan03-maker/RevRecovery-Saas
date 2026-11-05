@@ -11,6 +11,27 @@ const AVATAR_COLORS = [
   "f8fafc",
 ];
 
+function getDefaultPalette(property: "hairColor" | "skinColor") {
+  const definition = toonHead.schema.properties?.[property];
+
+  if (
+    !definition ||
+    typeof definition === "boolean" ||
+    !Array.isArray(definition.default) ||
+    definition.default.length < 5 ||
+    !definition.default.every((color) => typeof color === "string")
+  ) {
+    throw new Error(`ToonHead ${property} palette is unavailable.`);
+  }
+
+  return definition.default as [string, string, string, string, string];
+}
+
+const [BLACK_HAIR, AUBURN_HAIR, BROWN_HAIR, BLONDE_HAIR, DARK_BROWN_HAIR] =
+  getDefaultPalette("hairColor");
+const [LIGHT_SKIN, MEDIUM_SKIN, TAN_SKIN, BROWN_SKIN, DARK_SKIN] =
+  getDefaultPalette("skinColor");
+
 type AvatarPreset = {
   id: string;
   label: string;
@@ -26,8 +47,10 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 0,
       clothes: ["dress"],
       hair: ["bun"],
+      hairColor: [AUBURN_HAIR],
       rearHair: ["longWavy"],
       rearHairProbability: 100,
+      skinColor: [LIGHT_SKIN],
     },
     seed: "Maya",
   },
@@ -38,8 +61,10 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 0,
       clothes: ["openJacket"],
       hair: ["bun"],
+      hairColor: [BLACK_HAIR],
       rearHair: ["shoulderHigh"],
       rearHairProbability: 100,
+      skinColor: [DARK_SKIN],
     },
     seed: "Bella",
   },
@@ -50,8 +75,10 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 0,
       clothes: ["turtleNeck"],
       hair: ["sideComed"],
+      hairColor: [BLONDE_HAIR],
       rearHair: ["longStraight"],
       rearHairProbability: 100,
+      skinColor: [LIGHT_SKIN],
     },
     seed: "Zoe",
   },
@@ -62,8 +89,10 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 0,
       clothes: ["shirt"],
       hair: ["bun"],
+      hairColor: [BLACK_HAIR],
       rearHair: ["neckHigh"],
       rearHairProbability: 100,
+      skinColor: [BROWN_SKIN],
     },
     seed: "Sasha",
   },
@@ -74,7 +103,9 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 0,
       clothes: ["openJacket"],
       hair: ["undercut"],
+      hairColor: [BROWN_HAIR],
       rearHairProbability: 0,
+      skinColor: [MEDIUM_SKIN],
     },
     seed: "Jin",
   },
@@ -86,7 +117,9 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 100,
       clothes: ["shirt"],
       hair: ["spiky"],
+      hairColor: [BLACK_HAIR],
       rearHairProbability: 0,
+      skinColor: [DARK_SKIN],
     },
     seed: "Marcus",
   },
@@ -97,7 +130,9 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 0,
       clothes: ["tShirt"],
       hair: ["sideComed"],
+      hairColor: [DARK_BROWN_HAIR],
       rearHairProbability: 0,
+      skinColor: [TAN_SKIN],
     },
     seed: "Jordan",
   },
@@ -108,7 +143,9 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
       beardProbability: 0,
       clothes: ["turtleNeck"],
       hair: ["undercut"],
+      hairColor: [BLONDE_HAIR],
       rearHairProbability: 0,
+      skinColor: [MEDIUM_SKIN],
     },
     seed: "Kai",
   },

@@ -23,4 +23,18 @@ describe("account avatar presets", () => {
     expect(shortHairChoices.length).toBeGreaterThanOrEqual(4);
     expect(beardedChoices.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("uses a deliberate mix of hair and skin palettes", () => {
+    const hairColors = AVATAR_PRESETS.map((preset) => preset.options.hairColor?.[0]);
+    const skinColors = AVATAR_PRESETS.map((preset) => preset.options.skinColor?.[0]);
+    const hairColorCounts = hairColors.reduce<Record<string, number>>((counts, color) => {
+      expect(color).toBeTypeOf("string");
+      counts[color ?? "missing"] = (counts[color ?? "missing"] ?? 0) + 1;
+      return counts;
+    }, {});
+
+    expect(new Set(hairColors).size).toBeGreaterThanOrEqual(4);
+    expect(new Set(skinColors).size).toBeGreaterThanOrEqual(4);
+    expect(Math.max(...Object.values(hairColorCounts))).toBeLessThanOrEqual(3);
+  });
 });
