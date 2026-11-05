@@ -19,6 +19,7 @@ export type OptimizeRecommendation = {
 };
 
 export type OptimizeRecommendations = {
+  environmentLabel: string;
   impactSummary: {
     caption: string;
     value: string;
@@ -34,12 +35,15 @@ type FailedPaymentOptimizationRow = {
   amount_due: number;
   case_status?: string | null;
   currency: string | null;
+  id: string;
+  livemode: boolean | null;
   recovery_stage: string;
   status: string;
   stripe_customer_id: string | null;
 };
 
 type RecoveryMessageOptimizationRow = {
+  failed_payment_id: string;
   message_key: string;
   status: string;
   step_number: number;
@@ -80,7 +84,7 @@ async function getFailedPaymentRows(userId: string) {
   const { data, error } = await supabase
     .from(FAILED_PAYMENTS_TABLE)
     .select(
-      "amount_due, currency, recovery_stage, status, case_status, stripe_customer_id",
+      "id, amount_due, currency, recovery_stage, status, case_status, stripe_customer_id, livemode",
     )
     .eq("user_id", userId)
     .returns<FailedPaymentOptimizationRow[]>();
@@ -101,7 +105,7 @@ async function getRecoveryMessageRows(userId: string) {
 
   const { data, error } = await supabase
     .from(RECOVERY_MESSAGES_TABLE)
-    .select("message_key, status, step_number")
+    .select("failed_payment_id, message_key, status, step_number")
     .eq("user_id", userId)
     .returns<RecoveryMessageOptimizationRow[]>();
 
@@ -169,12 +173,13 @@ function buildModeRecommendation(
 function buildRecommendations(
   openFailedPaymentCount: number,
   recoverySettings: OptimizeRecoveryContext,
+  casesHref: string,
 ) {
   const recommendations = [buildModeRecommendation(recoverySettings)];
 
   if (openFailedPaymentCount > 0) {
     recommendations.push({
-      actionHref: "/dashboard/recovery",
+      actionHref: casesHref,
       actionLabel: "View active cases",
       body: `${openFailedPaymentCount} failed payment${openFailedPaymentCount === 1 ? " is" : "s are"} currently open. Review the cases and their next scheduled action.`,
       impactBadgeClass: BADGE_CLASSES.green,
@@ -185,6 +190,32 @@ function buildRecommendations(
   }
 
   return recommendations;
+}
+
+function getOptimizeEnvironmentScope(
+  recoverySettings: OptimizeRecoveryContext,
+) {
+  if (recoverySettings.connected && recoverySettings.livemode === true) {
+    return {
+      casesHref: "/dashboard/cases?environment=live",
+      label: "Live Stripe data",
+      livemode: true,
+    } as const;
+  }
+
+  if (recoverySettings.connected && recoverySettings.livemode === false) {
+    return {
+      casesHref: "/dashboard/cases?environment=test",
+      label: "Test Stripe data",
+      livemode: false,
+    } as const;
+  }
+
+  return {
+    casesHref: "/dashboard/cases",
+    label: "All recorded Stripe environments",
+    livemode: null,
+  } as const;
 }
 
 export async function getOptimizeRecommendations(
@@ -208,7 +239,19 @@ export function buildOptimizeRecommendations(
   recoveryMessages: RecoveryMessageOptimizationRow[],
   recoverySettings: OptimizeRecoveryContext = DEFAULT_RECOVERY_CONTEXT,
 ): OptimizeRecommendations {
-  const openFailedPayments = failedPayments.filter(isOpenFailedPayment);
+  const environment = getOptimizeEnvironmentScope(recoverySettings);
+  const scopedFailedPayments = environment.livemode === null
+    ? failedPayments
+    : failedPayments.filter(
+        (payment) => payment.livemode === environment.livemode,
+      );
+  const scopedFailedPaymentIds = new Set(
+    scopedFailedPayments.map((payment) => payment.id),
+  );
+  const scopedRecoveryMessages = recoveryMessages.filter((message) =>
+    scopedFailedPaymentIds.has(message.failed_payment_id),
+  );
+  const openFailedPayments = scopedFailedPayments.filter(isOpenFailedPayment);
   const openRevenueAtRisk = aggregateCurrencyAmounts(
     openFailedPayments.map((payment) => ({
       amount: payment.amount_due,
@@ -218,19 +261,21 @@ export function buildOptimizeRecommendations(
   const recommendations = buildRecommendations(
     openFailedPayments.length,
     recoverySettings,
+    environment.casesHref,
   );
 
   return {
+    environmentLabel: environment.label,
     impactSummary: {
       caption: openFailedPayments.length > 0
-        ? `Across ${openFailedPayments.length} open failed payment${openFailedPayments.length === 1 ? "" : "s"}`
-        : "Waiting for failed payment data",
+        ? `Across ${openFailedPayments.length} open failed payment${openFailedPayments.length === 1 ? "" : "s"} · ${environment.label}`
+        : `Waiting for failed payment data · ${environment.label}`,
       value: formatCurrencyAmounts(openRevenueAtRisk),
     },
     intro: {
       count: recommendations.length,
       summary: openFailedPayments.length > 0
-        ? `Your account currently has ${openFailedPayments.length} open failed payment${openFailedPayments.length === 1 ? "" : "s"} and ${recoveryMessages.length} recovery message${recoveryMessages.length === 1 ? "" : "s"} in its history.`
+        ? `This environment currently has ${openFailedPayments.length} open failed payment${openFailedPayments.length === 1 ? "" : "s"} and ${scopedRecoveryMessages.length} recovery message${scopedRecoveryMessages.length === 1 ? "" : "s"} in its history.`
         : "Guidance is based on your current Stripe connection and recovery delivery mode.",
     },
     recommendations,

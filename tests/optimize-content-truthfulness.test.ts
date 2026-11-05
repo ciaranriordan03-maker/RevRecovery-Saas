@@ -61,6 +61,8 @@ describe("Optimize content truthfulness", () => {
         {
           amount_due: 100,
           currency: "eur",
+          id: "fp_1",
+          livemode: true,
           recovery_stage: "email_1",
           status: "active",
           stripe_customer_id: "cus_1",
@@ -77,10 +79,65 @@ describe("Optimize content truthfulness", () => {
 
     expect(result.recommendations).toHaveLength(2);
     expect(result.recommendations[1]).toMatchObject({
-      actionHref: "/dashboard/recovery",
+      actionHref: "/dashboard/cases?environment=live",
       actionLabel: "View active cases",
       title: "Review active recovery cases",
     });
+  });
+
+  it("isolates recommendations and message history to the connected Stripe environment", () => {
+    const result = buildOptimizeRecommendations(
+      [
+        {
+          amount_due: 7900,
+          currency: "eur",
+          id: "fp_test",
+          livemode: false,
+          recovery_stage: "email_1",
+          status: "active",
+          stripe_customer_id: "cus_test",
+        },
+        {
+          amount_due: 15000,
+          currency: "eur",
+          id: "fp_live",
+          livemode: true,
+          recovery_stage: "email_1",
+          status: "active",
+          stripe_customer_id: "cus_live",
+        },
+      ],
+      [
+        {
+          failed_payment_id: "fp_test",
+          message_key: "email_1",
+          status: "sent",
+          step_number: 1,
+        },
+        {
+          failed_payment_id: "fp_live",
+          message_key: "email_1",
+          status: "sent",
+          step_number: 1,
+        },
+      ],
+      {
+        approvedTestRecipient: "test@revrecovery.io",
+        connected: true,
+        livemode: false,
+        mode: "test",
+      },
+    );
+
+    expect(result.environmentLabel).toBe("Test Stripe data");
+    expect(result.impactSummary).toEqual({
+      caption: "Across 1 open failed payment · Test Stripe data",
+      value: "€79.00",
+    });
+    expect(result.intro.summary).toContain("1 recovery message in its history");
+    expect(result.recommendations[1]?.actionHref).toBe(
+      "/dashboard/cases?environment=test",
+    );
   });
 
   it("uses links and contains no unsupported or inert Optimize controls", () => {

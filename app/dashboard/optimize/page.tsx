@@ -6,7 +6,7 @@ import { getOptimizeRecommendations } from "../../lib/server/optimize-recommenda
 
 export const metadata: Metadata = {
   title: "Optimization | RevRecovery",
-  description: "Data-informed suggestions to improve recovery workflows.",
+  description: "Practical next actions based on your current recovery state.",
 };
 
 export default async function OptimizePage() {
@@ -16,7 +16,7 @@ export default async function OptimizePage() {
   return (
     <AppShell
       active="Optimize"
-      subtitle="Data-informed suggestions to improve recovery workflows"
+      subtitle="Practical next actions based on your current recovery state"
       title="Optimization"
     >
       <OptimizeContent optimizeRecommendations={optimizeRecommendations} />

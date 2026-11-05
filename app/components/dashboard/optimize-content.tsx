@@ -17,9 +17,14 @@ export function OptimizeContent({
               <Icon name="sparkles" className="size-6" />
             </div>
             <div>
-              <h2 className="text-base font-medium tracking-[-0.02em] text-[var(--foreground)]">
-                Recovery guidance
-              </h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-medium tracking-[-0.02em] text-[var(--foreground)]">
+                  Recovery guidance
+                </h2>
+                <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--muted-strong)] shadow-[var(--shadow-subtle)]">
+                  {optimizeRecommendations.environmentLabel}
+                </span>
+              </div>
               <p className="mt-2 text-sm text-[var(--muted-strong)]">
                 Review {optimizeRecommendations.intro.count} practical action{optimizeRecommendations.intro.count === 1 ? "" : "s"}.
                 {" "}{optimizeRecommendations.intro.summary}

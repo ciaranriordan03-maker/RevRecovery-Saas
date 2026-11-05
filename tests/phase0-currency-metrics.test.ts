@@ -65,15 +65,15 @@ describe("Phase 0 currency-safe metrics", () => {
   it("uses the same state and currency rules for Optimize", () => {
     const result = buildOptimizeRecommendations(
       [
-        { amount_due: 1200, currency: "gbp", recovery_stage: "email_1", status: "active", stripe_customer_id: "cus_1" },
-        { amount_due: 800, currency: "eur", recovery_stage: "email_2", status: "exhausted", stripe_customer_id: "cus_2" },
-        { amount_due: 900, currency: "usd", recovery_stage: "closed", status: "canceled_by_merchant", stripe_customer_id: "cus_3" },
+        { amount_due: 1200, currency: "gbp", id: "fp_1", livemode: false, recovery_stage: "email_1", status: "active", stripe_customer_id: "cus_1" },
+        { amount_due: 800, currency: "eur", id: "fp_2", livemode: false, recovery_stage: "email_2", status: "exhausted", stripe_customer_id: "cus_2" },
+        { amount_due: 900, currency: "usd", id: "fp_3", livemode: false, recovery_stage: "closed", status: "canceled_by_merchant", stripe_customer_id: "cus_3" },
       ],
       [],
     );
 
     expect(result.impactSummary).toEqual({
-      caption: "Across 2 open failed payments",
+      caption: "Across 2 open failed payments · All recorded Stripe environments",
       value: "€8.00 + £12.00",
     });
   });
