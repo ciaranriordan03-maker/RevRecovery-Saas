@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { InsightsView } from "../../lib/insights-view";
 import { Icon } from "../ui-icon";
 import { MeasurementManifestVerification } from "./measurement-manifest-verification";
 import type {
@@ -18,6 +19,95 @@ import type {
   SegmentMetric,
 } from "../../lib/server/insights-metrics";
 
+const environmentLabels: Record<InsightsFilter["environment"], string> = {
+  live: "Live evidence",
+  test: "Test evidence",
+  unconfirmed: "Environment unconfirmed",
+};
+
+const insightsViews: ReadonlyArray<{
+  hrefLabel: string;
+  label: string;
+  value: InsightsView;
+}> = [
+  { hrefLabel: "Overview", label: "Overview", value: "overview" },
+  { hrefLabel: "Performance", label: "Performance", value: "performance" },
+  { hrefLabel: "Evidence", label: "Evidence & methodology", value: "evidence" },
+];
+
+function getInsightsHref(
+  filter: InsightsFilter,
+  view: InsightsView,
+  overrides: Partial<InsightsFilter> = {},
+) {
+  const nextFilter = { ...filter, ...overrides };
+  return `/dashboard/insights?environment=${nextFilter.environment}&period=${nextFilter.period}&segment=${nextFilter.segment}&view=${view}`;
+}
+
+function InsightsWorkspaceHeader({
+  filter,
+}: {
+  filter: InsightsFilter;
+}) {
+  return (
+    <header className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-[-0.025em] text-[var(--foreground)]">
+            Insights
+          </h1>
+          <span className="inline-flex rounded-[6px] bg-[var(--primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--primary)]">
+            {environmentLabels[filter.environment]}
+          </span>
+        </div>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+          Understand recovery performance without overstating what the evidence proves.
+        </p>
+        <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-[var(--muted-strong)]">
+          <Icon className="mt-0.5 size-4 shrink-0" name="shield-check" />
+          <span>Read only. Changing this view never changes recovery delivery, customer data, or calculations.</span>
+        </p>
+      </div>
+      <Link
+        className="inline-flex h-10 w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--text-subtle)] transition hover:bg-[var(--surface-muted)]"
+        href={getInsightsHref(filter, "evidence")}
+      >
+        Review evidence
+      </Link>
+    </header>
+  );
+}
+
+function InsightsWorkspaceNavigation({
+  active,
+  filter,
+}: {
+  active: InsightsView;
+  filter: InsightsFilter;
+}) {
+  return (
+    <nav aria-label="Insights views" className="overflow-x-auto border-b border-[var(--border)]">
+      <div className="flex min-w-max gap-6">
+        {insightsViews.map((item) => (
+          <Link
+            aria-current={active === item.value ? "page" : undefined}
+            className={`border-b-2 px-0.5 pb-3 text-sm font-medium transition-colors ${
+              active === item.value
+                ? "border-[var(--primary)] text-[var(--primary)]"
+                : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+            href={getInsightsHref(filter, item.value)}
+            key={item.value}
+          >
+            <span className="sm:hidden">{item.hrefLabel}</span>
+            <span className="hidden sm:inline">{item.label}</span>
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetric }) {
   const manifestJson = `${JSON.stringify(metric.exportManifest, null, 2)}\n`;
   const manifestFilename = `revrecovery-insights-evidence-${metric.evaluatedAt.replace(/[:.]/g, "-")}.json`;
@@ -25,13 +115,13 @@ function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetri
 
   return (
     <section
-      aria-labelledby="measurement-evidence-heading"
+      aria-labelledby="measurement-evidence-detail-heading"
       className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Audit context</p>
-          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="measurement-evidence-heading">
+          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="measurement-evidence-detail-heading">
             {metric.title}
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">Exact scope, boundaries, gates, and definitions for this view.</p>
@@ -255,7 +345,7 @@ function DescriptiveBaselinePanel({ metric }: { metric: DescriptiveBaselineMetri
         <div className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] p-4">
           <p className="text-sm font-medium text-[var(--foreground)]">No baseline values are displayed</p>
           <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
-            Complete every Baseline readiness gate above before treating this cohort as a descriptive benchmark.
+            Review the Baseline readiness checks in Evidence &amp; methodology before treating this cohort as a descriptive benchmark.
           </p>
         </div>
       )}
@@ -355,29 +445,41 @@ function MeasurementQualityPanel({ metric }: { metric: MeasurementQualityMetric 
   );
 }
 
-function InsightFilters({ filter }: { filter: InsightsFilter }) {
+function InsightFilters({ filter, view }: { filter: InsightsFilter; view: InsightsView }) {
   const periods = [["30d", "30 days"], ["90d", "90 days"], ["all", "All time"]] as const;
   const segments = [["all", "All audiences"], ["subscription", "Subscriptions"], ["standalone", "Standalone"], ["unknown", "Unknown"]] as const;
   const environments = [["live", "Live"], ["test", "Test"], ["unconfirmed", "Unconfirmed"]] as const;
   return (
-    <section className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
-      <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Evidence environment</p>
-        <div className="flex flex-wrap gap-2" aria-label="Evidence environment">
-          {environments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.environment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?environment=${value}&period=${filter.period}&segment=${filter.segment}`} key={value}>{label}</Link>)}
-        </div>
-      </div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Failure period</p>
-          <div className="flex flex-wrap gap-2" aria-label="Date range">
-            {periods.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.period === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?environment=${filter.environment}&period=${value}&segment=${filter.segment}`} key={value}>{label}</Link>)}
+          <h2 className="text-base font-semibold text-[var(--foreground)]">View scope</h2>
+          <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+            Choose the evidence you want to inspect. Test and live results always remain separate.
+          </p>
+        </div>
+        <span className="mt-2 w-fit rounded-[6px] bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-medium text-[var(--muted-strong)] sm:mt-0">
+          {environmentLabels[filter.environment]}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[0.8fr_0.8fr_1.4fr]">
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">Environment</p>
+          <div className="flex flex-wrap gap-2" aria-label="Evidence environment">
+            {environments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.environment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--surface-muted)] text-[var(--muted-strong)] hover:text-[var(--foreground)]"}`} href={getInsightsHref(filter, view, { environment: value })} key={value}>{label}</Link>)}
           </div>
         </div>
         <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Invoice audience</p>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">Failure period</p>
+          <div className="flex flex-wrap gap-2" aria-label="Date range">
+            {periods.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.period === value ? "bg-[var(--primary)] text-white" : "bg-[var(--surface-muted)] text-[var(--muted-strong)] hover:text-[var(--foreground)]"}`} href={getInsightsHref(filter, view, { period: value })} key={value}>{label}</Link>)}
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">Invoice audience</p>
           <div className="flex flex-wrap gap-2" aria-label="Audience cohort">
-            {segments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.segment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--background)] text-[var(--muted-strong)]"}`} href={`?environment=${filter.environment}&period=${filter.period}&segment=${value}`} key={value}>{label}</Link>)}
+            {segments.map(([value, label]) => <Link className={`rounded-[8px] px-3 py-2 text-sm ${filter.segment === value ? "bg-[var(--primary)] text-white" : "bg-[var(--surface-muted)] text-[var(--muted-strong)] hover:text-[var(--foreground)]"}`} href={getInsightsHref(filter, view, { segment: value })} key={value}>{label}</Link>)}
           </div>
         </div>
       </div>
@@ -543,6 +645,270 @@ function SequenceSummaryCard({ metrics }: { metrics: SequenceSummaryMetric[] }) 
   );
 }
 
+function OverviewMetric({
+  caption,
+  label,
+  value,
+}: {
+  caption: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <article className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+      <p className="text-xs leading-5 text-[var(--muted)]">{label}</p>
+      <p className="mt-1.5 break-words text-[28px] font-semibold leading-9 tracking-[-0.03em] text-[var(--foreground)]">
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] leading-4 text-[var(--muted)]">{caption}</p>
+    </article>
+  );
+}
+
+function ReportingReadiness({
+  filter,
+  insights,
+}: {
+  filter: InsightsFilter;
+  insights: InsightsMetrics;
+}) {
+  const passedGateCount = insights.dataSufficiency.gates.filter((gate) => gate.passed).length;
+  const totalGateCount = insights.dataSufficiency.gates.length;
+
+  return (
+    <section className="overflow-hidden rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]">
+      <div className="grid gap-px bg-[var(--border)] lg:grid-cols-2">
+        <div className="bg-[var(--surface)] p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">
+                Can I trust this view?
+              </p>
+              <h2 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+                {insights.dataSufficiency.eligible ? "Ready for descriptive reporting" : "Evidence is still developing"}
+              </h2>
+            </div>
+            <span className={`shrink-0 rounded-[6px] px-2.5 py-1 text-xs font-semibold ${insights.dataSufficiency.eligible ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--warning-soft)] text-[var(--warning-text)]"}`}>
+              {passedGateCount} of {totalGateCount} checks
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+            {insights.dataSufficiency.eligible
+              ? "The selected cohort passes the safeguards required to show a descriptive baseline."
+              : "Operational results remain visible, but baseline and comparison claims stay withheld until every check passes."}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {insights.dataSufficiency.gates.map((gate) => (
+              <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs text-[var(--muted-strong)]" key={gate.label}>
+                <span aria-hidden className={`size-1.5 rounded-full ${gate.passed ? "bg-[var(--success)]" : "bg-[var(--warning-text)]"}`} />
+                {gate.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[var(--surface)] p-5 sm:p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">
+            Reporting status
+          </p>
+          <div className="mt-3 divide-y divide-[var(--border)]">
+            <div className="flex items-center justify-between gap-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--foreground)]">Descriptive baseline</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">A factual summary of the selected cohort</p>
+              </div>
+              <span className="text-xs font-semibold text-[var(--muted-strong)]">
+                {insights.baselineSummary.available ? "Available" : "Withheld"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--foreground)]">Period comparison</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">Observed change, never attributed lift</p>
+              </div>
+              <span className="text-xs font-semibold text-[var(--muted-strong)]">
+                {insights.cohortComparison.available ? "Available" : "Withheld"}
+              </span>
+            </div>
+          </div>
+          <Link className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)]" href={getInsightsHref(filter, "evidence")}>
+            See checks and methodology
+            <Icon className="size-3.5" name="arrow-right" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function InsightsOverview({
+  filter,
+  insights,
+}: {
+  filter: InsightsFilter;
+  insights: InsightsMetrics;
+}) {
+  const recoveryRate = insights.sequenceSummary[0];
+  const recoveryTime = insights.sequenceSummary[1];
+  const deliveryRate = insights.deliveryHealth.deliveryRate === null
+    ? "Awaiting data"
+    : `${insights.deliveryHealth.deliveryRate}%`;
+
+  return (
+    <>
+      <section aria-label="Recovery performance summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <OverviewMetric
+          caption={recoveryRate?.caption ?? "No eligible sequences yet"}
+          label={recoveryRate?.label ?? "Sequence recovery rate"}
+          value={recoveryRate?.value ?? "—"}
+        />
+        <OverviewMetric
+          caption={recoveryTime?.caption ?? "Waiting for the first recovery"}
+          label={recoveryTime?.label ?? "Average recovery time"}
+          value={recoveryTime?.value ?? "—"}
+        />
+        <OverviewMetric
+          caption="Provider-confirmed outcomes only"
+          label="Delivery rate"
+          value={deliveryRate}
+        />
+        <OverviewMetric
+          caption="Directional engagement signal"
+          label="Unique clicks"
+          value={String(insights.emailEngagement.clickedCount)}
+        />
+      </section>
+
+      <ReportingReadiness filter={filter} insights={insights} />
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <DescriptiveBaselinePanel metric={insights.baselineSummary} />
+        <CohortComparisonPanel metric={insights.cohortComparison} />
+      </div>
+    </>
+  );
+}
+
+function InsightsWorkspaceSection({
+  children,
+  description,
+  title,
+}: {
+  children: React.ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <section>
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">{description}</p>
+      </div>
+      <div className="flex flex-col gap-5">{children}</div>
+    </section>
+  );
+}
+
+function InsightsDisclosure({
+  children,
+  defaultOpen = false,
+  description,
+  id,
+  status,
+  title,
+}: {
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  description: string;
+  id?: string;
+  status: string;
+  title: string;
+}) {
+  return (
+    <details
+      className="group overflow-hidden rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]"
+      id={id}
+      open={defaultOpen}
+    >
+      <summary className="flex list-none cursor-pointer items-start justify-between gap-4 px-5 py-5 sm:px-6 [&::-webkit-details-marker]:hidden">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</h3>
+            <span className="rounded-[6px] bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">
+              {status}
+            </span>
+          </div>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">{description}</p>
+        </div>
+        <Icon
+          className="mt-1 size-4 shrink-0 text-[var(--muted)] transition-transform group-open:rotate-180"
+          name="chevron-down"
+        />
+      </summary>
+      <div className="border-t border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
+        <div className="flex flex-col gap-5">{children}</div>
+      </div>
+    </details>
+  );
+}
+
+function EvidenceOverview({ insights }: { insights: InsightsMetrics }) {
+  const passedGateCount = insights.dataSufficiency.gates.filter((gate) => gate.passed).length;
+  const totalGateCount = insights.dataSufficiency.gates.length;
+  const attentionCount = insights.measurementQuality.items.filter(
+    (item) => item.status === "attention",
+  ).length;
+
+  return (
+    <section className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">
+            Evidence summary
+          </p>
+          <h3 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+            What this view can support
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+            Check the selected cohort, reporting readiness, and traceability before using these figures externally.
+          </p>
+        </div>
+        <span className="w-fit rounded-[6px] bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--muted-strong)]">
+          Read only
+        </span>
+      </div>
+
+      <dl className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="rounded-[10px] bg-[var(--surface-muted)] p-4">
+          <dt className="text-xs text-[var(--muted)]">Selected evidence</dt>
+          <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            {insights.measurementEvidence.scope.environment}
+          </dd>
+          <p className="mt-1 text-xs text-[var(--muted)]">{insights.measurementEvidence.scope.audience}</p>
+        </div>
+        <div className="rounded-[10px] bg-[var(--surface-muted)] p-4">
+          <dt className="text-xs text-[var(--muted)]">Baseline readiness</dt>
+          <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            {passedGateCount} of {totalGateCount} checks passed
+          </dd>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            {insights.dataSufficiency.eligible ? "Descriptive reporting is available" : "Reporting remains withheld"}
+          </p>
+        </div>
+        <div className="rounded-[10px] bg-[var(--surface-muted)] p-4">
+          <dt className="text-xs text-[var(--muted)]">Quality review</dt>
+          <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            {attentionCount === 0 ? "No open cautions" : `${attentionCount} ${attentionCount === 1 ? "caution" : "cautions"}`}
+          </dd>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Contract {insights.measurementEvidence.traceability.contractVersion}
+          </p>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
 function DeliveryHealthCard({ metric }: { metric: DeliveryHealthMetric }) {
   const rateLabel = metric.deliveryRate === null ? "Awaiting outcomes" : `${metric.deliveryRate}%`;
   const rateCaption = metric.deliveryRate === null
@@ -632,39 +998,99 @@ function EmailRecoveryTable({ rows }: { rows: EmailRecoveryMetric[] }) {
   );
 }
 
-export function InsightsContent({ filter, insights }: { filter: InsightsFilter; insights: InsightsMetrics }) {
+export function InsightsContent({
+  filter,
+  insights,
+  view = "overview",
+}: {
+  filter: InsightsFilter;
+  insights: InsightsMetrics;
+  view?: InsightsView;
+}) {
   return (
-    <div className="px-5 py-8 sm:px-8">
-      <div className="mx-auto flex max-w-[1024px] flex-col gap-7">
-        <InsightFilters filter={filter} />
-        <MeasurementQualityPanel metric={insights.measurementQuality} />
-        <DataSufficiencyPanel metric={insights.dataSufficiency} />
-        <DescriptiveBaselinePanel metric={insights.baselineSummary} />
-        <CohortComparisonPanel metric={insights.cohortComparison} />
-        <MeasurementEvidencePanel metric={insights.measurementEvidence} />
-        <SequenceSummaryCard metrics={insights.sequenceSummary} />
+    <div className="px-5 py-7 sm:px-8 lg:px-8 lg:py-8 xl:px-10">
+      <div className="mx-auto flex max-w-[1120px] flex-col gap-7">
+        <InsightsWorkspaceHeader filter={filter} />
+        <InsightsWorkspaceNavigation active={view} filter={filter} />
+        <InsightFilters filter={filter} view={view} />
 
-        <SegmentBreakdown rows={insights.segmentBreakdown} />
+        {view === "overview" ? (
+          <InsightsOverview filter={filter} insights={insights} />
+        ) : null}
 
-        <DeliveryHealthCard metric={insights.deliveryHealth} />
+        {view === "performance" ? (
+          <InsightsWorkspaceSection
+            description="Inspect recovery outcomes, audience patterns, delivery health, and engagement for the selected evidence."
+            title="Performance details"
+          >
+            <SequenceSummaryCard metrics={insights.sequenceSummary} />
+            <InsightsDisclosure
+              description="Compare subscription, standalone, and unconfirmed invoice cohorts without mixing them together."
+              status={`${insights.segmentBreakdown.length} audiences`}
+              title="Audience breakdown"
+            >
+              <SegmentBreakdown rows={insights.segmentBreakdown} />
+            </InsightsDisclosure>
+            <InsightsDisclosure
+              description="Review provider outcomes, unique engagement, and recoveries observed after the latest prior email."
+              status={insights.deliveryHealth.deliveryRate === null ? "Awaiting outcomes" : `${insights.deliveryHealth.deliveryRate}% delivered`}
+              title="Email delivery and engagement"
+            >
+              <DeliveryHealthCard metric={insights.deliveryHealth} />
+              <EmailEngagementCard metric={insights.emailEngagement} />
+              <EmailRecoveryTable rows={insights.emailRecovery} />
+            </InsightsDisclosure>
+            <InsightsDisclosure
+              description="Inspect the delivery funnel and supporting operational status only when you need the extra detail."
+              status="Read only"
+              title="Operational detail"
+            >
+              <RecoveryFunnelCard funnel={insights.funnel} />
+              <div className="grid gap-5 xl:grid-cols-2">
+                {insights.cards.map((card) => (
+                  <InsightCard
+                    icon={card.icon}
+                    iconClass={card.iconClass}
+                    key={card.title}
+                    rows={card.rows}
+                    title={card.title}
+                  />
+                ))}
+              </div>
+            </InsightsDisclosure>
+          </InsightsWorkspaceSection>
+        ) : null}
 
-        <EmailEngagementCard metric={insights.emailEngagement} />
-
-        <EmailRecoveryTable rows={insights.emailRecovery} />
-
-        <RecoveryFunnelCard funnel={insights.funnel} />
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          {insights.cards.map((card) => (
-            <InsightCard
-              icon={card.icon}
-              iconClass={card.iconClass}
-              key={card.title}
-              rows={card.rows}
-              title={card.title}
-            />
-          ))}
-        </div>
+        {view === "evidence" ? (
+          <InsightsWorkspaceSection
+            description="Review the cohort definition, readiness checks, exact boundaries, calculation contract, and sanitized evidence export."
+            title="Evidence & methodology"
+          >
+            <EvidenceOverview insights={insights} />
+            <InsightsDisclosure
+              description="See the cohort definition, maturity, amount basis, and limitations behind the selected figures."
+              status={insights.measurementQuality.items.some((item) => item.status === "attention") ? "Review cautions" : "Clear"}
+              title="Evidence context"
+            >
+              <MeasurementQualityPanel metric={insights.measurementQuality} />
+            </InsightsDisclosure>
+            <InsightsDisclosure
+              description="Confirm the selected evidence has enough cases, mature outcomes, valid currency data, and environment information."
+              status={insights.dataSufficiency.eligible ? "Ready" : `${insights.dataSufficiency.gates.filter((gate) => gate.passed).length} of ${insights.dataSufficiency.gates.length} checks`}
+              title="Baseline readiness"
+            >
+              <DataSufficiencyPanel metric={insights.dataSufficiency} />
+            </InsightsDisclosure>
+            <InsightsDisclosure
+              description="Inspect exact boundaries, the measurement contract, fingerprint, sanitized export, and verification workflow."
+              id="measurement-evidence-heading"
+              status="Export & verify"
+              title="Audit record"
+            >
+              <MeasurementEvidencePanel metric={insights.measurementEvidence} />
+            </InsightsDisclosure>
+          </InsightsWorkspaceSection>
+        ) : null}
       </div>
     </div>
   );

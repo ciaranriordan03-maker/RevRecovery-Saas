@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "../../components/dashboard/app-shell";
 import { InsightsContent } from "../../components/dashboard/insights-content";
 import { requireCompletedOnboarding } from "../../lib/auth";
+import { getInsightsView } from "../../lib/insights-view";
 import { getRecoveryModeSettingsForUser } from "../../lib/server/recovery-account-settings";
 import { getInsightsMetrics, normalizeInsightsFilter } from "../../lib/server/insights-metrics";
 
@@ -10,7 +11,16 @@ export const metadata: Metadata = {
   description: "Performance breakdown and key learnings for recovery flows.",
 };
 
-export default async function InsightsPage({ searchParams }: PageProps<"/dashboard/insights">) {
+type InsightsPageProps = {
+  searchParams?: Promise<{
+    environment?: string | string[];
+    period?: string | string[];
+    segment?: string | string[];
+    view?: string | string[];
+  }>;
+};
+
+export default async function InsightsPage({ searchParams }: InsightsPageProps) {
   const { claims } = await requireCompletedOnboarding();
   const [params, recoverySettings] = await Promise.all([
     searchParams,
@@ -22,15 +32,17 @@ export default async function InsightsPage({ searchParams }: PageProps<"/dashboa
       ? "test"
       : "unconfirmed";
   const filter = normalizeInsightsFilter(params, defaultEnvironment);
+  const view = getInsightsView(params?.view);
   const insightsMetrics = await getInsightsMetrics(claims.sub, filter);
 
   return (
     <AppShell
       active="Insights"
+      showPageHeading={false}
       subtitle="Performance breakdown and key learnings"
       title="Insights"
     >
-      <InsightsContent filter={filter} insights={insightsMetrics} />
+      <InsightsContent filter={filter} insights={insightsMetrics} view={view} />
     </AppShell>
   );
 }
