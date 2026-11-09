@@ -17,6 +17,7 @@ import {
   getRecoverySchedule,
   type RecoveryScheduleId,
 } from "../../lib/recovery/schedule-policy";
+import { AccountAlertsSettings } from "./notification-test-recipient-settings";
 
 type LoadState = {
   settings: UserSettings;
@@ -432,6 +433,12 @@ export function SettingsContent({
             </div>
           </div>
         </SettingsSection>
+        </div>
+
+        <div id="account-alerts">
+          <SettingsSection icon="bell" title="Account alerts">
+            <AccountAlertsSettings />
+          </SettingsSection>
         </div>
 
         <SettingsSection icon="refresh" title="Recovery setup">

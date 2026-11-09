@@ -5,9 +5,6 @@ import type { ActivationReadiness } from "../../lib/recovery/activation-readines
 import type { ControlledTestEligibility } from "../../lib/recovery/controlled-test-plan";
 import type { RecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
 import { buildRecoveryHealthSummary } from "../../lib/recovery/recovery-health";
-import type { PreviewNotificationHistory } from "../../lib/recovery/notification-event-history";
-import type { NotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
-import type { NotificationActivationReview as NotificationActivationReviewModel } from "../../lib/recovery/notification-activation-review";
 import {
   RecoveryOverview,
   RecoveryWorkspaceHeader,
@@ -17,7 +14,6 @@ import {
 } from "./recovery-workspace";
 import {
   MessagesAndTimingWorkspace,
-  NotificationsWorkspace,
   SafetyWorkspace,
 } from "./recovery-workspace-details";
 import {
@@ -26,21 +22,17 @@ import {
 } from "./recovery-settings-workspace";
 
 type RecoveryContentProps = {
-  accountEmail: string;
   atRiskCustomers?: AtRiskCustomer[];
   activationReadiness: ActivationReadiness;
   controlledTestEligibility: ControlledTestEligibility;
   mode?: "sequence" | "customize" | "review";
   opportunityReport: RecoveryOpportunityReport;
-  notificationHistory: PreviewNotificationHistory;
-  notificationActivationReview: NotificationActivationReviewModel;
-  notificationReadiness: NotificationActivationReadiness;
   recoveryView: RecoveryFlowView;
   userSettings: UserSettings;
   view?: RecoveryWorkspaceView;
 };
 
-function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView, userSettings, view }: { accountEmail: string; activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; notificationActivationReview: NotificationActivationReviewModel; notificationHistory: PreviewNotificationHistory; notificationReadiness: NotificationActivationReadiness; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView; userSettings: UserSettings; view: RecoveryWorkspaceView }) {
+function RecoverySequence({ activationReadiness, atRiskCustomers, opportunityReport, recoveryView, userSettings, view }: { activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView; userSettings: UserSettings; view: RecoveryWorkspaceView }) {
   const recoveryHealth = buildRecoveryHealthSummary(
     activationReadiness,
     recoveryView.mode,
@@ -74,20 +66,6 @@ function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, 
           </RecoveryWorkspaceSection>
         ) : null}
 
-        {view === "notifications" ? (
-          <RecoveryWorkspaceSection
-            description="Review the proposed alert policy, recorded preview events, and controlled delivery evidence. Nothing on this screen sends a notification."
-            title="Notifications"
-          >
-            <NotificationsWorkspace
-              accountEmail={accountEmail}
-              activationReview={notificationActivationReview}
-              history={notificationHistory}
-              readiness={notificationReadiness}
-            />
-          </RecoveryWorkspaceSection>
-        ) : null}
-
         {view === "safety" ? (
           <RecoveryWorkspaceSection
             description="Inspect recovery health and the safeguards that must pass before controlled testing or live activation can be considered."
@@ -101,8 +79,8 @@ function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, 
   );
 }
 
-export function RecoveryContent({ accountEmail, activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView, userSettings, view = "overview" }: RecoveryContentProps) {
+export function RecoveryContent({ activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", opportunityReport, recoveryView, userSettings, view = "overview" }: RecoveryContentProps) {
   if (mode === "review") return <RecoveryReviewWorkspace recoveryView={recoveryView} />;
   if (mode === "customize") return <RecoverySettingsWorkspace controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
-  return <RecoverySequence accountEmail={accountEmail} activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} notificationActivationReview={notificationActivationReview} notificationHistory={notificationHistory} notificationReadiness={notificationReadiness} opportunityReport={opportunityReport} recoveryView={recoveryView} userSettings={userSettings} view={view} />;
+  return <RecoverySequence activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} opportunityReport={opportunityReport} recoveryView={recoveryView} userSettings={userSettings} view={view} />;
 }

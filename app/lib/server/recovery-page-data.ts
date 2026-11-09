@@ -6,13 +6,9 @@ import {
   getActivationReadinessForUser,
   getControlledTestEligibility,
 } from "./activation-readiness";
-import { getNotificationActivationReviewForUser } from "./notification-activation-review";
 import { getRecoveryModeSettingsForUser } from "./recovery-account-settings";
-import { getPreviewRecoveryNotificationHistory } from "./recovery-notification-events";
 import { getUserSettings } from "./settings-store";
 import { getStripeConnectionSummary } from "./stripe-connections";
-import { unavailableNotificationActivationReview } from "../recovery/notification-activation-review";
-import { evaluateNotificationActivationReadiness } from "../recovery/notification-activation-readiness";
 import { buildRecoveryOpportunityReport } from "../recovery/opportunity-report";
 import { buildRecoveryFlowView } from "../recovery/recovery-view";
 
@@ -27,7 +23,7 @@ export function getRecoveryPageMode(step: string | undefined): RecoveryPageMode 
 export function getRecoveryWorkspaceView(
   value: string | undefined,
 ): RecoveryWorkspaceView {
-  if (value === "flow" || value === "notifications" || value === "safety") {
+  if (value === "flow" || value === "safety") {
     return value;
   }
 
@@ -35,11 +31,9 @@ export function getRecoveryWorkspaceView(
 }
 
 export async function loadRecoveryPageData({
-  accountEmail,
   mode,
   userId,
 }: {
-  accountEmail: string;
   mode: RecoveryPageMode;
   userId: string;
 }) {
@@ -48,19 +42,11 @@ export async function loadRecoveryPageData({
     recoverySettings,
     atRiskCustomers,
     stripeConnection,
-    notificationHistory,
-    notificationActivationReview,
   ] = await Promise.all([
     getUserSettings(userId),
     getRecoveryModeSettingsForUser(userId),
     mode === "sequence" ? getAtRiskCustomers(userId) : Promise.resolve([]),
     getStripeConnectionSummary(userId),
-    mode === "sequence"
-      ? getPreviewRecoveryNotificationHistory(userId)
-      : Promise.resolve({ deliveries: [], events: [], state: "ready" as const }),
-    mode === "sequence"
-      ? getNotificationActivationReviewForUser(userId)
-      : Promise.resolve(unavailableNotificationActivationReview()),
   ]);
   const recoveryView = buildRecoveryFlowView(
     settingsRecord.settings,
@@ -75,21 +61,11 @@ export async function loadRecoveryPageData({
     recoverySettings,
     userSettings: settingsRecord.settings,
   });
-  const notificationReadiness = evaluateNotificationActivationReadiness({
-    accountEmail,
-    activationReadiness,
-    notificationHistory,
-  });
-
   return {
-    accountEmail,
     activationReadiness,
     atRiskCustomers,
     controlledTestEligibility,
     mode,
-    notificationActivationReview,
-    notificationHistory,
-    notificationReadiness,
     opportunityReport: buildRecoveryOpportunityReport(stripeConnection),
     recoveryView,
     userSettings: settingsRecord.settings,

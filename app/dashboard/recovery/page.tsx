@@ -28,9 +28,7 @@ export default async function RecoveryPage({ searchParams }: RecoveryPageProps) 
   const params = await searchParams;
   const mode = getRecoveryPageMode(params?.step);
   const view = getRecoveryWorkspaceView(params?.view);
-  const accountEmail = typeof claims.email === "string" ? claims.email : "Account owner email unavailable";
   const content = await loadRecoveryPageData({
-    accountEmail,
     mode,
     userId: claims.sub,
   });

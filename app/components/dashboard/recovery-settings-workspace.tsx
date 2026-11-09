@@ -5,8 +5,6 @@ import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { UserSettings } from "../../lib/settings";
 import { Icon } from "../ui-icon";
 import { ControlledTestPlan } from "./controlled-test-plan";
-import { NotificationTestAuthorization } from "./notification-test-authorization";
-import { NotificationTestRecipientSettings } from "./notification-test-recipient-settings";
 import { RecoverySettingsForm } from "./recovery-settings-form";
 import { RecoveryMessageCards } from "./recovery-workspace";
 import { SendingDomainSettings } from "./sending-domain-settings";
@@ -84,7 +82,7 @@ function SettingsNavigation() {
     ["#recovery-delivery", "Delivery"],
     ["#email-identity", "Messages"],
     ["#controlled-test-section", "Controlled test"],
-    ["#advanced-safeguards", "Advanced safeguards"],
+    ["#advanced-safeguards", "Delivery safeguards"],
   ] as const;
 
   return (
@@ -172,13 +170,11 @@ export function RecoverySettingsWorkspace({
 
         <div id="advanced-safeguards">
           <SettingsDisclosure
-            description="Manage the separately reviewed recipient, one-time authorization evidence, sending domain, and Stripe overlap guidance. Delivery remains disabled."
-            status="Delivery disabled"
-            title="Advanced notification safeguards"
+            description="Review the customer sending domain and avoid duplicate Stripe messages before live recovery."
+            status="Review before live"
+            title="Delivery safeguards"
           >
             <div className="flex flex-col gap-5">
-              <NotificationTestRecipientSettings />
-              <NotificationTestAuthorization />
               <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6" id="stripe-overlap-guidance">
                 <h3 className="text-base font-medium text-[var(--foreground)]">Stripe communication overlap</h3>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted-strong)]">

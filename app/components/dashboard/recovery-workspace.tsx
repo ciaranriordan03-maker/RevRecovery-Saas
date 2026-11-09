@@ -14,7 +14,6 @@ import { AtRiskCustomersTable } from "./at-risk-customers-table";
 export type RecoveryWorkspaceView =
   | "overview"
   | "flow"
-  | "notifications"
   | "safety";
 
 const modeLabels = {
@@ -84,7 +83,7 @@ const checkActions: Partial<
     label: "Review Stripe connection",
   },
   test_recipient: {
-    href: "/dashboard/recovery?step=customize#notification-test-recipient",
+    href: "/dashboard/recovery?step=customize#recovery-delivery",
     label: "Review test recipient",
   },
   webhook_health: {
@@ -100,11 +99,6 @@ const workspaceTabs: ReadonlyArray<{
 }> = [
   { href: "/dashboard/recovery?view=overview", label: "Overview", value: "overview" },
   { href: "/dashboard/recovery?view=flow", label: "Messages & timing", value: "flow" },
-  {
-    href: "/dashboard/recovery?view=notifications",
-    label: "Notifications",
-    value: "notifications",
-  },
   { href: "/dashboard/recovery?view=safety", label: "Safety & audit", value: "safety" },
 ];
 

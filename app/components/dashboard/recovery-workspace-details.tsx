@@ -1,15 +1,10 @@
 import Link from "next/link";
 import type { ActivationReadiness } from "../../lib/recovery/activation-readiness";
-import type { PreviewNotificationHistory } from "../../lib/recovery/notification-event-history";
-import type { NotificationActivationReadiness } from "../../lib/recovery/notification-activation-readiness";
-import type { NotificationActivationReview as NotificationActivationReviewModel } from "../../lib/recovery/notification-activation-review";
 import type { RecoveryHealthSummary } from "../../lib/recovery/recovery-health";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { UserSettings } from "../../lib/settings";
 import { Icon } from "../ui-icon";
 import { ActivationReadinessChecklist } from "./activation-readiness-checklist";
-import { EssentialNotificationPreview } from "./essential-notification-preview";
-import { NotificationActivationReview } from "./notification-activation-review";
 import { RecoveryHealthBanner } from "./recovery-health-banner";
 import { RecoveryMessageEditor } from "./recovery-message-editor";
 
@@ -128,81 +123,6 @@ export function MessagesAndTimingWorkspace({
           Review flow
         </Link>
       </div>
-    </div>
-  );
-}
-
-export function NotificationsWorkspace({
-  accountEmail,
-  activationReview,
-  history,
-  readiness,
-}: {
-  accountEmail: string;
-  activationReview: NotificationActivationReviewModel;
-  history: PreviewNotificationHistory;
-  readiness: NotificationActivationReadiness;
-}) {
-  const eventCount = history.state === "ready" ? history.events.length : "Unavailable";
-  const deliveryCount = history.state === "ready" ? history.deliveries.length : "Unavailable";
-  const attentionCount = history.deliveries.filter(
-    (delivery) => delivery.state === "attention_required",
-  ).length;
-  const completeChecks = readiness.checks.filter(
-    (check) => check.status === "complete",
-  ).length;
-
-  return (
-    <div className="flex flex-col gap-5">
-      <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Alert policy" tone="primary" value="3 essential rules" />
-        <SummaryCard label="Preview events" value={eventCount} />
-        <SummaryCard
-          detail={attentionCount > 0 ? `${attentionCount} requires evidence review` : "No unresolved delivery evidence"}
-          label="Delivery records"
-          tone={attentionCount > 0 ? "attention" : "healthy"}
-          value={deliveryCount}
-        />
-        <SummaryCard
-          detail={`${completeChecks} of ${readiness.checks.length} safeguards recorded`}
-          label="Notification delivery"
-          tone="attention"
-          value="Disabled"
-        />
-      </dl>
-
-      <section className="flex items-start gap-3 rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:px-6">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary-soft)] text-[var(--primary)]">
-          <Icon className="size-4" name="lock" />
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-[var(--foreground)]">Read-only notification workspace</p>
-          <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-            Review recorded evidence safely. Nothing here enables delivery, retries a message, or contacts the email provider.
-          </p>
-        </div>
-      </section>
-
-      <RecoveryDisclosure
-        description="The proposed alert rules, recorded preview events, reconciliation records, quarantine evidence, and activation checklist."
-        status="Read only"
-        title="Policy and operational evidence"
-      >
-        <EssentialNotificationPreview
-          accountEmail={accountEmail}
-          history={history}
-          readiness={readiness}
-        />
-      </RecoveryDisclosure>
-
-      <RecoveryDisclosure
-        defaultOpen={activationReview.state === "unavailable"}
-        description="The final safeguards proving that notification delivery remains locked until a separate authorization review."
-        status="Delivery locked"
-        title="Final activation review"
-      >
-        <NotificationActivationReview review={activationReview} />
-      </RecoveryDisclosure>
     </div>
   );
 }
