@@ -40,7 +40,7 @@ type RecoveryContentProps = {
   view?: RecoveryWorkspaceView;
 };
 
-function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView, view }: { accountEmail: string; activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; notificationActivationReview: NotificationActivationReviewModel; notificationHistory: PreviewNotificationHistory; notificationReadiness: NotificationActivationReadiness; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView; view: RecoveryWorkspaceView }) {
+function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView, userSettings, view }: { accountEmail: string; activationReadiness: ActivationReadiness; atRiskCustomers: AtRiskCustomer[]; notificationActivationReview: NotificationActivationReviewModel; notificationHistory: PreviewNotificationHistory; notificationReadiness: NotificationActivationReadiness; opportunityReport: RecoveryOpportunityReport; recoveryView: RecoveryFlowView; userSettings: UserSettings; view: RecoveryWorkspaceView }) {
   const recoveryHealth = buildRecoveryHealthSummary(
     activationReadiness,
     recoveryView.mode,
@@ -67,7 +67,10 @@ function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, 
             description="Review the saved three-message sequence, delivery timing, and customer-facing copy used for new recovery cases."
             title="Messages & timing"
           >
-            <MessagesAndTimingWorkspace recoveryView={recoveryView} />
+            <MessagesAndTimingWorkspace
+              recoveryView={recoveryView}
+              userSettings={userSettings}
+            />
           </RecoveryWorkspaceSection>
         ) : null}
 
@@ -101,5 +104,5 @@ function RecoverySequence({ accountEmail, activationReadiness, atRiskCustomers, 
 export function RecoveryContent({ accountEmail, activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", notificationActivationReview, notificationHistory, notificationReadiness, opportunityReport, recoveryView, userSettings, view = "overview" }: RecoveryContentProps) {
   if (mode === "review") return <RecoveryReviewWorkspace recoveryView={recoveryView} />;
   if (mode === "customize") return <RecoverySettingsWorkspace controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
-  return <RecoverySequence accountEmail={accountEmail} activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} notificationActivationReview={notificationActivationReview} notificationHistory={notificationHistory} notificationReadiness={notificationReadiness} opportunityReport={opportunityReport} recoveryView={recoveryView} view={view} />;
+  return <RecoverySequence accountEmail={accountEmail} activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} notificationActivationReview={notificationActivationReview} notificationHistory={notificationHistory} notificationReadiness={notificationReadiness} opportunityReport={opportunityReport} recoveryView={recoveryView} userSettings={userSettings} view={view} />;
 }

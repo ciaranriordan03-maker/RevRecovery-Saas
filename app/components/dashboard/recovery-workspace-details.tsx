@@ -5,12 +5,13 @@ import type { NotificationActivationReadiness } from "../../lib/recovery/notific
 import type { NotificationActivationReview as NotificationActivationReviewModel } from "../../lib/recovery/notification-activation-review";
 import type { RecoveryHealthSummary } from "../../lib/recovery/recovery-health";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
+import type { UserSettings } from "../../lib/settings";
 import { Icon } from "../ui-icon";
 import { ActivationReadinessChecklist } from "./activation-readiness-checklist";
 import { EssentialNotificationPreview } from "./essential-notification-preview";
 import { NotificationActivationReview } from "./notification-activation-review";
 import { RecoveryHealthBanner } from "./recovery-health-banner";
-import { RecoveryMessageCards } from "./recovery-workspace";
+import { RecoveryMessageEditor } from "./recovery-message-editor";
 
 const modeLabels = {
   live: "Live",
@@ -94,8 +95,10 @@ function RecoveryDisclosure({
 
 export function MessagesAndTimingWorkspace({
   recoveryView,
+  userSettings,
 }: {
   recoveryView: RecoveryFlowView;
+  userSettings: UserSettings;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -106,20 +109,17 @@ export function MessagesAndTimingWorkspace({
         <SummaryCard label="Saved messages" tone="healthy" value={recoveryView.messages.length} />
       </dl>
 
-      <section className="rounded-[var(--radius-dashboard-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] px-5 py-4 sm:px-6">
-        <p className="text-sm leading-6 text-[var(--muted-strong)]">
-          These are the saved templates used for new recovery cases. Open a message to inspect its customer-facing preview.
-        </p>
-      </section>
-
-      <RecoveryMessageCards collapsible recoveryView={recoveryView} />
+      <RecoveryMessageEditor
+        initialSettings={userSettings}
+        recoveryView={recoveryView}
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
         <Link
           className="inline-flex h-10 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--text-subtle)] transition hover:bg-[var(--surface-muted)]"
-          href="/dashboard/recovery?step=customize"
+          href="/dashboard/recovery?step=customize#email-identity"
         >
-          View settings
+          Advanced message settings
         </Link>
         <Link
           className="inline-flex h-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] px-4 text-sm font-medium text-white transition hover:bg-[var(--primary-hover)]"

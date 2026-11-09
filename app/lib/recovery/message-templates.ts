@@ -59,6 +59,36 @@ export function getRecoveryMessageTemplatesForTone(tone: string) {
   }));
 }
 
+export function getRecoveryMessageTemplateValidationError(
+  template: RecoveryMessageTemplate,
+  messageNumber: number,
+) {
+  const subject = template.subject.trim();
+  const body = template.bodyPreview.trim();
+
+  if (!subject) {
+    return `Recovery email ${messageNumber} subject is required.`;
+  }
+
+  if (subject.length > 120) {
+    return `Recovery email ${messageNumber} subject must be 120 characters or fewer.`;
+  }
+
+  if (!body) {
+    return `Recovery email ${messageNumber} message is required.`;
+  }
+
+  if (body.length > 1000) {
+    return `Recovery email ${messageNumber} message must be 1000 characters or fewer.`;
+  }
+
+  if (/https?:\/\//i.test(subject) || /https?:\/\//i.test(body)) {
+    return `Recovery email ${messageNumber} cannot include a URL. RevRecovery adds the secure payment link automatically.`;
+  }
+
+  return null;
+}
+
 export function normalizeRecoveryMessageTemplates(source: unknown) {
   if (!Array.isArray(source)) {
     return cloneRecoveryMessageTemplates();
