@@ -580,8 +580,8 @@ export function DashboardContent({
           </div>
         </div>
 
-        <Link className="inline-flex w-fit items-center gap-1 text-[13px] text-[var(--primary)] hover:text-[var(--primary-hover)]" href="/dashboard/optimize">
-          Optimize recovery
+        <Link className="inline-flex min-h-11 w-fit items-center gap-1 rounded-[var(--radius-control)] text-[13px] font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]" href="/dashboard/optimize">
+          View recommendations
           <Icon className="size-3.5" name="arrow-right" />
         </Link>
       </div>

@@ -5,7 +5,7 @@ import { requireCompletedOnboarding } from "../../lib/auth";
 import { getOptimizeRecommendations } from "../../lib/server/optimize-recommendations";
 
 export const metadata: Metadata = {
-  title: "Optimization | RevRecovery",
+  title: "Recommendations | RevRecovery",
   description: "Practical next actions based on your current recovery state.",
 };
 
@@ -17,7 +17,7 @@ export default async function OptimizePage() {
     <AppShell
       active="Optimize"
       subtitle="Practical next actions based on your current recovery state"
-      title="Optimization"
+      title="Recommendations"
     >
       <OptimizeContent optimizeRecommendations={optimizeRecommendations} />
     </AppShell>

@@ -14,11 +14,11 @@ export function Button({
   const variantClass =
     variant === "primary"
       ? "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]"
-      : "border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text-subtle)] hover:bg-[var(--background)]";
+      : "border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text-subtle)] hover:bg-[var(--surface-muted)]";
 
   return (
     <button
-      className={`inline-flex h-[50px] items-center justify-center rounded-[var(--radius-control)] px-6 text-base font-medium transition ${variantClass} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-5 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${variantClass} ${className}`}
       type="button"
       {...props}
     >
