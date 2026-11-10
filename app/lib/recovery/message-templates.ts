@@ -8,6 +8,11 @@ export type RecoveryMessageTemplate = {
   subject: string;
 };
 
+export type RecoveryMessageTemplateFieldErrors = {
+  bodyPreview?: string;
+  subject?: string;
+};
+
 export const RECOVERY_MESSAGE_COPY_VERSION = "settings_v1";
 
 export const RECOVERY_MESSAGE_TEMPLATES: RecoveryMessageTemplate[] = [
@@ -87,6 +92,37 @@ export function getRecoveryMessageTemplateValidationError(
   }
 
   return null;
+}
+
+export function getRecoveryMessageTemplateFieldErrors(
+  template: RecoveryMessageTemplate,
+  messageNumber: number,
+): RecoveryMessageTemplateFieldErrors {
+  const subject = template.subject.trim();
+  const body = template.bodyPreview.trim();
+  const fieldErrors: RecoveryMessageTemplateFieldErrors = {};
+
+  if (!subject) {
+    fieldErrors.subject = `Recovery email ${messageNumber} subject is required.`;
+  } else if (subject.length > 120) {
+    fieldErrors.subject =
+      `Recovery email ${messageNumber} subject must be 120 characters or fewer.`;
+  } else if (/https?:\/\//i.test(subject)) {
+    fieldErrors.subject =
+      `Recovery email ${messageNumber} subject cannot include a URL. RevRecovery adds the secure payment link automatically.`;
+  }
+
+  if (!body) {
+    fieldErrors.bodyPreview = `Recovery email ${messageNumber} message is required.`;
+  } else if (body.length > 1000) {
+    fieldErrors.bodyPreview =
+      `Recovery email ${messageNumber} message must be 1000 characters or fewer.`;
+  } else if (/https?:\/\//i.test(body)) {
+    fieldErrors.bodyPreview =
+      `Recovery email ${messageNumber} message cannot include a URL. RevRecovery adds the secure payment link automatically.`;
+  }
+
+  return fieldErrors;
 }
 
 export function normalizeRecoveryMessageTemplates(source: unknown) {

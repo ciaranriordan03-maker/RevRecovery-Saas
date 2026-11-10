@@ -8,13 +8,6 @@ import { ActivationReadinessChecklist } from "./activation-readiness-checklist";
 import { RecoveryHealthBanner } from "./recovery-health-banner";
 import { RecoveryMessageEditor } from "./recovery-message-editor";
 
-const modeLabels = {
-  live: "Live",
-  off: "Off",
-  paused: "Paused",
-  test: "Test",
-} as const;
-
 function SummaryCard({
   detail,
   label,
@@ -97,25 +90,12 @@ export function MessagesAndTimingWorkspace({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Delivery mode" tone="primary" value={modeLabels[recoveryView.mode]} />
-        <SummaryCard label="Sequence" value={recoveryView.scheduleLabel} />
-        <SummaryCard label="Timezone" value={recoveryView.timezone} />
-        <SummaryCard label="Saved messages" tone="healthy" value={recoveryView.messages.length} />
-      </dl>
-
       <RecoveryMessageEditor
         initialSettings={userSettings}
         recoveryView={recoveryView}
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-        <Link
-          className="inline-flex h-10 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--text-subtle)] transition hover:bg-[var(--surface-muted)]"
-          href="/dashboard/recovery?step=customize#email-identity"
-        >
-          Advanced message settings
-        </Link>
+      <div className="flex justify-end">
         <Link
           className="inline-flex h-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] px-4 text-sm font-medium text-white transition hover:bg-[var(--primary-hover)]"
           href="/dashboard/recovery?step=review"
