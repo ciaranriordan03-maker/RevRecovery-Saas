@@ -581,6 +581,24 @@ export function SettingsContent({
           )}
         </SettingsSection>
 
+        <SettingsSection icon="chart" title="Advanced">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[var(--foreground)]">Data &amp; reporting</p>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-[var(--muted)]">
+                Export and verify technical reporting evidence for support, audits or troubleshooting.
+              </p>
+            </div>
+            <Link
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+              href="/dashboard/settings/data-reporting"
+            >
+              Open data tools
+              <Icon className="size-4" name="arrow-right" />
+            </Link>
+          </div>
+        </SettingsSection>
+
         <SettingsSection icon="shield" title="Security">
           <div className="flex flex-col gap-6">
             <div>

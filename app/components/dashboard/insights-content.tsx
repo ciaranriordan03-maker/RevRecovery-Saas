@@ -1,21 +1,16 @@
 import Link from "next/link";
 import type { InsightsView } from "../../lib/insights-view";
 import { Icon } from "../ui-icon";
+import { InsightsMethodologyDialog } from "./insights-methodology-dialog";
 import { InsightsPerformance } from "./insights-performance";
-import { MeasurementManifestVerification } from "./measurement-manifest-verification";
 import type {
-  CohortComparisonMetric,
-  DescriptiveBaselineMetric,
-  DataSufficiencyMetric,
   InsightsMetrics,
   InsightsFilter,
-  MeasurementQualityMetric,
-  MeasurementEvidenceMetric,
 } from "../../lib/server/insights-metrics";
 
 const environmentLabels: Record<InsightsFilter["environment"], string> = {
-  live: "Live evidence",
-  test: "Test evidence",
+  live: "Live data",
+  test: "Test data",
   unconfirmed: "Environment unconfirmed",
 };
 
@@ -26,7 +21,6 @@ const insightsViews: ReadonlyArray<{
 }> = [
   { hrefLabel: "Overview", label: "Overview", value: "overview" },
   { hrefLabel: "Performance", label: "Performance", value: "performance" },
-  { hrefLabel: "Evidence", label: "Evidence & methodology", value: "evidence" },
 ];
 
 function getInsightsHref(
@@ -58,12 +52,7 @@ function InsightsWorkspaceHeader({
           See what is at risk, what has recovered, and where your recovery flow needs attention.
         </p>
       </div>
-      <Link
-        className="inline-flex h-9 w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-sm font-medium text-[var(--text-subtle)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-muted)]"
-        href={getInsightsHref(filter, "evidence")}
-      >
-        How these numbers work
-      </Link>
+      <InsightsMethodologyDialog />
     </header>
   );
 }
@@ -95,343 +84,6 @@ function InsightsWorkspaceNavigation({
         ))}
       </div>
     </nav>
-  );
-}
-
-function MeasurementEvidencePanel({ metric }: { metric: MeasurementEvidenceMetric }) {
-  const manifestJson = `${JSON.stringify(metric.exportManifest, null, 2)}\n`;
-  const manifestFilename = `revrecovery-insights-evidence-${metric.evaluatedAt.replace(/[:.]/g, "-")}.json`;
-  const manifestHref = `data:application/json;charset=utf-8,${encodeURIComponent(manifestJson)}`;
-
-  return (
-    <section
-      aria-labelledby="measurement-evidence-detail-heading"
-      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Audit context</p>
-          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="measurement-evidence-detail-heading">
-            {metric.title}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">Exact scope, boundaries, gates, and definitions for this view.</p>
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Evaluated at</p>
-          <time className="mt-1 block font-mono text-xs text-[var(--muted-strong)]" dateTime={metric.evaluatedAt}>
-            {metric.evaluatedAt}
-          </time>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
-        <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Selected scope</p>
-          <dl className="mt-3 grid gap-3 text-sm">
-            <div><dt className="text-[var(--muted)]">Environment</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{metric.scope.environment}</dd></div>
-            <div><dt className="text-[var(--muted)]">Audience</dt><dd className="mt-1 font-medium text-[var(--foreground)]">{metric.scope.audience}</dd></div>
-          </dl>
-        </div>
-        <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Exact cohort boundaries</p>
-          <dl className="mt-3 grid gap-3 text-sm">
-            <div><dt className="text-[var(--muted)]">Current</dt><dd className="mt-1 break-words font-mono text-xs text-[var(--foreground)]">{metric.boundaries.current}</dd></div>
-            <div><dt className="text-[var(--muted)]">Previous</dt><dd className="mt-1 break-words font-mono text-xs text-[var(--foreground)]">{metric.boundaries.previous}</dd></div>
-          </dl>
-        </div>
-      </div>
-
-      <div className="mt-5 rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4">
-        <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Measurement traceability</p>
-        <dl className="mt-3 grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-[var(--muted)]">Contract version</dt>
-            <dd className="mt-1 font-mono text-xs font-medium text-[var(--foreground)]">{metric.traceability.contractVersion}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-[var(--muted)]">Fingerprint algorithm</dt>
-            <dd className="mt-1 font-mono text-xs font-medium text-[var(--foreground)]">{metric.traceability.fingerprintAlgorithm}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs text-[var(--muted)]">Evidence fingerprint</dt>
-            <dd className="mt-1 break-all font-mono text-xs leading-5 text-[var(--foreground)]">
-              {metric.traceability.evidenceFingerprint}
-            </dd>
-          </div>
-        </dl>
-        <p className="mt-3 text-xs leading-5 text-[var(--muted-strong)]">
-          {metric.traceability.fingerprintBasis} The fingerprint is generated server-side; no row identifiers or source values are displayed.
-        </p>
-      </div>
-
-      <div className="mt-5 rounded-[10px] border border-[var(--primary-border)] bg-[var(--primary-soft)] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--primary-text)]">
-              Evidence export manifest
-            </p>
-            <h3 className="mt-1 text-sm font-medium text-[var(--foreground)]">Sanitized measurement record</h3>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-[var(--muted-strong)]">
-              Export the contract, fingerprint, evaluation timestamp, selected scope, cohort boundaries, gate outcomes, and calculation definitions for this view.
-            </p>
-          </div>
-          <a
-            className="inline-flex w-fit items-center justify-center rounded-[8px] border border-[var(--primary)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--primary)] transition-colors hover:bg-[var(--primary)] hover:text-white"
-            download={manifestFilename}
-            href={manifestHref}
-          >
-            Download JSON
-          </a>
-        </div>
-
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[8px] bg-[var(--surface)] p-3">
-            <dt className="text-xs text-[var(--muted)]">Manifest version</dt>
-            <dd className="mt-1 break-all font-mono text-xs font-medium text-[var(--foreground)]">
-              {metric.exportManifest.manifestVersion}
-            </dd>
-          </div>
-          <div className="rounded-[8px] bg-[var(--surface)] p-3">
-            <dt className="text-xs text-[var(--muted)]">Included sections</dt>
-            <dd className="mt-1 text-xs leading-5 text-[var(--foreground)]">
-              Traceability, scope, boundaries, gates, definitions, and limitations
-            </dd>
-          </div>
-        </dl>
-
-        <details className="mt-3 rounded-[8px] bg-[var(--surface)] p-3">
-          <summary className="cursor-pointer text-xs font-medium text-[var(--primary)]">Preview sanitized JSON</summary>
-          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-5 text-[var(--muted-strong)]">
-            {manifestJson}
-          </pre>
-        </details>
-
-        <p className="mt-3 text-xs leading-5 text-[var(--muted-strong)]">
-          Read only. The manifest contains no case, customer, message, sequence, provider-event, or source-identifier rows and makes no new performance claim.
-        </p>
-      </div>
-
-      <MeasurementManifestVerification
-        currentManifest={metric.exportManifest}
-        key={`${metric.exportManifest.evaluatedAt}:${metric.exportManifest.fingerprint.value}`}
-      />
-
-      <div className="mt-5">
-        <h3 className="text-sm font-medium text-[var(--foreground)]">Gate outcomes</h3>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {metric.gateOutcomes.map((gate) => (
-            <div className="flex items-start justify-between gap-3 rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-3" key={gate.label}>
-              <div><p className="text-xs text-[var(--muted)]">{gate.label}</p><p className="mt-1 text-sm font-medium text-[var(--foreground)]">{gate.value}</p></div>
-              <span className={`rounded-[8px] px-2 py-1 text-xs font-medium ${gate.passed ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--warning-soft)] text-[var(--warning-text)]"}`}>
-                {gate.passed ? "Pass" : "Waiting"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <h3 className="text-sm font-medium text-[var(--foreground)]">Calculation definitions</h3>
-        <dl className="mt-3 grid gap-3">
-          {metric.definitions.map((definition) => (
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-3" key={definition.label}>
-              <dt className="text-xs font-medium text-[var(--foreground)]">{definition.label}</dt>
-              <dd className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{definition.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
-    </section>
-  );
-}
-
-function CohortComparisonPanel({ metric }: { metric: CohortComparisonMetric }) {
-  return (
-    <section
-      aria-labelledby="cohort-comparison-heading"
-      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Period comparison</p>
-          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="cohort-comparison-heading">
-            {metric.title}
-          </h2>
-        </div>
-        <span className={`w-fit rounded-[8px] px-3 py-1.5 text-xs font-medium ${metric.available ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--surface-muted)] text-[var(--muted-strong)]"}`}>
-          {metric.available ? "Read only" : "Withheld"}
-        </span>
-      </div>
-
-      {metric.available ? (
-        <div className="mt-5 overflow-x-auto">
-          <div className="min-w-[680px]">
-            <div className="grid grid-cols-[1.2fr_1fr_1fr_1.2fr] gap-3 border-b border-[var(--border)] px-3 pb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
-              <span>Measure</span>
-              <span>{metric.previousLabel}</span>
-              <span>{metric.currentLabel}</span>
-              <span>Observed change</span>
-            </div>
-            {metric.rows.map((row) => (
-              <div className="grid grid-cols-[1.2fr_1fr_1fr_1.2fr] gap-3 border-b border-[var(--border)] px-3 py-4 text-sm last:border-b-0" key={row.label}>
-                <div>
-                  <p className="font-medium text-[var(--foreground)]">{row.label}</p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{row.detail}</p>
-                </div>
-                <p className="text-[var(--muted-strong)]">{row.previous}</p>
-                <p className="font-medium text-[var(--foreground)]">{row.current}</p>
-                <p className="text-[var(--muted-strong)]">{row.observedChange}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] p-4">
-          <p className="text-sm font-medium text-[var(--foreground)]">No period comparison values are displayed</p>
-          <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
-            Both adjacent cohorts must independently pass every Baseline readiness gate.
-          </p>
-        </div>
-      )}
-
-      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
-    </section>
-  );
-}
-
-function DescriptiveBaselinePanel({ metric }: { metric: DescriptiveBaselineMetric }) {
-  return (
-    <section
-      aria-labelledby="descriptive-baseline-heading"
-      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
-            Descriptive baseline
-          </p>
-          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="descriptive-baseline-heading">
-            {metric.title}
-          </h2>
-        </div>
-        <span className={`w-fit rounded-[8px] px-3 py-1.5 text-xs font-medium ${metric.available ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--surface-muted)] text-[var(--muted-strong)]"}`}>
-          {metric.available ? "Read only" : "Withheld"}
-        </span>
-      </div>
-
-      {metric.available ? (
-        <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-          {metric.rows.map((row) => (
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--background)] p-4" key={row.label}>
-              <dt className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">{row.label}</dt>
-              <dd className="mt-2 text-lg font-semibold text-[var(--foreground)]">{row.value}</dd>
-              <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{row.detail}</p>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <div className="mt-5 rounded-[10px] border border-[var(--warning)] bg-[var(--warning-soft)] p-4">
-          <p className="text-sm font-medium text-[var(--foreground)]">No baseline values are displayed</p>
-          <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
-            Review the Baseline readiness checks in Evidence &amp; methodology before treating this cohort as a descriptive benchmark.
-          </p>
-        </div>
-      )}
-
-      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
-    </section>
-  );
-}
-
-function DataSufficiencyPanel({ metric }: { metric: DataSufficiencyMetric }) {
-  return (
-    <section
-      aria-labelledby="data-sufficiency-heading"
-      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
-            Baseline readiness
-          </p>
-          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="data-sufficiency-heading">
-            {metric.title}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Check whether the selected evidence is sufficient for defensible descriptive reporting.
-          </p>
-        </div>
-        <span className={`w-fit rounded-[8px] px-3 py-1.5 text-xs font-medium ${metric.eligible ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--warning-soft)] text-[var(--warning-text)]"}`}>
-          {metric.eligible ? "All gates passed" : "Evidence incomplete"}
-        </span>
-      </div>
-
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
-        {metric.gates.map((gate) => (
-          <article
-            className={`rounded-[10px] border p-4 ${gate.passed ? "border-[var(--success-badge)] bg-[var(--success-soft)]" : "border-[var(--warning)] bg-[var(--warning-soft)]"}`}
-            key={gate.label}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">{gate.label}</p>
-              <span className={`text-xs font-medium ${gate.passed ? "text-[var(--success)]" : "text-[var(--warning-text)]"}`}>
-                {gate.passed ? "Pass" : "Waiting"}
-              </span>
-            </div>
-            <p className="mt-2 text-sm font-medium text-[var(--foreground)]">{gate.value}</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{gate.detail}</p>
-          </article>
-        ))}
-      </div>
-
-      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
-    </section>
-  );
-}
-
-function MeasurementQualityPanel({ metric }: { metric: MeasurementQualityMetric }) {
-  const statusClasses = {
-    attention: "border-[var(--warning)] bg-[var(--warning-soft)]",
-    clear: "border-[var(--success-badge)] bg-[var(--success-soft)]",
-    informational: "border-[var(--blue-border)] bg-[var(--blue-soft)]",
-  } as const;
-
-  return (
-    <section
-      aria-labelledby="measurement-quality-heading"
-      className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
-            Evidence context
-          </p>
-          <h2 className="mt-1 text-base font-medium text-[var(--foreground)]" id="measurement-quality-heading">
-            {metric.title}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Understand what the selected Insights figures can—and cannot—support.
-          </p>
-        </div>
-        <span className="w-fit rounded-[8px] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--muted-strong)]">
-          Read only
-        </span>
-      </div>
-
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
-        {metric.items.map((item) => (
-          <article className={`rounded-[10px] border p-4 ${statusClasses[item.status]}`} key={item.label}>
-            <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">{item.label}</p>
-            <p className="mt-2 text-sm font-medium text-[var(--foreground)]">{item.value}</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">{item.detail}</p>
-          </article>
-        ))}
-      </div>
-
-      <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{metric.summary}</p>
-    </section>
   );
 }
 
@@ -576,53 +228,60 @@ function OverviewContext({
   filter: InsightsFilter;
   insights: InsightsMetrics;
 }) {
-  const passedGateCount = insights.dataSufficiency.gates.filter((gate) => gate.passed).length;
-  const totalGateCount = insights.dataSufficiency.gates.length;
   const trendRow = insights.cohortComparison.rows.find((row) => row.label === "Terminal recovery share");
 
-  return (
-    <section className="grid gap-4 md:grid-cols-2">
-      <article className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">Trend</p>
-        {insights.cohortComparison.available && trendRow ? (
-          <>
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{trendRow.current}</p>
-              <span className="text-xs font-semibold text-[var(--muted-strong)]">{trendRow.observedChange}</span>
-            </div>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Compared with {trendRow.previous} in the previous period. Observed change only.</p>
-          </>
-        ) : (
-          <>
-            <h2 className="mt-2 text-base font-semibold text-[var(--foreground)]">Trend not measurable yet</h2>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Both periods need enough mature cases before a fair comparison appears.</p>
-          </>
-        )}
-      </article>
+  if (!insights.cohortComparison.available || !trendRow) {
+    return (
+      <p className="rounded-[10px] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[var(--muted-strong)]">
+        {filter.period === "all"
+          ? "Choose a 30- or 90-day period when you want to compare it with the previous period."
+          : "A period trend will appear after both periods have enough completed cases."}
+      </p>
+    );
+  }
 
-      <article className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">Data confidence</p>
-            <h2 className="mt-2 text-base font-semibold text-[var(--foreground)]">
-              {insights.dataSufficiency.eligible ? "Ready for descriptive reporting" : "Evidence is still developing"}
-            </h2>
-          </div>
-          <span className={`shrink-0 rounded-[6px] px-2.5 py-1 text-xs font-semibold ${insights.dataSufficiency.eligible ? "bg-[var(--success-soft)] text-[var(--success)]" : "bg-[var(--surface-muted)] text-[var(--muted-strong)]"}`}>
-            {passedGateCount}/{totalGateCount} checks
-          </span>
+  return (
+    <section className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">Trend</p>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{trendRow.current}</p>
+          <span className="text-xs font-semibold text-[var(--muted-strong)]">{trendRow.observedChange}</span>
         </div>
-        <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-          {insights.dataSufficiency.eligible
-            ? "The selected data is complete enough for a factual cohort summary."
-            : "Current results remain visible, but benchmark and trend claims may stay limited."}
-        </p>
-        <Link className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)]" href={getInsightsHref(filter, "evidence")}>
-          Review data checks
-          <Icon className="size-3.5" name="arrow-right" />
-        </Link>
-      </article>
+        <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Compared with {trendRow.previous} in the previous period. Observed change only.</p>
     </section>
+  );
+}
+
+function ReportingConfidenceNote({ insights }: { insights: InsightsMetrics }) {
+  if (insights.dataSufficiency.eligible) return null;
+
+  const sampleGate = insights.dataSufficiency.gates.find((gate) => gate.label === "Sample size");
+  const outcomeGate = insights.dataSufficiency.gates.find((gate) => gate.label === "Outcome maturity");
+  const totalCaseCount = insights.overviewSummary.totalCaseCount;
+  const completedOutcomeCount = insights.overviewSummary.recoveredCaseCount
+    + insights.overviewSummary.otherClosedCaseCount;
+  const notes: string[] = [];
+
+  if (sampleGate && !sampleGate.passed) {
+    notes.push(`Early data — based on ${totalCaseCount} ${totalCaseCount === 1 ? "case" : "cases"}.`);
+  }
+
+  if (outcomeGate && !outcomeGate.passed) {
+    notes.push(
+      completedOutcomeCount === 0
+        ? "Recovery rate will appear after more cases reach a final outcome."
+        : `Outcomes are still developing — ${completedOutcomeCount} of ${totalCaseCount} cases have reached a final outcome.`,
+    );
+  }
+
+  if (notes.length === 0) return null;
+
+  return (
+    <aside aria-label="Reporting confidence" className="rounded-[10px] bg-[var(--surface-muted)] px-4 py-3">
+      {notes.map((note) => (
+        <p className="text-sm leading-6 text-[var(--muted-strong)]" key={note}>{note}</p>
+      ))}
+    </aside>
   );
 }
 
@@ -633,9 +292,15 @@ function OverviewAttention({
   filter: InsightsFilter;
   insights: InsightsMetrics;
 }) {
+  type AttentionItem = {
+    detail: string;
+    href: string | null;
+    label: string | null;
+  };
+
   const monetaryGate = insights.dataSufficiency.gates.find((gate) => gate.label === "Monetary evidence");
   const environmentGate = insights.dataSufficiency.gates.find((gate) => gate.label === "Environment certainty");
-  const items = [
+  const candidates: Array<AttentionItem | null> = [
     insights.overviewSummary.failedDeliveryCount > 0 ? {
       detail: `${insights.overviewSummary.failedDeliveryCount} ${insights.overviewSummary.failedDeliveryCount === 1 ? "message has" : "messages have"} a recorded delivery failure.`,
       href: getInsightsHref(filter, "performance"),
@@ -643,15 +308,16 @@ function OverviewAttention({
     } : null,
     environmentGate && !environmentGate.passed ? {
       detail: "Some selected cases do not have a confirmed Test or Live environment.",
-      href: getInsightsHref(filter, "evidence"),
-      label: "Review environment data",
+      href: null,
+      label: null,
     } : null,
     monetaryGate && !monetaryGate.passed && insights.overviewSummary.totalCaseCount > 0 ? {
       detail: "Some selected cases have incomplete amount or currency information.",
-      href: getInsightsHref(filter, "evidence"),
-      label: "Review amount data",
+      href: null,
+      label: null,
     } : null,
-  ].filter((item): item is { detail: string; href: string; label: string } => item !== null);
+  ];
+  const items = candidates.filter((item): item is AttentionItem => item !== null);
 
   if (items.length === 0) return null;
 
@@ -663,12 +329,14 @@ function OverviewAttention({
           <h2 className="text-sm font-semibold text-[var(--foreground)]" id="insights-attention-heading">Needs attention</h2>
           <div className="mt-2 grid gap-2">
             {items.map((item) => (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" key={item.label}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" key={item.detail}>
                 <p className="text-sm text-[var(--muted-strong)]">{item.detail}</p>
-                <Link className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)]" href={item.href}>
-                  {item.label}
-                  <Icon className="size-3.5" name="arrow-right" />
-                </Link>
+                {item.href && item.label ? (
+                  <Link className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)]" href={item.href}>
+                    {item.label}
+                    <Icon className="size-3.5" name="arrow-right" />
+                  </Link>
+                ) : null}
               </div>
             ))}
           </div>
@@ -742,130 +410,11 @@ function InsightsOverview({
         />
       </section>
 
+      <ReportingConfidenceNote insights={insights} />
       <OutcomeSummary insights={insights} />
       <OverviewAttention filter={filter} insights={insights} />
       <OverviewContext filter={filter} insights={insights} />
     </>
-  );
-}
-
-function InsightsWorkspaceSection({
-  children,
-  description,
-  title,
-}: {
-  children: React.ReactNode;
-  description: string;
-  title: string;
-}) {
-  return (
-    <section>
-      <div className="mb-5">
-        <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">{description}</p>
-      </div>
-      <div className="flex flex-col gap-5">{children}</div>
-    </section>
-  );
-}
-
-function InsightsDisclosure({
-  children,
-  defaultOpen = false,
-  description,
-  id,
-  status,
-  title,
-}: {
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-  description: string;
-  id?: string;
-  status: string;
-  title: string;
-}) {
-  return (
-    <details
-      className="group overflow-hidden rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]"
-      id={id}
-      open={defaultOpen}
-    >
-      <summary className="flex list-none cursor-pointer items-start justify-between gap-4 px-5 py-5 sm:px-6 [&::-webkit-details-marker]:hidden">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</h3>
-            <span className="rounded-[6px] bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">
-              {status}
-            </span>
-          </div>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">{description}</p>
-        </div>
-        <Icon
-          className="mt-1 size-4 shrink-0 text-[var(--muted)] transition-transform group-open:rotate-180"
-          name="chevron-down"
-        />
-      </summary>
-      <div className="border-t border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
-        <div className="flex flex-col gap-5">{children}</div>
-      </div>
-    </details>
-  );
-}
-
-function EvidenceOverview({ insights }: { insights: InsightsMetrics }) {
-  const passedGateCount = insights.dataSufficiency.gates.filter((gate) => gate.passed).length;
-  const totalGateCount = insights.dataSufficiency.gates.length;
-  const attentionCount = insights.measurementQuality.items.filter(
-    (item) => item.status === "attention",
-  ).length;
-
-  return (
-    <section className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--muted)]">
-            Evidence summary
-          </p>
-          <h3 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-            What this view can support
-          </h3>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Check the selected cohort, reporting readiness, and traceability before using these figures externally.
-          </p>
-        </div>
-        <span className="w-fit rounded-[6px] bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--muted-strong)]">
-          Read only
-        </span>
-      </div>
-
-      <dl className="mt-5 grid gap-3 md:grid-cols-3">
-        <div className="rounded-[10px] bg-[var(--surface-muted)] p-4">
-          <dt className="text-xs text-[var(--muted)]">Selected evidence</dt>
-          <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-            {insights.measurementEvidence.scope.environment}
-          </dd>
-          <p className="mt-1 text-xs text-[var(--muted)]">{insights.measurementEvidence.scope.audience}</p>
-        </div>
-        <div className="rounded-[10px] bg-[var(--surface-muted)] p-4">
-          <dt className="text-xs text-[var(--muted)]">Baseline readiness</dt>
-          <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-            {passedGateCount} of {totalGateCount} checks passed
-          </dd>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            {insights.dataSufficiency.eligible ? "Descriptive reporting is available" : "Reporting remains withheld"}
-          </p>
-        </div>
-        <div className="rounded-[10px] bg-[var(--surface-muted)] p-4">
-          <dt className="text-xs text-[var(--muted)]">Quality review</dt>
-          <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-            {attentionCount === 0 ? "No open cautions" : `${attentionCount} ${attentionCount === 1 ? "caution" : "cautions"}`}
-          </dd>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            Contract {insights.measurementEvidence.traceability.contractVersion}
-          </p>
-        </div>
-      </dl>
-    </section>
   );
 }
 
@@ -901,46 +450,6 @@ export function InsightsContent({
 
         {view === "performance" ? <InsightsPerformance filter={filter} insights={insights} /> : null}
 
-        {view === "evidence" ? (
-          <InsightsWorkspaceSection
-            description="Review the cohort definition, readiness checks, exact boundaries, calculation contract, and sanitized evidence export."
-            title="Evidence & methodology"
-          >
-            <EvidenceOverview insights={insights} />
-            <InsightsDisclosure
-              description="See the cohort definition, maturity, amount basis, and limitations behind the selected figures."
-              status={insights.measurementQuality.items.some((item) => item.status === "attention") ? "Review cautions" : "Clear"}
-              title="Evidence context"
-            >
-              <MeasurementQualityPanel metric={insights.measurementQuality} />
-            </InsightsDisclosure>
-            <InsightsDisclosure
-              description="Confirm the selected evidence has enough cases, mature outcomes, valid currency data, and environment information."
-              status={insights.dataSufficiency.eligible ? "Ready" : `${insights.dataSufficiency.gates.filter((gate) => gate.passed).length} of ${insights.dataSufficiency.gates.length} checks`}
-              title="Baseline readiness"
-            >
-              <DataSufficiencyPanel metric={insights.dataSufficiency} />
-            </InsightsDisclosure>
-            <InsightsDisclosure
-              description="Review the factual cohort summary and adjacent-period comparison only when their evidence checks pass."
-              status={insights.baselineSummary.available && insights.cohortComparison.available ? "Available" : "Withheld where incomplete"}
-              title="Descriptive reporting"
-            >
-              <div className="grid gap-5 xl:grid-cols-2">
-                <DescriptiveBaselinePanel metric={insights.baselineSummary} />
-                <CohortComparisonPanel metric={insights.cohortComparison} />
-              </div>
-            </InsightsDisclosure>
-            <InsightsDisclosure
-              description="Inspect exact boundaries, the measurement contract, fingerprint, sanitized export, and verification workflow."
-              id="measurement-evidence-heading"
-              status="Export & verify"
-              title="Audit record"
-            >
-              <MeasurementEvidencePanel metric={insights.measurementEvidence} />
-            </InsightsDisclosure>
-          </InsightsWorkspaceSection>
-        ) : null}
       </div>
     </div>
   );

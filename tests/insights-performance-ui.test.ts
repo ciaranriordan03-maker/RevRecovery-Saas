@@ -30,8 +30,8 @@ describe("Insights performance UI", () => {
     expect(performanceSource).toContain("Confirmed delivered");
     expect(performanceSource).toContain("Unique clicks");
     expect(performanceSource).toContain("Value on recovered cases");
-    expect(performanceSource).toContain("These figures are descriptive, not causal.");
-    expect(performanceSource).toContain("How these numbers work");
+    expect(performanceSource).toContain("These figures are descriptive.");
+    expect(performanceSource).toContain("InsightsMethodologyDialog");
   });
 
   it("only promotes delivery problems when a recorded outcome needs attention", () => {
@@ -40,9 +40,10 @@ describe("Insights performance UI", () => {
     expect(performanceSource).toContain('href="#delivery-details"');
   });
 
-  it("shows audience and message outcomes without hiding them in dropdowns", () => {
+  it("shows audience comparison only when two populated groups can be compared", () => {
     expect(performanceSource).toContain("Audience comparison");
-    expect(performanceSource).toContain("Only one audience has cases in this view.");
+    expect(performanceSource).toContain("populatedRows.length < 2");
+    expect(performanceSource).not.toContain("Only one audience has cases in this view.");
     expect(performanceSource).toContain("Message outcomes");
     expect(performanceSource).toContain("Recoveries observed afterward");
     expect(performanceSource).not.toContain('title="Message-by-message outcomes"');

@@ -9,6 +9,7 @@ import type {
   SegmentMetric,
 } from "../../lib/server/insights-metrics";
 import { Icon } from "../ui-icon";
+import { InsightsMethodologyDialog } from "./insights-methodology-dialog";
 
 const attentionLabels = [
   "Temporarily delayed",
@@ -23,7 +24,7 @@ function getDeliveryValue(metric: DeliveryHealthMetric, label: string) {
 
 function getInsightsHref(
   filter: InsightsFilter,
-  view: "evidence" | "performance",
+  view: "performance",
   overrides: Partial<InsightsFilter> = {},
 ) {
   const nextFilter = { ...filter, ...overrides };
@@ -174,9 +175,6 @@ function PerformanceSnapshot({ insights }: { insights: InsightsMetrics }) {
         </article>
       </div>
 
-      <p className="border-t border-[var(--border)] bg-[var(--surface-muted)] px-5 py-3 text-xs leading-5 text-[var(--muted-strong)] sm:px-6">
-        Payment outcomes are observed in this cohort. They are not attributed to a specific message or to RevRecovery.
-      </p>
     </section>
   );
 }
@@ -210,7 +208,7 @@ function AudienceMetrics({ row }: { row: SegmentMetric }) {
 function AudienceComparison({ rows }: { rows: SegmentMetric[] }) {
   const populatedRows = rows.filter((row) => row.totalCount > 0);
 
-  if (populatedRows.length === 0) return null;
+  if (populatedRows.length < 2) return null;
 
   return (
     <section
@@ -222,19 +220,11 @@ function AudienceComparison({ rows }: { rows: SegmentMetric[] }) {
           Audience comparison
         </h2>
         <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
-          {populatedRows.length === 1
-            ? "Only one audience has cases in this view."
-            : "Compare observed recovery outcomes across audiences with recorded cases."}
+          Compare observed recovery outcomes across audiences with recorded cases.
         </p>
       </div>
 
-      {populatedRows.length === 1 ? (
-        <article className="px-5 py-5 sm:px-6">
-          <h3 className="mb-4 text-sm font-semibold text-[var(--foreground)]">{populatedRows[0].label}</h3>
-          <AudienceMetrics row={populatedRows[0]} />
-        </article>
-      ) : (
-        <>
+      <>
           <div className="hidden overflow-x-auto lg:block">
             <table className="w-full border-collapse text-left text-sm">
               <thead className="bg-[var(--surface-muted)] text-xs text-[var(--muted)]">
@@ -270,8 +260,7 @@ function AudienceComparison({ rows }: { rows: SegmentMetric[] }) {
               </li>
             ))}
           </ul>
-        </>
-      )}
+      </>
     </section>
   );
 }
@@ -339,9 +328,6 @@ function MessageOutcomeList({ rows }: { rows: EmailRecoveryMetric[] }) {
         </>
       )}
 
-      <p className="border-t border-[var(--border)] bg-[var(--surface-muted)] px-5 py-3 text-xs leading-5 text-[var(--muted-strong)] sm:px-6">
-        These associations are descriptive. Timing alone does not prove that a message caused a payment recovery.
-      </p>
     </section>
   );
 }
@@ -500,14 +486,11 @@ export function InsightsPerformance({
         funnel={insights.funnel}
         status={getOperationalStatus(insights)}
       />
-      <footer className="flex flex-col gap-2 border-t border-[var(--border)] pt-4 text-xs text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
-        <p>These figures are descriptive, not causal.</p>
-        <Link
-          className="font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
-          href={getInsightsHref(filter, "evidence")}
-        >
-          How these numbers work
-        </Link>
+      <footer className="flex flex-col gap-2 border-t border-[var(--border)] pt-4 text-xs leading-5 text-[var(--muted)] sm:flex-row sm:items-start sm:justify-between">
+        <p className="max-w-3xl">
+          These figures are descriptive. Timing alone does not prove that a message caused a recovery, and value on recovered cases reflects amount due at failure—not confirmed revenue.
+        </p>
+        <InsightsMethodologyDialog variant="link" />
       </footer>
     </div>
   );
