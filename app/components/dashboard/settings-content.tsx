@@ -463,7 +463,7 @@ export function SettingsContent({
                   </p>
                 </div>
                 <Link
-                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)]"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
                   href="/dashboard/recovery?step=customize"
                 >
                   Manage recovery

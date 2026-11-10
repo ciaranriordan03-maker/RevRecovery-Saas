@@ -10,13 +10,11 @@ const source = [
 
 describe("recovery content truthfulness", () => {
   it("describes message editing and active-sequence snapshots accurately", () => {
-    expect(source).toContain("Message copy can be edited here");
-    expect(source).toContain("assigned to a persisted invoice audience");
-    expect(source).toContain("Saved message preview");
-    expect(source).toContain("currently saved for new recovery cases");
-    expect(source).toContain(
-      "Existing active sequences keep the configuration snapshot they started with",
-    );
+    expect(source).toContain("Message copy and timing now have their own focused workspace");
+    expect(source).toContain("Edit messages & timing");
+    expect(source).toContain("Delivery and sender details");
+    expect(source).not.toContain("Saved message preview");
+    expect(source).not.toContain("Recovery message templates");
     expect(source).not.toContain(
       "individual message editing are not available yet",
     );

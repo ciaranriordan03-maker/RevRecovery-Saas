@@ -83,7 +83,7 @@ function SettingsNavigation() {
   const links = [
     ["#setup-status", "Setup status"],
     ["#recovery-delivery", "Delivery"],
-    ["#email-identity", "Messages"],
+    ["#email-identity", "Sender & audience"],
     ["#controlled-test-section", "Controlled test"],
     ["#advanced-safeguards", "Delivery safeguards"],
   ] as const;
@@ -117,29 +117,40 @@ export function RecoverySettingsWorkspace({
   return (
     <div className="px-5 py-7 sm:px-8 lg:px-8 lg:py-8 xl:px-10">
       <div className="mx-auto flex max-w-[960px] flex-col gap-6">
-        <section className="flex items-start gap-3 rounded-[var(--radius-dashboard-card)] border border-[var(--primary-border)] bg-[var(--primary-soft)] px-5 py-4 sm:px-6">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--primary)]">
-            <Icon className="size-4" name="lock" />
-          </span>
-          <div>
-            <h2 className="text-sm font-semibold text-[var(--foreground)]">Changes apply safely to future cases</h2>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
-              Message copy can be edited here. New cases are assigned to a persisted invoice audience, while existing active sequences keep the configuration snapshot they started with.
-            </p>
+        <section className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)] sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">Recovery settings</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--foreground)]">Delivery, sender and testing</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                Manage how recovery runs. Message copy and timing now have their own focused workspace.
+              </p>
+            </div>
+            <Link
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+              href="/dashboard/recovery?view=flow"
+            >
+              Edit messages & timing
+              <Icon className="size-4" name="arrow-right" />
+            </Link>
           </div>
+          <dl className="mt-5 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[var(--primary-soft)] px-3 py-1.5 text-xs">
+              <dt className="text-[var(--muted)]">Mode</dt>
+              <dd className="font-semibold text-[var(--primary)]">{modeLabels[recoveryView.mode]}</dd>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-[var(--surface-muted)] px-3 py-1.5 text-xs">
+              <dt className="text-[var(--muted)]">Stripe</dt>
+              <dd className="font-semibold text-[var(--foreground)]">{recoveryView.environment}</dd>
+            </div>
+            {recoveryView.mode === "test" ? (
+              <div className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[var(--success-soft)] px-3 py-1.5 text-xs">
+                <dt className="shrink-0 text-[var(--muted)]">Test recipient</dt>
+                <dd className="max-w-60 truncate font-semibold text-[var(--success)]">{recipient}</dd>
+              </div>
+            ) : null}
+          </dl>
         </section>
-
-        <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SettingsMetric label="Recovery mode" tone="primary" value={modeLabels[recoveryView.mode]} />
-          <SettingsMetric label="Stripe environment" value={recoveryView.environment} />
-          <SettingsMetric label="Schedule" value={recoveryView.scheduleLabel} />
-          <SettingsMetric
-            detail={recoveryView.mode === "test" ? "Only this address can receive test messages" : undefined}
-            label="Approved test recipient"
-            tone={recoveryView.approvedTestRecipient ? "healthy" : "attention"}
-            value={recipient}
-          />
-        </dl>
 
         <SettingsNavigation />
 
@@ -150,9 +161,9 @@ export function RecoverySettingsWorkspace({
         <section aria-labelledby="core-recovery-settings-heading">
           <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">Core setup</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em]" id="core-recovery-settings-heading">Delivery and customer messages</h2>
+            <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em]" id="core-recovery-settings-heading">Delivery and sender details</h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-              Configure who receives recovery messages, when they are scheduled, and the content customers see.
+              Configure who receives recovery messages, how delivery runs, and the sender details customers see.
             </p>
           </div>
           <RecoverySettingsForm
@@ -194,17 +205,6 @@ export function RecoverySettingsWorkspace({
             </div>
           </SettingsDisclosure>
         </div>
-
-        <SettingsDisclosure
-          description="Inspect the customer-facing copy currently saved for future recovery cases."
-          status={`${recoveryView.messages.length} messages`}
-          title="Saved message preview"
-        >
-          <p className="mb-4 text-sm leading-6 text-[var(--muted-strong)]">
-            These previews show the message copy currently saved for new recovery cases. Existing active sequences keep the configuration snapshot they started with.
-          </p>
-          <RecoveryMessageCards collapsible recoveryView={recoveryView} />
-        </SettingsDisclosure>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
           <Link className="inline-flex h-10 items-center justify-center text-sm font-medium text-[var(--muted-strong)] hover:text-[var(--foreground)]" href="/dashboard/recovery">Back to recovery</Link>

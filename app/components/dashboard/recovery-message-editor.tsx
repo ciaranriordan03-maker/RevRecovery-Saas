@@ -516,14 +516,14 @@ export function RecoveryMessageEditor({
           No recovery messages available
         </h3>
         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-          Your saved message sequence could not be loaded. Review the advanced settings or
+          Your saved message sequence could not be loaded. Review the sender settings or
           refresh the page before making changes.
         </p>
         <Link
           className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--primary)]"
           href="/dashboard/recovery?step=customize#email-identity"
         >
-          Open advanced message settings
+          Open sender settings
           <Icon className="size-4" name="arrow-right" />
         </Link>
       </section>
@@ -555,7 +555,7 @@ export function RecoveryMessageEditor({
           className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-[var(--muted-strong)] transition hover:text-[var(--foreground)]"
           href="/dashboard/recovery?step=customize#email-identity"
         >
-          Advanced message settings
+          Sender &amp; audience settings
           <Icon className="size-4" name="arrow-right" />
         </Link>
       </div>
@@ -913,7 +913,7 @@ export function RecoveryMessageEditor({
                       className="mt-2 inline-flex font-semibold underline underline-offset-2"
                       href="/dashboard/recovery?step=customize#email-identity"
                     >
-                      Review advanced email settings
+                      Review sender settings
                     </Link>
                   </div>
                 </div>

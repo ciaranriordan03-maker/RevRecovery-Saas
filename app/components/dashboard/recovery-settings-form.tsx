@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Button } from "../button";
@@ -10,16 +11,10 @@ import {
 import {
   RECOVERY_SCHEDULES,
   RECOVERY_TIMEZONES,
-  getRecoverySchedule,
-  getRecoveryScheduleWindowDays,
   type RecoveryScheduleId,
 } from "../../lib/recovery/schedule-policy";
-import { getRecoveryMessageTemplatesForTone } from "../../lib/recovery/message-templates";
-import {
-  cloneSettings,
-  recoveryToneOptions,
-  type UserSettings,
-} from "../../lib/settings";
+import { cloneSettings, type UserSettings } from "../../lib/settings";
+import { Icon } from "../ui-icon";
 
 type RecoverySettingsDraft = {
   approvedTestRecipient: string;
@@ -75,13 +70,14 @@ export function RecoverySettingsForm({
   const [savingEmail, setSavingEmail] = useState(false);
 
   const recoveryChanged = JSON.stringify(recovery) !== JSON.stringify(savedRecovery);
-  const selectedSchedule = getRecoverySchedule(recovery.scheduleId);
-  const recoveryWindowDays = getRecoveryScheduleWindowDays(recovery.scheduleId);
   const emailChanged =
-    JSON.stringify({ email: settings.email, recovery: settings.recovery }) !==
+    JSON.stringify({
+      email: settings.email,
+      segmentation: settings.recovery.segmentation,
+    }) !==
     JSON.stringify({
       email: savedSettings.email,
-      recovery: savedSettings.recovery,
+      segmentation: savedSettings.recovery.segmentation,
     });
 
   async function saveRecovery(event: FormEvent<HTMLFormElement>) {
@@ -146,17 +142,17 @@ export function RecoverySettingsForm({
       };
 
       if (!response.ok || !payload.settings) {
-        throw new Error(getErrorMessage(payload, "Unable to save email settings."));
+        throw new Error(getErrorMessage(payload, "Unable to save sender settings."));
       }
 
       const nextSettings = cloneSettings(payload.settings);
       setSettings(nextSettings);
       setSavedSettings(cloneSettings(nextSettings));
-      setEmailStatus("Email settings saved.");
+      setEmailStatus("Sender and audience settings saved.");
       router.refresh();
     } catch (error) {
       setEmailStatus(
-        error instanceof Error ? error.message : "Unable to save email settings.",
+        error instanceof Error ? error.message : "Unable to save sender settings.",
       );
     } finally {
       setSavingEmail(false);
@@ -172,7 +168,7 @@ export function RecoverySettingsForm({
       >
         <h2 className="text-base font-medium text-[var(--foreground)]">Recovery delivery</h2>
         <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">
-          Control who receives recovery messages and when they are scheduled.
+          Control whether recovery can run and who can receive controlled test messages.
         </p>
 
         {!editable ? (
@@ -229,53 +225,35 @@ export function RecoverySettingsForm({
           </label>
         ) : null}
 
-        <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
-          Schedule
-          <select
-            className={`${fieldClassName} mt-2`}
-            disabled={!editable || savingRecovery}
-            onChange={(event) =>
-              setRecovery((current) => ({
-                ...current,
-                scheduleId: event.target.value as RecoveryScheduleId,
-              }))
-            }
-            value={recovery.scheduleId}
-          >
-            {RECOVERY_SCHEDULES.map((schedule) => (
-              <option key={schedule.id} value={schedule.id}>{schedule.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
-          <p className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Window and exhaustion preview</p>
-          <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
-            Three messages over {recoveryWindowDays} {recoveryWindowDays === 1 ? "day" : "days"}
-          </p>
-          <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">
-            Messages are scheduled at {selectedSchedule.label.toLowerCase()}. If the invoice remains unpaid after the final message is delivered, the sequence is marked exhausted for manual review.
-          </p>
-          <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
-            Saving a different schedule applies to future recovery cases only. Existing cases keep the schedule snapshot they started with.
-          </p>
-        </div>
-
-        <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
-          Timezone
-          <select
-            className={`${fieldClassName} mt-2`}
-            disabled={!editable || savingRecovery}
-            onChange={(event) =>
-              setRecovery((current) => ({ ...current, timezone: event.target.value }))
-            }
-            value={recovery.timezone}
-          >
-            {RECOVERY_TIMEZONES.map((timezone) => (
-              <option key={timezone} value={timezone}>{timezone}</option>
-            ))}
-          </select>
-        </label>
+        <details className="group mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)]">
+          <summary className="flex min-h-12 list-none cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
+            <span>
+              Timezone
+              <span className="ml-2 text-xs font-normal text-[var(--muted)]">{recovery.timezone}</span>
+            </span>
+            <Icon className="size-4 text-[var(--muted)] transition-transform group-open:rotate-180" name="chevron-down" />
+          </summary>
+          <div className="border-t border-[var(--border)] p-4">
+            <label className="block text-sm font-medium text-[var(--foreground)]">
+              Recovery timezone
+              <select
+                className={`${fieldClassName} mt-2`}
+                disabled={!editable || savingRecovery}
+                onChange={(event) =>
+                  setRecovery((current) => ({ ...current, timezone: event.target.value }))
+                }
+                value={recovery.timezone}
+              >
+                {RECOVERY_TIMEZONES.map((timezone) => (
+                  <option key={timezone} value={timezone}>{timezone}</option>
+                ))}
+              </select>
+            </label>
+            <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+              Message timing is edited in Messages &amp; timing. This timezone applies to future cases.
+            </p>
+          </div>
+        </details>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p aria-live="polite" className="text-sm text-[var(--muted-strong)]">{recoveryStatus}</p>
@@ -290,25 +268,21 @@ export function RecoverySettingsForm({
         id="email-identity"
         onSubmit={saveEmailSettings}
       >
-        <h2 className="text-base font-medium text-[var(--foreground)]">Email identity and messages</h2>
-        <p className="mt-2 text-sm leading-5 text-[var(--muted-strong)]">
-          Set the sender customers see, reply addresses, and recovery message wording.
-        </p>
-
-        <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
-            <dt className="text-xs text-[var(--muted)]">Tone</dt>
-            <dd className="mt-1 text-sm font-medium text-[var(--foreground)]">{settings.recovery.defaultEmailTone}</dd>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-base font-medium text-[var(--foreground)]">Sender and audience</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-5 text-[var(--muted-strong)]">
+              Set who customers hear from and optionally use different schedules for different invoice types.
+            </p>
           </div>
-          <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
-            <dt className="text-xs text-[var(--muted)]">Sender</dt>
-            <dd className="mt-1 truncate text-sm font-medium text-[var(--foreground)]">{settings.email.senderName}</dd>
-          </div>
-          <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4">
-            <dt className="text-xs text-[var(--muted)]">Audience rules</dt>
-            <dd className="mt-1 text-sm font-medium text-[var(--foreground)]">{settings.recovery.segmentation.enabled ? "Enabled" : "One shared schedule"}</dd>
-          </div>
-        </dl>
+          <Link
+            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 text-sm font-medium text-[var(--primary)] transition hover:text-[var(--primary-hover)] focus-visible:rounded-[var(--radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+            href="/dashboard/recovery?view=flow"
+          >
+            Edit messages
+            <Icon className="size-4" name="arrow-right" />
+          </Link>
+        </div>
 
         <details className="group mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)]">
           <summary className="flex list-none cursor-pointer items-center justify-between gap-3 px-4 py-4 text-sm font-medium text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
@@ -379,97 +353,6 @@ export function RecoverySettingsForm({
           </fieldset>
         </details>
 
-        <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
-          Email tone
-          <select
-            className={`${fieldClassName} mt-2`}
-            disabled={savingEmail}
-            onChange={(event) => {
-              const tone = event.target.value;
-              setSettings((current) => ({
-                ...current,
-                recovery: {
-                  ...current.recovery,
-                  defaultEmailTone: tone,
-                  messageTemplates: getRecoveryMessageTemplatesForTone(tone),
-                },
-              }));
-            }}
-            value={settings.recovery.defaultEmailTone}
-          >
-            {recoveryToneOptions.map((tone) => <option key={tone}>{tone}</option>)}
-          </select>
-          <span className="mt-2 block text-xs font-normal leading-4 text-[var(--muted)]">
-            Choosing a tone replaces the three draft messages. You can edit them below before saving.
-          </span>
-        </label>
-
-        <details className="group mt-5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)]">
-          <summary className="flex list-none cursor-pointer items-center justify-between gap-3 px-4 py-4 text-sm font-medium text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
-            <span>Recovery message templates</span>
-            <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">⌄</span>
-          </summary>
-          <div className="border-t border-[var(--border)] p-4">
-            <p className="text-xs leading-5 text-[var(--muted)]">
-              Edit the subject and main message. RevRecovery securely adds the customer greeting,
-              outstanding amount, Stripe payment button, and footer when each email is sent.
-            </p>
-            <div className="mt-4 grid gap-5">
-              {settings.recovery.messageTemplates.map((template, index) => (
-                <fieldset
-                  className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--background)] p-4"
-                  disabled={savingEmail}
-                  key={template.messageKey}
-                >
-                  <legend className="px-1 text-sm font-medium text-[var(--foreground)]">
-                    Email {index + 1}
-                  </legend>
-                  <label className="mt-2 block text-xs font-medium text-[var(--foreground)]">
-                    Subject
-                    <input
-                      className={`${fieldClassName} mt-2`}
-                      maxLength={120}
-                      onChange={(event) =>
-                        setSettings((current) => ({
-                          ...current,
-                          recovery: {
-                            ...current.recovery,
-                            messageTemplates: current.recovery.messageTemplates.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, subject: event.target.value } : item,
-                            ),
-                          },
-                        }))
-                      }
-                      required
-                      value={template.subject}
-                    />
-                  </label>
-                  <label className="mt-4 block text-xs font-medium text-[var(--foreground)]">
-                    Message
-                    <textarea
-                      className="mt-2 min-h-32 w-full resize-y rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-sm leading-5 text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:bg-[var(--background)] disabled:text-[var(--muted)]"
-                      maxLength={1000}
-                      onChange={(event) =>
-                        setSettings((current) => ({
-                          ...current,
-                          recovery: {
-                            ...current.recovery,
-                            messageTemplates: current.recovery.messageTemplates.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, bodyPreview: event.target.value } : item,
-                            ),
-                          },
-                        }))
-                      }
-                      required
-                      value={template.bodyPreview}
-                    />
-                  </label>
-                </fieldset>
-              ))}
-            </div>
-          </div>
-        </details>
-
         <div className="mt-5 grid gap-4 lg:grid-cols-3">
           <label className="block text-sm font-medium text-[var(--foreground)]">
             Sender name
@@ -525,7 +408,7 @@ export function RecoverySettingsForm({
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p aria-live="polite" className="text-sm text-[var(--muted-strong)]">{emailStatus}</p>
           <Button disabled={!emailChanged || savingEmail} type="submit">
-            {savingEmail ? "Saving…" : "Save recovery content"}
+            {savingEmail ? "Saving…" : "Save sender & audience"}
           </Button>
         </div>
       </form>

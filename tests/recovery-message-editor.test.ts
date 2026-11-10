@@ -41,7 +41,7 @@ describe("inline recovery message editor", () => {
     expect(editorSource).toContain('MobileWorkspaceView = "edit" | "preview"');
     expect(editorSource).toContain("beforeunload");
     expect(editorSource).toContain("unsaved message or timing changes");
-    expect(editorSource).toContain("Advanced message settings");
+    expect(editorSource).toContain("Sender &amp; audience settings");
   });
 
   it("shows compact timing controls and a live customer preview", () => {
