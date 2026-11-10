@@ -23,9 +23,7 @@ export function getRecoveryPageMode(step: string | undefined): RecoveryPageMode 
 export function getRecoveryWorkspaceView(
   value: string | undefined,
 ): RecoveryWorkspaceView {
-  if (value === "flow" || value === "safety") {
-    return value;
-  }
+  if (value === "flow") return "flow";
 
   return "overview";
 }

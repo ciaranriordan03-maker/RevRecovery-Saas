@@ -1,9 +1,6 @@
 import Link from "next/link";
-import type {
-  ActivationReadiness,
-  ActivationReadinessCheck,
-  ActivationReadinessState,
-} from "../../lib/recovery/activation-readiness";
+import type { ActivationReadiness } from "../../lib/recovery/activation-readiness";
+import { recoveryReadinessActions } from "../../lib/recovery/readiness-actions";
 import type { RecoveryHealthSummary } from "../../lib/recovery/recovery-health";
 import type { RecoveryOpportunityReport } from "../../lib/recovery/opportunity-report";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
@@ -11,10 +8,7 @@ import type { AtRiskCustomer } from "../../lib/server/at-risk-customers";
 import { Icon } from "../ui-icon";
 import { AtRiskCustomersTable } from "./at-risk-customers-table";
 
-export type RecoveryWorkspaceView =
-  | "overview"
-  | "flow"
-  | "safety";
+export type RecoveryWorkspaceView = "overview" | "flow";
 
 const modeLabels = {
   live: "Live mode",
@@ -30,68 +24,6 @@ const modeScopeCopy: Record<RecoveryFlowView["mode"], string> = {
   test: "Customer delivery is disabled. Test messages are restricted to the approved recipient.",
 };
 
-const readinessCopy: Record<
-  ActivationReadinessState,
-  { detail: string; label: string }
-> = {
-  attention_required: {
-    detail: "A required recovery dependency needs attention.",
-    label: "Attention required",
-  },
-  not_ready: {
-    detail: "Finish the required setup before running a controlled test.",
-    label: "Setup incomplete",
-  },
-  ready_for_live: {
-    detail: "The recorded safeguards support a separate live-activation review.",
-    label: "Ready for live review",
-  },
-  ready_for_test: {
-    detail: "Core setup is complete enough for a controlled test.",
-    label: "Ready to test",
-  },
-};
-
-const checkActions: Partial<
-  Record<
-    ActivationReadinessCheck["id"],
-    { href: string; label: string }
-  >
-> = {
-  controlled_test: {
-    href: "/dashboard/recovery?step=customize#controlled-test-plan",
-    label: "Review controlled test",
-  },
-  email_identity: {
-    href: "/dashboard/recovery?step=customize#email-identity",
-    label: "Complete email settings",
-  },
-  recovery_configuration: {
-    href: "/dashboard/recovery?step=customize#recovery-delivery",
-    label: "Configure recovery",
-  },
-  sending_domain: {
-    href: "/dashboard/recovery?step=customize#sending-domain",
-    label: "Review sending domain",
-  },
-  stripe_communication_overlap: {
-    href: "/dashboard/recovery?step=customize#stripe-overlap-guidance",
-    label: "Review guidance",
-  },
-  stripe_connection: {
-    href: "/dashboard/settings#stripe-integration",
-    label: "Review Stripe connection",
-  },
-  test_recipient: {
-    href: "/dashboard/recovery?step=customize#recovery-delivery",
-    label: "Review test recipient",
-  },
-  webhook_health: {
-    href: "/dashboard/settings#stripe-integration",
-    label: "Review webhook health",
-  },
-};
-
 const workspaceTabs: ReadonlyArray<{
   href: string;
   label: string;
@@ -99,7 +31,6 @@ const workspaceTabs: ReadonlyArray<{
 }> = [
   { href: "/dashboard/recovery?view=overview", label: "Overview", value: "overview" },
   { href: "/dashboard/recovery?view=flow", label: "Messages & timing", value: "flow" },
-  { href: "/dashboard/recovery?view=safety", label: "Safety & audit", value: "safety" },
 ];
 
 function StateDot({ tone }: { tone: "attention" | "healthy" | "monitoring" }) {
@@ -110,34 +41,6 @@ function StateDot({ tone }: { tone: "attention" | "healthy" | "monitoring" }) {
   }[tone];
 
   return <span aria-hidden className={`size-2 rounded-full ${toneClass}`} />;
-}
-
-function readinessTone(
-  state: ActivationReadinessState,
-): "attention" | "healthy" | "monitoring" {
-  if (state === "attention_required" || state === "not_ready") {
-    return "attention";
-  }
-
-  return state === "ready_for_live" ? "healthy" : "monitoring";
-}
-
-function getNextAction(readiness: ActivationReadiness) {
-  const check = readiness.checks.find((item) => item.status !== "complete");
-
-  if (!check) {
-    return {
-      href: "/dashboard/recovery?step=review",
-      label: "Review recovery flow",
-    };
-  }
-
-  return (
-    checkActions[check.id] ?? {
-      href: "/dashboard/recovery?step=customize",
-      label: "Review recovery settings",
-    }
-  );
 }
 
 export function RecoveryWorkspaceHeader({
@@ -214,51 +117,105 @@ export function RecoveryWorkspaceNavigation({
 
 function OperatingStatus({
   health,
-  readiness,
+  mode,
 }: {
   health: RecoveryHealthSummary;
-  readiness: ActivationReadiness;
+  mode: RecoveryFlowView["mode"];
 }) {
-  const nextAction = getNextAction(readiness);
-  const readinessSummary = readinessCopy[readiness.state];
+  const status =
+    health.state === "attention"
+      ? {
+          detail: health.detail,
+          label: "Needs attention",
+          title: "Recovery needs your attention",
+          tone: "attention" as const,
+        }
+      : mode === "live"
+        ? {
+            detail: health.detail,
+            label: "Operational",
+            title: "Recovery is running",
+            tone:
+              health.state === "healthy"
+                ? ("healthy" as const)
+                : ("monitoring" as const),
+          }
+        : mode === "test"
+          ? {
+              detail:
+                "Customer delivery remains off while you review and test your recovery setup.",
+              label: "Test mode",
+              title: "Recovery is in test mode",
+              tone: "monitoring" as const,
+            }
+          : mode === "paused"
+            ? {
+                detail:
+                  "Your saved setup is unchanged, but recovery messages are not being delivered.",
+                label: "Paused",
+                title: "Recovery is paused",
+                tone: "monitoring" as const,
+              }
+            : {
+                detail:
+                  "Failed-payment monitoring can continue, but recovery messages are not being delivered.",
+                label: "Off",
+                title: "Recovery delivery is off",
+                tone: "monitoring" as const,
+              };
 
   return (
-    <section className="overflow-hidden rounded-[var(--radius-dashboard-card)] bg-[var(--primary)] text-white">
-      <div className="grid gap-px bg-white/15 md:grid-cols-2">
-        <div className="bg-[var(--primary)] p-5 sm:p-6">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-white/70">
-            <StateDot tone={health.state} />
-            Recovery health
+    <section
+      className={`rounded-[var(--radius-dashboard-card)] border p-5 sm:p-6 ${
+        status.tone === "attention"
+          ? "border-[var(--warning)] bg-[var(--warning-soft)]"
+          : "border-[var(--border)] bg-[var(--surface)]"
+      }`}
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full ${
+              status.tone === "healthy"
+                ? "bg-[var(--success-soft)] text-[var(--success)]"
+                : status.tone === "attention"
+                  ? "bg-[var(--surface)] text-[var(--warning-text)]"
+                  : "bg-[var(--primary-soft)] text-[var(--primary)]"
+            }`}
+          >
+            <StateDot tone={status.tone} />
+          </span>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+                {status.title}
+              </h2>
+              <span
+                className={`rounded-[6px] px-2 py-1 text-xs font-semibold ${
+                  status.tone === "healthy"
+                    ? "bg-[var(--success-soft)] text-[var(--success)]"
+                    : status.tone === "attention"
+                      ? "bg-[var(--surface)] text-[var(--warning-text)]"
+                      : "bg-[var(--primary-soft)] text-[var(--primary)]"
+                }`}
+              >
+                {status.label}
+              </span>
+            </div>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted-strong)]">
+              {status.detail}
+            </p>
           </div>
-          <h2 className="mt-3 text-lg font-semibold tracking-[-0.02em]">
-            {health.title}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-white/75">{health.detail}</p>
         </div>
-        <div className="bg-[var(--primary)] p-5 sm:p-6">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-white/70">
-            <StateDot tone={readinessTone(readiness.state)} />
-            Activation readiness
-          </div>
-          <h2 className="mt-3 text-lg font-semibold tracking-[-0.02em]">
-            {readinessSummary.label}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-white/75">
-            {readinessSummary.detail}
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-col gap-3 border-t border-white/15 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p className="text-xs leading-5 text-white/70">
-          Status only. This overview does not enable delivery or change the recovery flow.
-        </p>
-        <Link
-          className="inline-flex items-center gap-2 text-sm font-semibold text-white hover:text-white/80"
-          href={nextAction.href}
-        >
-          {nextAction.label}
-          <Icon className="size-4" name="arrow-right" />
-        </Link>
+        {status.tone === "attention" ? (
+          <Link
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary-hover)] focus-visible:rounded-[var(--radius-control)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+            href="/dashboard/recovery?step=customize#setup-status"
+          >
+            Review setup
+            <Icon className="size-4" name="arrow-right" />
+          </Link>
+        ) : null}
       </div>
     </section>
   );
@@ -283,19 +240,11 @@ function MetricCard({
 
 function RecoveryMetrics({
   customers,
-  health,
   report,
 }: {
   customers: AtRiskCustomer[];
-  health: RecoveryHealthSummary;
   report: RecoveryOpportunityReport;
 }) {
-  const healthLabel = {
-    attention: "Needs attention",
-    healthy: "Operational",
-    monitoring: "Monitoring",
-  }[health.state];
-
   return (
     <section aria-labelledby="recovery-snapshot-heading">
       <div className="flex items-center justify-between gap-4">
@@ -311,11 +260,10 @@ function RecoveryMetrics({
           <span className="text-xs text-[var(--muted)]">Connection-time Stripe scan</span>
         ) : null}
       </div>
-      <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <dl className="mt-4 grid gap-3 sm:grid-cols-3">
         <MetricCard label="Revenue at risk" value={report.revenueAtRisk} />
         <MetricCard label="Open failed-payment cases" value={customers.length} />
         <MetricCard label="Customers at risk" value={report.atRiskCustomersCount} />
-        <MetricCard label="Recovery health" value={healthLabel} />
       </dl>
       <details className="group mt-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
         <summary className="flex list-none items-center justify-between gap-3 text-sm font-medium text-[var(--muted-strong)] [&::-webkit-details-marker]:hidden">
@@ -332,6 +280,10 @@ function RecoveryMetrics({
 
 function AttentionPanel({ readiness }: { readiness: ActivationReadiness }) {
   const items = readiness.checks.filter((item) => item.status !== "complete");
+
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <section
@@ -353,22 +305,9 @@ function AttentionPanel({ readiness }: { readiness: ActivationReadiness }) {
           </span>
         </div>
       </div>
-      {items.length === 0 ? (
-        <div className="flex items-start gap-3 px-5 py-5 sm:px-6">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--success-soft)] text-[var(--success)]">
-            <Icon className="size-4" name="check" />
-          </span>
-          <div>
-            <p className="text-sm font-medium">No setup issues need attention</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-              Continue to review operational health before any live activation.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <ul className="divide-y divide-[var(--border)]">
-          {items.map((item) => {
-            const action = checkActions[item.id];
+      <ul className="divide-y divide-[var(--border)]">
+        {items.map((item) => {
+            const action = recoveryReadinessActions[item.id];
             return (
               <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6" key={item.id}>
                 <div className="flex min-w-0 gap-3">
@@ -398,9 +337,8 @@ function AttentionPanel({ readiness }: { readiness: ActivationReadiness }) {
                 ) : null}
               </li>
             );
-          })}
-        </ul>
-      )}
+        })}
+      </ul>
     </section>
   );
 }
@@ -541,8 +479,8 @@ export function RecoveryOverview({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      <OperatingStatus health={recoveryHealth} readiness={activationReadiness} />
-      <RecoveryMetrics customers={atRiskCustomers} health={recoveryHealth} report={opportunityReport} />
+      <OperatingStatus health={recoveryHealth} mode={recoveryView.mode} />
+      <RecoveryMetrics customers={atRiskCustomers} report={opportunityReport} />
       <AttentionPanel readiness={activationReadiness} />
       <SequenceOverview recoveryView={recoveryView} />
       <AtRiskCustomersTable customers={atRiskCustomers} />

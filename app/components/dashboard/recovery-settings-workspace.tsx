@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { ControlledTestEligibility } from "../../lib/recovery/controlled-test-plan";
+import type { ActivationReadiness } from "../../lib/recovery/activation-readiness";
 import { recoveryBenefits } from "../../lib/data";
 import type { RecoveryFlowView } from "../../lib/recovery/recovery-view";
 import type { UserSettings } from "../../lib/settings";
 import { Icon } from "../ui-icon";
 import { ControlledTestPlan } from "./controlled-test-plan";
 import { RecoverySettingsForm } from "./recovery-settings-form";
+import { RecoverySetupStatus } from "./recovery-setup-status";
 import { RecoveryMessageCards } from "./recovery-workspace";
 import { SendingDomainSettings } from "./sending-domain-settings";
 
@@ -79,6 +81,7 @@ function SettingsDisclosure({
 
 function SettingsNavigation() {
   const links = [
+    ["#setup-status", "Setup status"],
     ["#recovery-delivery", "Delivery"],
     ["#email-identity", "Messages"],
     ["#controlled-test-section", "Controlled test"],
@@ -99,10 +102,12 @@ function SettingsNavigation() {
 }
 
 export function RecoverySettingsWorkspace({
+  activationReadiness,
   controlledTestEligibility,
   recoveryView,
   userSettings,
 }: {
+  activationReadiness: ActivationReadiness;
   controlledTestEligibility: ControlledTestEligibility;
   recoveryView: RecoveryFlowView;
   userSettings: UserSettings;
@@ -137,6 +142,10 @@ export function RecoverySettingsWorkspace({
         </dl>
 
         <SettingsNavigation />
+
+        <div id="setup-status">
+          <RecoverySetupStatus readiness={activationReadiness} />
+        </div>
 
         <section aria-labelledby="core-recovery-settings-heading">
           <div className="mb-4">
@@ -264,7 +273,7 @@ export function RecoveryReviewWorkspace({
           </span>
           <div>
             <h2 className="text-sm font-semibold text-[var(--foreground)]">Review only—delivery does not change here</h2>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">Any move toward live delivery still requires the separately reviewed safeguards shown in Safety &amp; audit.</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted-strong)]">Any move toward live delivery still requires a separate review of Setup status and Delivery safeguards in Recovery Settings.</p>
           </div>
         </section>
 

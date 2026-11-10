@@ -12,10 +12,7 @@ import {
   RecoveryWorkspaceSection,
   type RecoveryWorkspaceView,
 } from "./recovery-workspace";
-import {
-  MessagesAndTimingWorkspace,
-  SafetyWorkspace,
-} from "./recovery-workspace-details";
+import { MessagesAndTimingWorkspace } from "./recovery-workspace-details";
 import {
   RecoveryReviewWorkspace,
   RecoverySettingsWorkspace,
@@ -66,14 +63,6 @@ function RecoverySequence({ activationReadiness, atRiskCustomers, opportunityRep
           </RecoveryWorkspaceSection>
         ) : null}
 
-        {view === "safety" ? (
-          <RecoveryWorkspaceSection
-            description="Inspect recovery health and the safeguards that must pass before controlled testing or live activation can be considered."
-            title="Safety & audit"
-          >
-            <SafetyWorkspace health={recoveryHealth} readiness={activationReadiness} />
-          </RecoveryWorkspaceSection>
-        ) : null}
       </div>
     </div>
   );
@@ -81,6 +70,6 @@ function RecoverySequence({ activationReadiness, atRiskCustomers, opportunityRep
 
 export function RecoveryContent({ activationReadiness, atRiskCustomers = [], controlledTestEligibility, mode = "sequence", opportunityReport, recoveryView, userSettings, view = "overview" }: RecoveryContentProps) {
   if (mode === "review") return <RecoveryReviewWorkspace recoveryView={recoveryView} />;
-  if (mode === "customize") return <RecoverySettingsWorkspace controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
+  if (mode === "customize") return <RecoverySettingsWorkspace activationReadiness={activationReadiness} controlledTestEligibility={controlledTestEligibility} recoveryView={recoveryView} userSettings={userSettings} />;
   return <RecoverySequence activationReadiness={activationReadiness} atRiskCustomers={atRiskCustomers} opportunityReport={opportunityReport} recoveryView={recoveryView} userSettings={userSettings} view={view} />;
 }
