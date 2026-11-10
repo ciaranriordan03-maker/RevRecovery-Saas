@@ -8,6 +8,10 @@ import {
   INSIGHTS_MEASUREMENT_MANIFEST_VERSION,
   type MeasurementEvidenceExportManifest,
 } from "../insights-evidence-manifest";
+import {
+  getEffectiveRecoveryCaseStatus,
+  isOpenRecoveryCase,
+} from "../stripe/recovery-state";
 
 export type { MeasurementEvidenceExportManifest } from "../insights-evidence-manifest";
 
@@ -41,8 +45,19 @@ export type InsightsMetrics = {
   funnel: InsightFunnelMetric[];
   measurementQuality: MeasurementQualityMetric;
   measurementEvidence: MeasurementEvidenceMetric;
+  overviewSummary: InsightsOverviewSummary;
   sequenceSummary: SequenceSummaryMetric[];
   segmentBreakdown: SegmentMetric[];
+};
+
+export type InsightsOverviewSummary = {
+  failedDeliveryCount: number;
+  openCaseCount: number;
+  otherClosedCaseCount: number;
+  recoveredCaseCount: number;
+  recoveredValue: string;
+  revenueAtRisk: string;
+  totalCaseCount: number;
 };
 
 export type MeasurementEvidenceMetric = {
@@ -1203,6 +1218,22 @@ export function buildInsightsMetrics({
   const emailEngagement = buildEmailEngagementMetric(events);
   const segmentBreakdown = buildSegmentMetrics(failedPayments, messages, events);
   const dataSufficiency = buildDataSufficiencyMetric(failedPayments, filter);
+  const recoveredCases = failedPayments.filter((payment) =>
+    getEffectiveRecoveryCaseStatus(payment.case_status, payment.status) === "recovered",
+  );
+  const openCases = failedPayments.filter((payment) =>
+    isOpenRecoveryCase(payment.case_status, payment.status),
+  );
+  const otherClosedCaseCount = Math.max(
+    0,
+    failedPayments.length - recoveredCases.length - openCases.length,
+  );
+  const formatCaseValue = (rows: FailedPaymentMetricRow[]) => rows.length === 0
+    ? "0"
+    : formatCurrencyAmounts(aggregateCurrencyAmounts(rows.map((payment) => ({
+      amount: payment.amount_due ?? 0,
+      currency: payment.currency,
+    }))));
   const resolvedCohortComparison = cohortComparison ?? {
     available: false,
     currentLabel: "Selected cohort",
@@ -1293,6 +1324,15 @@ export function buildInsightsMetrics({
       evaluatedAt,
       { events, failedPayments, messages, sequences },
     ),
+    overviewSummary: {
+      failedDeliveryCount: failedMessageCount,
+      openCaseCount: openCases.length,
+      otherClosedCaseCount,
+      recoveredCaseCount: recoveredCases.length,
+      recoveredValue: formatCaseValue(recoveredCases),
+      revenueAtRisk: formatCaseValue(openCases),
+      totalCaseCount: failedPayments.length,
+    },
     sequenceSummary,
     segmentBreakdown,
   };
