@@ -9,6 +9,10 @@ const settingsRouteSource = readFileSync(
   new URL("../app/api/settings/route.ts", import.meta.url),
   "utf8",
 );
+const completionRouteSource = readFileSync(
+  new URL("../app/api/onboarding/complete/route.ts", import.meta.url),
+  "utf8",
+);
 
 describe("onboarding email identity", () => {
   it("collects and saves all customer-facing email identity fields", () => {
@@ -29,5 +33,17 @@ describe("onboarding email identity", () => {
     expect(settingsRouteSource).toContain("const currentRecord = await getUserSettings(userId)");
     expect(settingsRouteSource).toContain("...currentRecord.settings");
     expect(settingsRouteSource).toContain("...currentRecord.settings.email");
+  });
+
+  it("revalidates onboarding requirements before marking setup complete", () => {
+    expect(completionRouteSource).toContain("evaluateOnboardingReadiness");
+    expect(completionRouteSource).toContain("getRecoveryModeSettingsForUser");
+    expect(completionRouteSource).toContain("getUserSettings");
+    expect(completionRouteSource).toContain("if (!readiness.ready)");
+    expect(completionRouteSource.indexOf("if (!readiness.ready)")).toBeLessThan(
+      completionRouteSource.indexOf(
+        "const profile = await markUserOnboardingCompleted",
+      ),
+    );
   });
 });

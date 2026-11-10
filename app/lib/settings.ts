@@ -166,17 +166,29 @@ function isLegacyDemoTeam(team: TeamMember[]) {
   );
 }
 
-export function getUserSettingsValidationError(settings: UserSettings) {
-  if (!settings.email.senderName.trim()) {
+export function getEmailSettingsValidationError(
+  email: UserSettings["email"],
+) {
+  if (!email.senderName.trim()) {
     return "Sender name is required.";
   }
 
-  if (!isValidEmailAddress(settings.email.supportEmail)) {
+  if (!isValidEmailAddress(email.supportEmail)) {
     return "Support email must be a valid email address.";
   }
 
-  if (!isValidEmailAddress(settings.email.replyToEmail)) {
+  if (!isValidEmailAddress(email.replyToEmail)) {
     return "Reply-to email must be a valid email address.";
+  }
+
+  return null;
+}
+
+export function getUserSettingsValidationError(settings: UserSettings) {
+  const emailValidationError = getEmailSettingsValidationError(settings.email);
+
+  if (emailValidationError) {
+    return emailValidationError;
   }
 
   for (const [index, template] of settings.recovery.messageTemplates.entries()) {
