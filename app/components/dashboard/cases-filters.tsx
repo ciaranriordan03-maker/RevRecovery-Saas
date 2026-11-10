@@ -323,12 +323,9 @@ function MobileFilters({ filters }: { filters: RecoveryCaseFilters }) {
             role="dialog"
           >
             <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-              <div>
-                <h2 className="text-base font-semibold text-[var(--foreground)]" id={titleId}>
-                  Filter cases
-                </h2>
-                <p className="mt-0.5 text-xs text-[var(--muted)]">Changes apply when you confirm.</p>
-              </div>
+              <h2 className="text-base font-semibold text-[var(--foreground)]" id={titleId}>
+                Filter cases
+              </h2>
               <button
                 aria-label="Close filters"
                 className="inline-flex size-9 items-center justify-center rounded-[8px] text-[var(--muted)] hover:bg-[var(--surface-muted)]"
@@ -398,7 +395,7 @@ function MobileFilters({ filters }: { filters: RecoveryCaseFilters }) {
                   </label>
                 </div>
                 <p className="text-xs leading-5 text-[var(--muted)]">
-                  Currency and minimum value work together so amounts are never compared across currencies.
+                  Currency and minimum value are applied together.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4">
