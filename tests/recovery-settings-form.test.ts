@@ -15,10 +15,10 @@ describe("recovery settings form", () => {
     expect(source).toContain("Approved test recipient");
   });
 
-  it("preserves the full user settings object when saving email identity", () => {
+  it("preserves the full user settings object when saving sender and audience settings", () => {
     expect(source).toContain('fetch("/api/settings"');
     expect(source).toContain("JSON.stringify({ settings })");
-    expect(source).toContain("Save recovery content");
+    expect(source).toContain("Save sender & audience");
     expect(source).toContain("router.refresh()");
   });
 
@@ -29,11 +29,11 @@ describe("recovery settings form", () => {
     expect(source).toContain("Unknown invoice type");
   });
 
-  it("previews the recovery window and limits schedule changes to future cases", () => {
-    expect(source).toContain("Window and exhaustion preview");
-    expect(source).toContain("getRecoveryScheduleWindowDays");
-    expect(source).toContain("marked exhausted for manual review");
-    expect(source).toContain("applies to future recovery cases only");
-    expect(source).toContain("keep the schedule snapshot they started with");
+  it("delegates message timing while preserving the current schedule on delivery saves", () => {
+    expect(source).toContain('/dashboard/recovery?view=flow');
+    expect(source).toContain("Message timing is edited in Messages &amp; timing");
+    expect(source).toContain("scheduleId: recovery.scheduleId");
+    expect(source).not.toContain("Window and exhaustion preview");
+    expect(source).not.toContain("getRecoveryScheduleWindowDays");
   });
 });

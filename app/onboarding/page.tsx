@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import { OnboardingFlow } from "../components/onboarding/onboarding-flow";
 import { requireIncompleteOnboarding } from "../lib/auth";
 import { onboardingSteps, type OnboardingStep } from "../lib/data";
+import {
+  clampOnboardingStep,
+  evaluateOnboardingReadiness,
+} from "../lib/onboarding/readiness";
 import { getRecoveryModeSettingsForUser } from "../lib/server/recovery-account-settings";
 import { buildRecoveryStatusSummary } from "../lib/recovery/recovery-view";
+import { getEmailSettingsValidationError } from "../lib/settings";
 import { getUserSettings } from "../lib/server/settings-store";
 
 export const metadata: Metadata = {
@@ -39,6 +44,15 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
     getUserSettings(claims.sub),
   ]);
   const savedEmailSettings = userSettingsRecord.settings.email;
+  const onboardingReadiness = evaluateOnboardingReadiness({
+    emailIdentityConfigured:
+      getEmailSettingsValidationError(savedEmailSettings) === null,
+    stripeConnected: recoverySettings.connected,
+  });
+  const initialStep = clampOnboardingStep(
+    getInitialStep(params?.step),
+    onboardingReadiness,
+  );
 
   return (
     <OnboardingFlow
@@ -47,7 +61,8 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
         senderName: savedEmailSettings.senderName,
         supportEmail: savedEmailSettings.supportEmail || accountEmail,
       }}
-      initialStep={getInitialStep(params?.step)}
+      initialReadiness={onboardingReadiness}
+      initialStep={initialStep}
       recoverySummary={buildRecoveryStatusSummary(recoverySettings)}
     />
   );

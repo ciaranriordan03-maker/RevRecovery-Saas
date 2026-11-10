@@ -31,13 +31,13 @@ describe("needs-attention queue and high-value prioritization", () => {
     }
   });
 
-  it("explains that high value is user-defined and currency-specific", () => {
+  it("explains that value comparisons are currency-specific", () => {
     const content = readFileSync(
       new URL("../app/components/dashboard/cases-content.tsx", import.meta.url),
       "utf8",
     );
-    expect(content).toContain("High value is never assumed across currencies");
-    expect(content).toContain("your own threshold");
+    expect(content).toContain("Amounts are compared only within the selected currency.");
+    expect(content).toContain("Amount at risk is unpaid invoice value");
   });
 
   it("uses the latest provider outcome so an old bounce does not stay actionable", () => {

@@ -11,17 +11,17 @@ export function OptimizeContent({
   return (
     <div className="px-5 pb-8 sm:px-8 xl:px-20">
       <div className="mx-auto flex max-w-[1024px] flex-col gap-4">
-        <section className="rounded-[var(--radius-card)] border border-[var(--primary-border)] bg-gradient-to-br from-[var(--primary-soft)] to-[var(--purple-soft)] px-6 py-[25px]">
+        <section className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
           <div className="flex items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary)] text-white">
-              <Icon name="sparkles" className="size-6" />
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary-soft)] text-[var(--primary)]">
+              <Icon name="sparkles" className="size-5" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-base font-medium tracking-[-0.02em] text-[var(--foreground)]">
-                  Recovery guidance
+                <h2 className="text-base font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+                  Recommended next steps
                 </h2>
-                <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--muted-strong)] shadow-[var(--shadow-subtle)]">
+                <span className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--muted-strong)]">
                   {optimizeRecommendations.environmentLabel}
                 </span>
               </div>

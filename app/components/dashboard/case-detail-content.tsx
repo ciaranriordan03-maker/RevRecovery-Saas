@@ -94,7 +94,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-flex w-fit items-center gap-1.5 rounded-[6px] px-2 py-1 text-[11px] font-semibold ${style.background} ${style.text}`}
+      className={`inline-flex w-fit items-center gap-1.5 rounded-[6px] px-2 py-1 text-xs font-semibold ${style.background} ${style.text}`}
     >
       <span aria-hidden className={`size-1 rounded-full ${style.dot}`} />
       {getStatusLabel(status)}
@@ -117,7 +117,7 @@ function ContextBadge({
     : "bg-[var(--muted)]";
 
   return (
-    <span className={`inline-flex w-fit items-center gap-1.5 rounded-[6px] px-2 py-1 text-[11px] font-semibold ${className}`}>
+    <span className={`inline-flex w-fit items-center gap-1.5 rounded-[6px] px-2 py-1 text-xs font-semibold ${className}`}>
       <span aria-hidden className={`size-1 rounded-full ${dotClassName}`} />
       {label}
     </span>
@@ -199,7 +199,7 @@ function AttentionPanel({ recoveryCase }: { recoveryCase: RecoveryCaseListItem }
         />
       </div>
       <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
-        Explainable flags based only on the case and delivery facts recorded below.
+        Review these recorded issues before continuing recovery.
       </p>
       <div className="mt-4 grid gap-3">
         {recoveryCase.attentionFlags.map((flag) => (
@@ -233,12 +233,9 @@ function GuidancePanel({ recoveryCase }: { recoveryCase: RecoveryCaseListItem })
         >
           Recommended recovery action
         </h2>
-        <ContextBadge label="Advisory" />
+        <ContextBadge label="Guidance" />
       </div>
-      <p className="mt-3 text-[13px] leading-5 text-[var(--muted-strong)]">
-        Communication guidance based on Stripe&apos;s reported failure reason.
-      </p>
-      <dl className="mt-5 grid gap-4 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+      <dl className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
         <div>
           <dt className="text-[13px] font-semibold text-[var(--foreground)]">What the customer should do</dt>
           <dd className="mt-1 text-[13px] leading-5 text-[var(--foreground)]">{recoveryCase.customerAction}</dd>
@@ -253,7 +250,7 @@ function GuidancePanel({ recoveryCase }: { recoveryCase: RecoveryCaseListItem })
         </div>
       </dl>
       <p className="mt-5 text-xs leading-5 text-[var(--muted)]">
-        Advisory only. This guidance changes neither saved message copy, Stripe retry timing, nor automated delivery.
+        Guidance only—nothing is changed automatically.
       </p>
     </section>
   );
@@ -295,7 +292,7 @@ function CoordinationPanel({
         <Fact label="Next RevRecovery email" value={formatDate(recoveryCase.nextEmailAt)} />
         <Fact
           label="Recorded attempts"
-          value={`${recoveryCase.attemptCount} recorded payment ${recoveryCase.attemptCount === 1 ? "attempt" : "attempts"}`}
+          value={`${recoveryCase.attemptCount} payment ${recoveryCase.attemptCount === 1 ? "attempt" : "attempts"}`}
         />
       </dl>
       <div className={`mt-5 rounded-[var(--radius-control)] border p-4 ${overlapClassName}`}>
@@ -321,11 +318,7 @@ function CoordinationPanel({
         </dl>
       </div>
       <p className="mt-5 text-xs leading-5 text-[var(--muted)]">
-        This read-only view does not automatically change any schedules.{" "}
-        {isRecoverySequenceExhausted
-          ? "The case is marked exhausted after its recorded recovery sequence completed."
-          : "The case is not marked exhausted."}
-        {" "}RevRecovery has not changed this case&apos;s schedule or status.
+        This view compares recorded timing only; it does not change schedules or status.
       </p>
     </section>
   );
@@ -347,25 +340,20 @@ function EmailPreviewPanel({
 
   return (
     <CaseDetailDisclosure
-      badges={
-        <div className="flex flex-wrap gap-2">
-          <ContextBadge label="Preview only" />
-          <ContextBadge label="Not saved" />
-        </div>
-      }
+      badges={<ContextBadge label="Preview" />}
       className={className}
       collapsedLabel="Show email preview"
       expandedLabel="Hide email preview"
       footer={
         <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
-          This preview does not modify the account template, this case&apos;s sequence, or email delivery.
+          Preview only—nothing is saved or sent.
         </p>
       }
       title="Suggested first email"
     >
       <div className="mt-4 border-t border-[var(--border)] pt-5 lg:mt-5">
         <p className="text-[13px] leading-5 text-[var(--muted-strong)]">
-          Suggested first-email treatment for this failure category. Review it before deciding whether it should influence automated messages.
+          A suggested first email based on the recorded payment failure.
         </p>
         <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-muted)] p-4 sm:p-5">
           <p className="text-xs text-[var(--muted)]">Suggested subject</p>
@@ -442,7 +430,7 @@ function TimelinePanel({ timeline }: { timeline: RecoveryCaseTimelineEvent[] }) 
         <div className="mt-5 rounded-[var(--radius-control)] border border-dashed border-[var(--border-strong)] p-6">
           <p className="text-[13px] font-semibold text-[var(--foreground)]">No timeline activity recorded</p>
           <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-            No historical timeline events are available for this case. Older cases may predate event tracking.
+            No timeline events are available. Older cases may predate event tracking.
           </p>
         </div>
       ) : (
@@ -495,7 +483,7 @@ export function CaseDetailContent({
   const emailStageDetail = recoveryCase.manuallyPausedAt
     ? "Recovery emails manually paused"
     : recoveryCase.nextEmailAt === null && recoveryCase.caseStatus === "detected"
-      ? "No recovery email has been scheduled"
+      ? "No recovery email is scheduled"
       : `Current stage: ${formatLabel(recoveryCase.recoveryStage)}`;
   const hasSyntheticTestEvidence = timeline.some(
     (event) => event.sourceEventId?.startsWith("rr_test_evt_") ?? false,
@@ -529,7 +517,7 @@ export function CaseDetailContent({
           <OverviewItem label="Failure reported" value={recoveryCase.failureTitle} />
           <OverviewItem
             label="Recorded attempts"
-            value={`${recoveryCase.attemptCount} recorded payment ${recoveryCase.attemptCount === 1 ? "attempt" : "attempts"}`}
+            value={`${recoveryCase.attemptCount} payment ${recoveryCase.attemptCount === 1 ? "attempt" : "attempts"}`}
           />
           <OverviewItem label="Recovery stage" value={getRecoveryStageLabel(recoveryCase)} />
         </dl>

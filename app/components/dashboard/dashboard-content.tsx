@@ -139,7 +139,7 @@ function SummaryMetric({
       >
         {value}
       </p>
-      <p className="mt-1 text-[11px] leading-4 text-[var(--muted)]">{caption}</p>
+      <p className="mt-1 text-xs leading-4 text-[var(--muted)]">{caption}</p>
     </div>
   );
 }
@@ -202,7 +202,7 @@ function CasesTable({ cases }: { cases: RecoveryCaseListItem[] }) {
     <div className="overflow-x-auto">
       <table className="w-full min-w-[860px] border-collapse text-left">
         <thead>
-          <tr className="border-y border-[var(--border)] bg-[var(--surface-muted)] text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+          <tr className="border-y border-[var(--border)] bg-[var(--surface-muted)] text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
             <th className="px-5 py-3">Customer</th>
             <th className="px-4 py-3">Amount</th>
             <th className="px-4 py-3">Failure</th>
@@ -220,7 +220,7 @@ function CasesTable({ cases }: { cases: RecoveryCaseListItem[] }) {
                 >
                   {getCustomerLabel(item)}
                 </Link>
-                <p className="mt-1 text-[11px] text-[var(--muted)]">
+                <p className="mt-1 text-xs text-[var(--muted)]">
                   {item.livemode === false ? "Test" : item.livemode ? "Live" : "Environment unknown"}
                 </p>
               </td>
@@ -231,7 +231,7 @@ function CasesTable({ cases }: { cases: RecoveryCaseListItem[] }) {
                 <p className="max-w-[180px] text-sm text-[var(--foreground)]">
                   {item.failureTitle}
                 </p>
-                <p className="mt-1 text-[11px] text-[var(--muted)]">
+                <p className="mt-1 text-xs text-[var(--muted)]">
                   {item.attemptCount} payment {item.attemptCount === 1 ? "attempt" : "attempts"}
                 </p>
               </td>
@@ -278,13 +278,12 @@ function RecentActivity({ cases }: { cases: RecoveryCaseListItem[] }) {
       <h2 className="text-base font-semibold text-[var(--foreground)]">
         Recently updated cases
       </h2>
-      <p className="mt-0.5 text-xs text-[var(--muted)]">Latest case changes</p>
       {recentCases.length === 0 ? (
         <p className="mt-6 text-sm text-[var(--muted)]">
           No case activity has been recorded in this environment yet.
         </p>
       ) : (
-        <div className="mt-3 divide-y divide-[var(--border)]">
+        <div className="mt-4 divide-y divide-[var(--border)]">
           {recentCases.map((item) => {
             const opened = item.createdAt === item.updatedAt;
             const title = hasAttention(item)
@@ -305,13 +304,13 @@ function RecentActivity({ cases }: { cases: RecoveryCaseListItem[] }) {
                   >
                     {title} · {getCustomerLabel(item)}
                   </Link>
-                  <p className="mt-1 text-[11px] leading-4 text-[var(--muted)]">
+                  <p className="mt-1 text-xs leading-4 text-[var(--muted)]">
                     {hasAttention(item)
                       ? item.attentionFlags[0]?.title
                       : `${item.failureTitle} · ${formatLabel(item.caseStatus)}`}
                   </p>
                 </div>
-                <time className="shrink-0 text-[10px] text-[var(--muted)]" dateTime={item.updatedAt}>
+                <time className="shrink-0 text-xs text-[var(--muted)]" dateTime={item.updatedAt}>
                   {formatActivityTime(item.updatedAt)}
                 </time>
               </div>
@@ -385,7 +384,7 @@ function RecoveryHealth({ recoverySettings }: { recoverySettings: RecoveryModeSe
       </dl>
       <div className="pt-3">
         <p className="text-xs font-semibold text-[var(--foreground)]">{deliveryTitle}</p>
-        <p className="mt-1.5 text-[11px] leading-4 text-[var(--muted)]">{deliveryBody}</p>
+        <p className="mt-1.5 text-xs leading-4 text-[var(--muted)]">{deliveryBody}</p>
         <Link
           className="mt-2 inline-flex items-center gap-1 text-[13px] text-[var(--primary)] hover:text-[var(--primary-hover)]"
           href="/dashboard/recovery"
@@ -393,7 +392,7 @@ function RecoveryHealth({ recoverySettings }: { recoverySettings: RecoveryModeSe
           View flow
           <Icon className="size-3.5" name="arrow-right" />
         </Link>
-        <p className="mt-2 text-[11px] text-[var(--muted)]">
+        <p className="mt-2 text-xs text-[var(--muted)]">
           Schedule: {schedule.label.replaceAll(", ", " · ")}
         </p>
       </div>
@@ -421,7 +420,7 @@ function PerformanceSnapshot({ metrics }: { metrics: DashboardMetrics }) {
       <p className="mt-3 text-[13px] font-semibold leading-5 text-[var(--foreground)]">
         {metrics.sentMessagesCount} messages sent / {metrics.recoveredPaymentsCount} resolved cases
       </p>
-      <p className="mt-1.5 text-[11px] leading-4 text-[var(--muted)]">
+      <p className="mt-1.5 text-xs leading-4 text-[var(--muted)]">
         Recovery rate {rate} · {metrics.eligiblePaymentsCount > 0
           ? "Calculated from open and confirmed recovered cases."
           : "No completed recovery outcomes yet."}
@@ -466,7 +465,7 @@ export function DashboardContent({
               </span>
             </div>
             <p className="mt-2 text-[13px] leading-5 text-[var(--muted)] lg:text-sm">
-              Your failed payments and next actions.
+              See failed payments, priorities, and next actions.
             </p>
           </div>
           <Link
@@ -531,8 +530,8 @@ export function DashboardContent({
             </Link>
           </div>
           <CasesTable cases={featuredCases} />
-          <p className="border-t border-[var(--border)] px-5 py-3 text-[11px] leading-4 text-[var(--muted)]">
-            Amount at risk is unpaid invoice value, not lost revenue. Resolved means the payment is confirmed.
+          <p className="border-t border-[var(--border)] px-5 py-3 text-xs leading-4 text-[var(--muted)]">
+            Amounts at risk are unpaid invoice values, not confirmed lost revenue. Resolved cases have a confirmed payment.
           </p>
         </section>
 
@@ -541,14 +540,14 @@ export function DashboardContent({
             <h2 className="text-base font-semibold text-[var(--foreground)]">
               Needs attention · {attentionCount}
             </h2>
-            <p className="mt-1 text-xs text-[var(--muted)]">Review the customer&apos;s next step.</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Start with the cases that need action.</p>
           </div>
           {attentionCases.length > 0 ? (
             attentionCases.slice(0, 2).map((item) => <MobileCaseCard item={item} key={item.id} />)
           ) : (
             <div className={`${cardClass} p-[18px]`}>
               <p className="text-sm font-semibold text-[var(--foreground)]">Nothing needs attention</p>
-              <p className="mt-1 text-xs leading-5 text-[var(--muted)]">No open case currently has an operational or delivery warning.</p>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted)]">No open case currently needs manual review.</p>
             </div>
           )}
           {otherOpenCases.length > 0 ? (
@@ -580,8 +579,8 @@ export function DashboardContent({
           </div>
         </div>
 
-        <Link className="inline-flex w-fit items-center gap-1 text-[13px] text-[var(--primary)] hover:text-[var(--primary-hover)]" href="/dashboard/optimize">
-          Optimize recovery
+        <Link className="inline-flex min-h-11 w-fit items-center gap-1 rounded-[var(--radius-control)] text-[13px] font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]" href="/dashboard/optimize">
+          View recommendations
           <Icon className="size-3.5" name="arrow-right" />
         </Link>
       </div>

@@ -93,7 +93,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function EnvironmentBadge({ livemode }: { livemode: boolean | null }) {
   return (
-    <span className="inline-flex w-fit rounded-[5px] border border-[var(--border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--muted)]">
+    <span className="inline-flex w-fit rounded-[5px] border border-[var(--border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--muted)]">
       {getEnvironmentLabel(livemode)}
     </span>
   );
@@ -103,7 +103,7 @@ function AttentionSummary({ item }: { item: RecoveryCaseListItem }) {
   const firstFlag = item.attentionFlags[0];
 
   if (!firstFlag) {
-    return <p className="text-xs text-[var(--muted)]">No attention flag</p>;
+    return <p className="text-xs text-[var(--muted)]">No action needed</p>;
   }
 
   const critical = item.attentionLevel === "critical";
@@ -120,7 +120,7 @@ function AttentionSummary({ item }: { item: RecoveryCaseListItem }) {
         {firstFlag.title}
       </span>
       {item.attentionFlags.length > 1 ? (
-        <p className="mt-1.5 text-[11px] text-[var(--muted)]">
+        <p className="mt-1.5 text-xs text-[var(--muted)]">
           +{item.attentionFlags.length - 1} more
         </p>
       ) : null}
@@ -136,13 +136,13 @@ function RecoveryActivity({ item }: { item: RecoveryCaseListItem }) {
   return (
     <div className="space-y-1">
       <p className="text-[13px] font-semibold text-[var(--foreground)]">{stage}</p>
-      <p className="text-[11px] leading-4 text-[var(--muted)]">
+      <p className="text-xs leading-4 text-[var(--muted)]">
         {item.attemptCount} payment {item.attemptCount === 1 ? "attempt" : "attempts"}
       </p>
-      <p className="text-[11px] leading-4 text-[var(--muted)]">
+      <p className="text-xs leading-4 text-[var(--muted)]">
         Stripe retry: {formatDate(item.nextPaymentAttemptAt)}
       </p>
-      <p className="text-[11px] leading-4 text-[var(--muted)]">
+      <p className="text-xs leading-4 text-[var(--muted)]">
         Next email: {formatDate(item.nextEmailAt)}
       </p>
     </div>
@@ -160,7 +160,7 @@ function DesktopCases({
     <div className="hidden overflow-x-auto lg:block">
       <table className="w-full min-w-[900px] border-collapse text-left">
         <thead>
-          <tr className="border-y border-[var(--border)] bg-[var(--surface-muted)] text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+          <tr className="border-y border-[var(--border)] bg-[var(--surface-muted)] text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
             <th className="w-[25%] px-5 py-3" scope="col">Customer / amount</th>
             <th className="w-[25%] px-4 py-3" scope="col">Payment issue</th>
             <th className="w-[22%] px-4 py-3" scope="col">Recovery activity</th>
@@ -178,7 +178,7 @@ function DesktopCases({
                 >
                   {getCustomerLabel(item)}
                 </Link>
-                <p className="mt-1 max-w-[230px] truncate text-[11px] text-[var(--muted)]">
+                <p className="mt-1 max-w-[230px] truncate text-xs text-[var(--muted)]">
                   {item.invoiceId}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -188,11 +188,11 @@ function DesktopCases({
                   <EnvironmentBadge livemode={item.livemode} />
                 </div>
                 {highValueActive ? (
-                  <span className="mt-2 inline-flex rounded-[5px] bg-[var(--primary-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--primary-text)]">
+                  <span className="mt-2 inline-flex rounded-[5px] bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--primary-text)]">
                     Meets threshold
                   </span>
                 ) : null}
-                <p className="mt-2 text-[11px] text-[var(--muted)]">
+                <p className="mt-2 text-xs text-[var(--muted)]">
                   {formatLabel(item.audienceSegment)}
                 </p>
               </td>
@@ -212,10 +212,10 @@ function DesktopCases({
               </td>
               <td className="px-4 py-5 align-top">
                 <StatusBadge status={item.caseStatus} />
-                <p className="mt-2 text-[11px] leading-4 text-[var(--muted)]">
+                <p className="mt-2 text-xs leading-4 text-[var(--muted)]">
                   Stripe invoice: {formatLabel(item.invoiceStatus)}
                 </p>
-                <p className="mt-1 text-[11px] leading-4 text-[var(--muted)]">
+                <p className="mt-1 text-xs leading-4 text-[var(--muted)]">
                   Updated {formatDate(item.updatedAt)}
                 </p>
               </td>
@@ -239,7 +239,7 @@ function DesktopCases({
 function DetailFact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+      <dt className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
         {label}
       </dt>
       <dd className="mt-1 break-words text-xs leading-5 text-[var(--foreground)]">
@@ -267,7 +267,7 @@ function MobileCaseCard({
           <p className="truncate text-[13px] font-semibold text-[var(--foreground)]">
             {getCustomerLabel(item)}
           </p>
-          <p className="mt-1 truncate text-[11px] text-[var(--muted)]">{item.invoiceId}</p>
+          <p className="mt-1 truncate text-xs text-[var(--muted)]">{item.invoiceId}</p>
         </div>
         <p className="shrink-0 text-base font-semibold text-[var(--foreground)]">
           {formatCurrency(item)}
@@ -278,7 +278,7 @@ function MobileCaseCard({
         <StatusBadge status={item.caseStatus} />
         <EnvironmentBadge livemode={item.livemode} />
         {highValueActive ? (
-          <span className="inline-flex rounded-[5px] bg-[var(--primary-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--primary-text)]">
+          <span className="inline-flex rounded-[5px] bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--primary-text)]">
             Meets threshold
           </span>
         ) : null}
@@ -293,7 +293,7 @@ function MobileCaseCard({
         </div>
         <AttentionSummary item={item} />
         <div className="rounded-[8px] bg-[var(--surface-muted)] px-3 py-2.5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
+          <p className="text-[11px] font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
             Recovery activity
           </p>
           <p className="mt-1 text-xs font-semibold text-[var(--foreground)]">{stage}</p>
@@ -310,8 +310,8 @@ function MobileCaseCard({
 
       <details className="group mt-2 border-t border-[var(--border)] pt-2">
         <summary className="flex min-h-9 list-none items-center justify-center gap-1.5 text-xs font-semibold text-[var(--muted-strong)] [&::-webkit-details-marker]:hidden">
-          <span className="group-open:hidden">Show fields</span>
-          <span className="hidden group-open:inline">Hide fields</span>
+          <span className="group-open:hidden">More details</span>
+          <span className="hidden group-open:inline">Hide details</span>
           <Icon className="size-3.5 transition-transform group-open:rotate-180" name="chevron-down" />
         </summary>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-[var(--border)] pt-4">
@@ -401,8 +401,8 @@ export function CasesContent({ page }: { page: RecoveryCasesPage }) {
     page.filters.currency !== null && page.filters.minimumAmountCents !== null;
   const environment = getCasesEnvironmentLabel(page.filters.environment);
   const queueDescription = page.filters.status === "attention"
-    ? "Cases with an exhausted or failed recovery flow, or a recorded email-delivery problem."
-    : "Review what Stripe reported, what happens next, and where each recovery stands.";
+    ? "Cases with exhausted recovery, operational failures, or email-delivery issues."
+    : "See the payment issue, recovery progress, and next step for each case.";
 
   return (
     <div className="px-5 py-5 sm:px-8 sm:py-8 lg:px-8 xl:px-10">
@@ -437,7 +437,7 @@ export function CasesContent({ page }: { page: RecoveryCasesPage }) {
                 {page.totalCount} matching {page.totalCount === 1 ? "case" : "cases"}
               </p>
               {highValueActive ? (
-                <p className="mt-1 text-[11px] text-[var(--muted)]">
+                <p className="mt-1 text-xs text-[var(--muted)]">
                   {page.filters.currency?.toUpperCase()} {page.filters.minimumAmountInput}+ · highest value first
                 </p>
               ) : null}
@@ -464,8 +464,8 @@ export function CasesContent({ page }: { page: RecoveryCasesPage }) {
           <CasesPagination page={page} />
         </section>
 
-        <p className="text-[11px] leading-4 text-[var(--muted)]">
-          High value is never assumed across currencies; use your own threshold for comparable invoices. Amount at risk is unpaid invoice value, not confirmed lost revenue. Status and retry timing reflect the latest recorded Stripe and RevRecovery evidence.
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          Amounts are compared only within the selected currency. Amount at risk is unpaid invoice value, not confirmed lost revenue.
         </p>
       </div>
     </div>

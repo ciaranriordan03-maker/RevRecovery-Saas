@@ -92,7 +92,7 @@ describe("recovery cases workspace", () => {
     );
 
     expect(source).toContain("getRecoveryDeclineDiagnostic");
-    expect(content).toContain("Review what Stripe reported");
+    expect(content).toContain("See the payment issue, recovery progress, and next step for each case.");
     expect(content).not.toMatch(/caused (the )?recovery/i);
   });
 
@@ -137,11 +137,11 @@ describe("recovery cases workspace", () => {
       "utf8",
     );
 
-    expect(filtersSource).toContain("Changes apply when you confirm.");
+    expect(filtersSource).toContain("Currency and minimum value are applied together.");
     expect(filtersSource).toContain('role="dialog"');
     expect(filtersSource).toContain("getAppliedDraft(filters)");
     expect(contentSource).toContain("<details");
-    expect(contentSource).toContain("Show fields");
+    expect(contentSource).toContain("More details");
     expect(contentSource).toContain("Review case");
   });
 });

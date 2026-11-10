@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AppShell } from "../../components/dashboard/app-shell";
 import { InsightsContent } from "../../components/dashboard/insights-content";
 import { requireCompletedOnboarding } from "../../lib/auth";
@@ -33,6 +34,16 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
       : "unconfirmed";
   const filter = normalizeInsightsFilter(params, defaultEnvironment);
   const view = getInsightsView(params?.view);
+
+  if (view === "evidence") {
+    const advancedParams = new URLSearchParams({
+      environment: filter.environment,
+      period: filter.period,
+      segment: filter.segment,
+    });
+    redirect(`/dashboard/settings/data-reporting?${advancedParams.toString()}`);
+  }
+
   const insightsMetrics = await getInsightsMetrics(claims.sub, filter);
 
   return (

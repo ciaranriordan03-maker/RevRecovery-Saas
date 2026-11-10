@@ -17,6 +17,7 @@ import {
   getRecoverySchedule,
   type RecoveryScheduleId,
 } from "../../lib/recovery/schedule-policy";
+import { AccountAlertsSettings } from "./notification-test-recipient-settings";
 
 type LoadState = {
   settings: UserSettings;
@@ -434,6 +435,12 @@ export function SettingsContent({
         </SettingsSection>
         </div>
 
+        <div id="account-alerts">
+          <SettingsSection icon="bell" title="Account alerts">
+            <AccountAlertsSettings />
+          </SettingsSection>
+        </div>
+
         <SettingsSection icon="refresh" title="Recovery setup">
           {isLoadingRecoveryMode ? (
             <p className="text-sm text-[var(--muted)]">Loading recovery configuration...</p>
@@ -456,7 +463,7 @@ export function SettingsContent({
                   </p>
                 </div>
                 <Link
-                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)]"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
                   href="/dashboard/recovery?step=customize"
                 >
                   Manage recovery
@@ -572,6 +579,24 @@ export function SettingsContent({
               {recoveryModeMessage || "Unable to load recovery delivery mode."}
             </p>
           )}
+        </SettingsSection>
+
+        <SettingsSection icon="chart" title="Advanced">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[var(--foreground)]">Data &amp; reporting</p>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-[var(--muted)]">
+                Export and verify technical reporting evidence for support, audits or troubleshooting.
+              </p>
+            </div>
+            <Link
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+              href="/dashboard/settings/data-reporting"
+            >
+              Open data tools
+              <Icon className="size-4" name="arrow-right" />
+            </Link>
+          </div>
         </SettingsSection>
 
         <SettingsSection icon="shield" title="Security">

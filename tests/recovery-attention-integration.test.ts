@@ -23,6 +23,6 @@ describe("recovery attention integration", () => {
     );
     expect(cases).toContain("item.attentionFlags");
     expect(detail).toContain("recoveryCase.attentionFlags");
-    expect(detail).toContain("based only on the case and delivery facts");
+    expect(detail).toContain("Review these recorded issues before continuing recovery.");
   });
 });

@@ -46,7 +46,7 @@ describe("recovery case detail route", () => {
     );
 
     expect(source).toContain('recoveryCase.caseStatus !== "detected"');
-    expect(source).toContain("No recovery email has been scheduled");
+    expect(source).toContain("No recovery email is scheduled");
   });
 
   it("shows failure-specific communication guidance without claiming automation", () => {
@@ -55,11 +55,11 @@ describe("recovery case detail route", () => {
       "utf8",
     );
 
-    expect(source).toContain("Communication guidance");
+    expect(source).toContain("Recommended recovery action");
     expect(source).toContain("recoveryCase.customerAction");
     expect(source).toContain("recoveryCase.merchantAction");
     expect(source).toContain("recoveryCase.retryGuidance");
-    expect(source).toContain("Advisory only");
+    expect(source).toContain("Guidance only—nothing is changed automatically.");
   });
 
   it("shows a failure-specific email preview without saving it", () => {
@@ -68,10 +68,9 @@ describe("recovery case detail route", () => {
       "utf8",
     );
 
-    expect(source).toContain("Suggested first-email treatment");
+    expect(source).toContain("A suggested first email based on the recorded payment failure.");
     expect(source).toContain("buildFailureSpecificEmailPreview");
-    expect(source).toContain("Not saved");
-    expect(source).toContain("does not modify the account template");
+    expect(source).toContain("Preview only—nothing is saved or sent.");
   });
 
   it("shows a read-only Stripe retry and email timing evaluation", () => {
@@ -83,7 +82,7 @@ describe("recovery case detail route", () => {
     expect(source).toContain("evaluateRetryEmailOverlap");
     expect(source).toContain("Recovery coordination");
     expect(source).toContain("Read only");
-    expect(source).toContain("does not automatically change any schedules");
+    expect(source).toContain("does not change schedules or status");
   });
 
   it("shows recovery-window and sequence-exhaustion facts without controls", () => {
@@ -96,8 +95,8 @@ describe("recovery case detail route", () => {
     expect(source).toContain("recoveryCase.remainingMessageCount");
     expect(source).toContain("recoveryCase.scheduledMessageCount");
     expect(source).toContain("recoveryCase.recoveryWindowEndsAt");
-    expect(source).toContain("The case is not marked exhausted.");
-    expect(source).toContain("has not changed this case&apos;s schedule or status");
+    expect(source).toContain('isRecoverySequenceExhausted ? "Yes" : "No"');
+    expect(source).toContain("does not change schedules or status");
   });
 
   it("keeps synthetic sandbox wording conditional on recorded test evidence", () => {

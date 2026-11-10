@@ -27,6 +27,16 @@ const navIcon: Record<DashboardNavItem, string> = {
   Settings: "grid",
 };
 
+const navLabel: Record<DashboardNavItem, string> = {
+  Setup: "Setup",
+  Dashboard: "Dashboard",
+  Cases: "Cases",
+  Recovery: "Recovery",
+  Insights: "Insights",
+  Optimize: "Recommendations",
+  Settings: "Settings",
+};
+
 function getDisplayName({
   email,
   fullName,
@@ -65,7 +75,7 @@ function Navigation({
       {navItems.map((item) => (
         <Link
           aria-current={item === active ? "page" : undefined}
-          className={`flex h-[42px] items-center gap-3 rounded-[8px] px-3 text-sm font-medium transition-colors ${
+          className={`flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
             item === active
               ? "bg-[var(--primary-soft)] text-[var(--primary)]"
               : "text-[var(--muted-strong)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
@@ -74,7 +84,7 @@ function Navigation({
           key={item}
         >
           <Icon className="size-[18px]" name={navIcon[item]} />
-          {item}
+          {navLabel[item]}
         </Link>
       ))}
     </nav>
@@ -143,7 +153,7 @@ export async function AppShell({
                   {displayName}
                 </p>
                 <Link
-                  className="mt-0.5 block truncate text-[11px] text-[var(--muted)] hover:text-[var(--primary)]"
+                  className="mt-0.5 block truncate rounded-sm text-xs text-[var(--muted)] hover:text-[var(--primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
                   href="/dashboard/settings"
                 >
                   Account settings
@@ -158,7 +168,7 @@ export async function AppShell({
           <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-5 lg:hidden">
             <BrandMark variant="mobile" />
             <details className="group relative">
-              <summary className="flex list-none items-center gap-1.5 text-xs text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 list-none items-center gap-1.5 rounded-[var(--radius-control)] px-2 text-sm font-medium text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] [&::-webkit-details-marker]:hidden">
                 <Icon className="size-[18px]" name="menu" />
                 Menu
               </summary>
@@ -187,7 +197,7 @@ export async function AppShell({
 
           <div className="hidden h-[68px] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-8 lg:flex xl:px-10">
             <p className="text-xs text-[var(--muted)]">
-              <Link className="hover:text-[var(--primary)]" href="/dashboard">
+              <Link className="rounded-sm hover:text-[var(--primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]" href="/dashboard">
                 RevRecovery
               </Link>
               <span className="px-2 text-[var(--border-strong)]">/</span>
@@ -198,7 +208,7 @@ export async function AppShell({
 
           {showPageHeading ? (
             <header className="px-5 pt-7 sm:px-8 lg:px-8 lg:pt-8 xl:px-10">
-              <h1 className="text-2xl font-semibold tracking-[-0.025em] text-[var(--foreground)]">
+              <h1 className="text-[26px] font-semibold leading-8 tracking-[-0.025em] text-[var(--foreground)] sm:text-[30px] sm:leading-9">
                 {title}
               </h1>
               <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>

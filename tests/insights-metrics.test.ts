@@ -58,6 +58,48 @@ const sequence = (
 });
 
 describe("Insights metrics", () => {
+  it("summarizes founder-level outcomes without mixing currencies or overstating recovered value", () => {
+    const insights = buildInsightsMetrics({
+      events: [],
+      failedPayments: [
+        failedPayment({ amount_due: 7900, case_status: "active", currency: "eur", id: "open-eur", livemode: false }),
+        failedPayment({ amount_due: 5000, case_status: "exhausted", currency: "usd", id: "open-usd", livemode: false }),
+        failedPayment({ amount_due: 14900, case_status: "recovered", currency: "eur", id: "recovered", livemode: false, status: "recovered" }),
+        failedPayment({ amount_due: 9900, case_status: "no_longer_applicable", currency: "eur", id: "closed", livemode: false }),
+      ],
+      filter: { environment: "test", period: "all", segment: "all" },
+      messages: [message({ status: "failed_terminal" })],
+      sequences: [],
+    });
+
+    expect(insights.overviewSummary).toEqual({
+      failedDeliveryCount: 1,
+      openCaseCount: 2,
+      otherClosedCaseCount: 1,
+      recoveredCaseCount: 1,
+      recoveredValue: "€149.00",
+      revenueAtRisk: "€79.00 + $50.00",
+      totalCaseCount: 4,
+    });
+  });
+
+  it("uses a plain zero when a selected cohort has no open or recovered value", () => {
+    const insights = buildInsightsMetrics({
+      events: [],
+      failedPayments: [
+        failedPayment({ amount_due: 7900, case_status: "no_longer_applicable", currency: "eur", livemode: false }),
+      ],
+      filter: { environment: "test", period: "all", segment: "all" },
+      messages: [],
+      sequences: [],
+    });
+
+    expect(insights.overviewSummary).toMatchObject({
+      recoveredValue: "0",
+      revenueAtRisk: "0",
+    });
+  });
+
   it("keeps the complete D5 evidence chain isolated, gated, auditable, and non-causal", () => {
     const evaluatedAt = new Date("2026-10-20T12:00:00.000Z");
     const filter = { environment: "test", period: "30d", segment: "all" } as const;
