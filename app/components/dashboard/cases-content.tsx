@@ -170,7 +170,7 @@ function DesktopCases({
         </thead>
         <tbody className="divide-y divide-[var(--border)]">
           {cases.map((item) => (
-            <tr className="transition-colors hover:bg-[var(--surface-muted)]" key={item.id}>
+            <tr className="motion-safe:transition-colors motion-safe:duration-150 hover:bg-[var(--surface-muted)]" key={item.id}>
               <td className="px-5 py-5 align-top">
                 <Link
                   className="block max-w-[230px] truncate text-[13px] font-semibold text-[var(--foreground)] hover:text-[var(--primary)]"
@@ -221,7 +221,7 @@ function DesktopCases({
               </td>
               <td className="px-5 py-5 text-right align-top">
                 <Link
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)] motion-safe:transition-colors motion-safe:duration-150 hover:border-[var(--border-strong)]"
                   href={`/dashboard/cases/${item.id}`}
                 >
                   Review
@@ -405,7 +405,7 @@ export function CasesContent({ page }: { page: RecoveryCasesPage }) {
     : "See the payment issue, recovery progress, and next step for each case.";
 
   return (
-    <div className="px-5 py-5 sm:px-8 sm:py-8 lg:px-8 xl:px-10">
+    <div className="dashboard-page-enter px-5 py-5 sm:px-8 sm:py-8 lg:px-8 xl:px-10">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-[22px] lg:gap-[26px]">
         <section>
           <div className="flex items-start justify-between gap-4">
@@ -414,7 +414,7 @@ export function CasesContent({ page }: { page: RecoveryCasesPage }) {
                 Cases
               </h1>
               <p className="mt-2 text-[13px] leading-5 text-[var(--muted)] lg:text-sm">
-                Investigate failed payments and decide the next recovery action.
+                Review failed payments and decide what to do next.
               </p>
             </div>
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-[6px] bg-[var(--primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--primary)] lg:hidden">

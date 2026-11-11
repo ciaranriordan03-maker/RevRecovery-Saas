@@ -75,7 +75,7 @@ function Navigation({
       {navItems.map((item) => (
         <Link
           aria-current={item === active ? "page" : undefined}
-          className={`flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
+          className={`flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm font-medium motion-safe:transition-colors motion-safe:duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
             item === active
               ? "bg-[var(--primary-soft)] text-[var(--primary)]"
               : "text-[var(--muted-strong)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"

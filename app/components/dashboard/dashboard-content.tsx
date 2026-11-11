@@ -451,7 +451,7 @@ export function DashboardContent({
   const atRiskValue = formatCurrencyAmounts(metrics.revenueAtRiskByCurrency);
 
   return (
-    <div className="px-5 py-5 sm:px-8 sm:py-8 lg:px-8 xl:px-10">
+    <div className="dashboard-page-enter px-5 py-5 sm:px-8 sm:py-8 lg:px-8 xl:px-10">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-[22px] lg:gap-[26px]">
         <section className="flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
@@ -465,7 +465,7 @@ export function DashboardContent({
               </span>
             </div>
             <p className="mt-2 text-[13px] leading-5 text-[var(--muted)] lg:text-sm">
-              See failed payments, priorities, and next actions.
+              See failed payments, priorities, and what to do next.
             </p>
           </div>
           <Link

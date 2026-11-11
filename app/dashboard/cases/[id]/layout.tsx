@@ -9,7 +9,7 @@ export default function RecoveryCaseLayout({
     <AppShell
       active="Cases"
       showPageHeading={false}
-      subtitle="Review the complete failed-payment recovery history"
+      subtitle="Review the payment issue, recovery progress, and history"
       title="Case details"
     >
       {children}

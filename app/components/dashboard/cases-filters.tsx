@@ -12,7 +12,7 @@ import { getCasesHref } from "../../lib/cases-query";
 import { Icon } from "../ui-icon";
 
 const controlClass =
-  "h-10 rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]";
+  "h-10 rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none motion-safe:transition-[border-color,box-shadow] motion-safe:duration-150 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]";
 
 const statusOptions: Array<{ label: string; value: RecoveryCaseStatusFilter }> = [
   { label: "Open cases", value: "open" },
@@ -80,7 +80,7 @@ function FilterChip({
       {removable && href ? (
         <Link
           aria-label={`Remove ${label} filter`}
-          className="-mr-1 inline-flex size-5 items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+          className="-mr-1 inline-flex size-5 items-center justify-center rounded text-[var(--muted)] motion-safe:transition-colors motion-safe:duration-150 hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
           href={href}
         >
           <Icon className="size-3" name="x" />
@@ -202,7 +202,7 @@ function DesktopFilters({ filters }: { filters: RecoveryCaseFilters }) {
           />
         </label>
         <button
-          className="h-10 rounded-[var(--radius-control)] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)]"
+          className="h-10 rounded-[var(--radius-control)] bg-[var(--primary)] px-4 text-sm font-semibold text-white motion-safe:transition-[background-color,transform] motion-safe:duration-150 motion-safe:active:translate-y-px hover:bg-[var(--primary-hover)]"
           type="submit"
         >
           Apply
@@ -299,7 +299,7 @@ function MobileFilters({ filters }: { filters: RecoveryCaseFilters }) {
       <div className="flex items-center justify-between gap-3">
         <AppliedFilters filters={filters} />
         <button
-          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)]"
+          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)] motion-safe:transition-colors motion-safe:duration-150 hover:border-[var(--border-strong)]"
           onClick={openSheet}
           type="button"
         >
@@ -328,7 +328,7 @@ function MobileFilters({ filters }: { filters: RecoveryCaseFilters }) {
               </h2>
               <button
                 aria-label="Close filters"
-                className="inline-flex size-9 items-center justify-center rounded-[8px] text-[var(--muted)] hover:bg-[var(--surface-muted)]"
+                className="inline-flex size-9 items-center justify-center rounded-[8px] text-[var(--muted)] motion-safe:transition-colors motion-safe:duration-150 hover:bg-[var(--surface-muted)]"
                 onClick={closeSheet}
                 type="button"
               >
@@ -406,7 +406,7 @@ function MobileFilters({ filters }: { filters: RecoveryCaseFilters }) {
                   Clear all
                 </Link>
                 <button
-                  className="h-11 rounded-[8px] bg-[var(--primary)] text-sm font-semibold text-white hover:bg-[var(--primary-hover)]"
+                  className="h-11 rounded-[8px] bg-[var(--primary)] text-sm font-semibold text-white motion-safe:transition-[background-color,transform] motion-safe:duration-150 motion-safe:active:translate-y-px hover:bg-[var(--primary-hover)]"
                   type="submit"
                 >
                   Apply filters

@@ -3,7 +3,7 @@ import { Icon } from "../ui-icon";
 
 export function CaseDetailFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-5 py-5 sm:px-8 sm:py-8 lg:px-8 lg:py-10 xl:px-10">
+    <div className="dashboard-page-enter px-5 py-5 sm:px-8 sm:py-8 lg:px-8 lg:py-10 xl:px-10">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-6">{children}</div>
     </div>
   );

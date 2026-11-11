@@ -10,7 +10,7 @@ export default function CasesLoading() {
       ariaLabel="Loading cases"
       contextLabel="Stripe"
       showPageHeading={false}
-      subtitle="Investigate failed payments and their next recovery action"
+      subtitle="Review failed payments and decide what to do next"
       title="Cases"
     >
       <div className="px-5 py-5 sm:px-8 sm:py-8 lg:px-8 xl:px-10">
@@ -20,7 +20,7 @@ export default function CasesLoading() {
               Cases
             </h1>
             <p className="mt-2 text-[13px] text-[var(--muted)] lg:text-sm">
-              Investigate failed payments and decide the next recovery action.
+              Review failed payments and decide what to do next.
             </p>
           </section>
 

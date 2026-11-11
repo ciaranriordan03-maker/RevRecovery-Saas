@@ -20,7 +20,7 @@ export default function DashboardLoading() {
               Dashboard
             </h1>
             <p className="mt-2 text-[13px] text-[var(--muted)] lg:text-sm">
-              See failed payments, priorities, and next actions.
+              See failed payments, priorities, and what to do next.
             </p>
           </section>
 
