@@ -50,20 +50,39 @@ export function CaseDetailFeedback({
 
 export function CaseDetailLoadingSkeleton() {
   return (
-    <section
+    <div
       aria-busy="true"
       aria-label="Loading case details"
-      className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-6"
+      className="flex flex-col gap-5"
     >
-      <h2 className="text-base font-semibold text-[var(--foreground)]">Loading case details</h2>
-      <div className="mt-4 h-5 animate-pulse rounded bg-[var(--border)]" />
-      <div className="mt-4 h-3 animate-pulse rounded bg-[var(--border)]" />
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="h-16 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-muted)]" />
-        <div className="h-16 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-muted)]" />
-        <div className="h-16 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-muted)]" />
+      <span className="sr-only" role="status">Loading case details</span>
+      <section className="rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="h-5 w-48 motion-safe:animate-pulse rounded bg-[var(--surface-muted)]" />
+            <div className="mt-3 h-4 w-64 max-w-full motion-safe:animate-pulse rounded bg-[var(--surface-muted)]" />
+          </div>
+          <div className="h-7 w-24 motion-safe:animate-pulse rounded-[6px] bg-[var(--primary-soft)]" />
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div
+              className="h-24 motion-safe:animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-muted)]"
+              key={index}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="h-64 motion-safe:animate-pulse rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]" />
+        <div className="h-64 motion-safe:animate-pulse rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]" />
+      </section>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="h-48 motion-safe:animate-pulse rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]" />
+        <div className="h-48 motion-safe:animate-pulse rounded-[var(--radius-dashboard-card)] border border-[var(--border)] bg-[var(--surface)]" />
       </div>
-      <div className="mt-4 h-24 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-muted)]" />
-    </section>
+    </div>
   );
 }

@@ -47,7 +47,7 @@ describe("Insights overview UI", () => {
   });
 
   it("provides calm loading and recoverable error states", () => {
-    expect(loading).toContain('aria-label="Loading insights"');
+    expect(loading).toContain('ariaLabel="Loading insights"');
     expect(error).toContain("Insights are temporarily unavailable");
     expect(error).toContain("No recovery settings");
     expect(error).toContain("onClick={reset}");
