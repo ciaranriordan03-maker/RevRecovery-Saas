@@ -10,7 +10,7 @@ import { getCasesEnvironmentLabel } from "../../lib/cases-query";
 
 export const metadata: Metadata = {
   title: "Cases | RevRecovery",
-  description: "Investigate failed Stripe subscription-payment recovery cases.",
+  description: "Review failed Stripe payments and decide what to do next.",
 };
 
 type CasesPageProps = {
@@ -35,7 +35,7 @@ export default async function CasesPage({ searchParams }: CasesPageProps) {
       active="Cases"
       contextLabel={`Stripe · ${environment}`}
       showPageHeading={false}
-      subtitle="Investigate failed payments and their next recovery action"
+      subtitle="Review failed payments and decide what to do next"
       title="Cases"
     >
       <CasesContent page={casesPage} />

@@ -40,7 +40,7 @@ export function CaseDetailDisclosure({
       >
         <span>{expanded ? expandedLabel : collapsedLabel}</span>
         <Icon
-          className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+          className={`size-4 motion-safe:transition-transform motion-safe:duration-150 ${expanded ? "rotate-180" : ""}`}
           name="chevron-down"
         />
       </button>
