@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BotpressWidget } from "./components/marketing/botpress-widget";
 import { MarketingPage } from "./components/marketing/marketing-page";
 
 export const metadata: Metadata = {
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return <MarketingPage />;
+  return (
+    <>
+      <MarketingPage />
+      <BotpressWidget />
+    </>
+  );
 }
