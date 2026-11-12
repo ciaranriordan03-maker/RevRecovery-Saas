@@ -1,7 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { TrackedLink } from "../analytics/tracked-link";
+import { checkoutStartedEvent, marketingEventNames } from "../../lib/analytics/events";
+import { trackMarketingEvent } from "../../lib/analytics/tracker";
 import { calculateRecoveryOpportunity, RECOVERY_CALCULATOR_LIMITS } from "../../lib/recovery-calculator";
 import { FOUNDING_MEMBER_CHECKOUT_URL } from "../../lib/marketing-links";
 
@@ -18,8 +20,14 @@ export function RecoveryCalculator() {
   const [monthlyRevenue, setMonthlyRevenue] = useState(50_000);
   const [failedPaymentRate, setFailedPaymentRate] = useState(5);
   const [recoveryRate, setRecoveryRate] = useState(35);
+  const interactionTracked = useRef(false);
   const result = useMemo(() => calculateRecoveryOpportunity({ failedPaymentRate, monthlyRevenue, recoveryRate }), [failedPaymentRate, monthlyRevenue, recoveryRate]);
-  return <div className="grid overflow-hidden rounded-[14px] border border-[var(--marketing-border)] bg-white shadow-[var(--shadow-marketing)] lg:grid-cols-[1.05fr_0.95fr]"><div className="space-y-8 p-6 sm:p-9"><Slider label="Monthly recurring revenue" max={RECOVERY_CALCULATOR_LIMITS.monthlyRevenue.max} min={0} onChange={setMonthlyRevenue} prefix="€" step={1000} value={monthlyRevenue}/><Slider label="Revenue affected by failed payments" max={20} min={0} onChange={setFailedPaymentRate} step={0.5} suffix="%" value={failedPaymentRate}/><Slider label="Assumed recovery rate" max={100} min={0} onChange={setRecoveryRate} step={1} suffix="%" value={recoveryRate}/><p className="rounded-[10px] bg-[var(--surface-muted)] p-4 text-xs leading-5 text-[var(--muted)]">How it works: monthly revenue × failed-payment percentage × your assumed recovery rate. Adjust every assumption to fit your business.</p></div><div className="flex flex-col bg-[var(--marketing-result)] p-6 sm:p-9"><p className="text-sm font-semibold text-[var(--primary-text)]">Your estimated opportunity</p><div className="mt-7 space-y-4"><Result label="Revenue currently at risk each month" value={result.monthlyRevenueAtRisk}/><Result highlight label="Potentially recoverable each month" value={result.monthlyRecoveryOpportunity}/><Result label="Potential annual recovery opportunity" value={result.annualRecoveryOpportunity}/></div><p className="mt-6 text-xs leading-5 text-[var(--muted)]">Estimates are illustrative, not guaranteed. Actual results depend on your customers, payment failures, timing, and account configuration.</p><Link className="mt-7 inline-flex min-h-11 items-center justify-center rounded-[8px] bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]" href={FOUNDING_MEMBER_CHECKOUT_URL}>Start recovering failed payments</Link></div></div>;
+  const trackInteraction = () => {
+    if (interactionTracked.current) return;
+    interactionTracked.current = true;
+    trackMarketingEvent({ name: marketingEventNames.calculatorUsed, props: { interaction: "adjusted" } });
+  };
+  return <div className="grid overflow-hidden rounded-[14px] border border-[var(--marketing-border)] bg-white shadow-[var(--shadow-marketing)] lg:grid-cols-[1.05fr_0.95fr]"><div className="space-y-8 p-6 sm:p-9"><Slider label="Monthly recurring revenue" max={RECOVERY_CALCULATOR_LIMITS.monthlyRevenue.max} min={0} onChange={(value) => { trackInteraction(); setMonthlyRevenue(value); }} prefix="€" step={1000} value={monthlyRevenue}/><Slider label="Revenue affected by failed payments" max={20} min={0} onChange={(value) => { trackInteraction(); setFailedPaymentRate(value); }} step={0.5} suffix="%" value={failedPaymentRate}/><Slider label="Assumed recovery rate" max={100} min={0} onChange={(value) => { trackInteraction(); setRecoveryRate(value); }} step={1} suffix="%" value={recoveryRate}/><p className="rounded-[10px] bg-[var(--surface-muted)] p-4 text-xs leading-5 text-[var(--muted)]">How it works: monthly revenue × failed-payment percentage × your assumed recovery rate. Adjust every assumption to fit your business.</p></div><div className="flex flex-col bg-[var(--marketing-result)] p-6 sm:p-9"><p className="text-sm font-semibold text-[var(--primary-text)]">Your estimated opportunity</p><div className="mt-7 space-y-4"><Result label="Revenue currently at risk each month" value={result.monthlyRevenueAtRisk}/><Result highlight label="Potentially recoverable each month" value={result.monthlyRecoveryOpportunity}/><Result label="Potential annual recovery opportunity" value={result.annualRecoveryOpportunity}/></div><p className="mt-6 text-xs leading-5 text-[var(--muted)]">Estimates are illustrative, not guaranteed. Actual results depend on your customers, payment failures, timing, and account configuration.</p><TrackedLink className="mt-7 inline-flex min-h-11 items-center justify-center rounded-[8px] bg-[var(--primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]" event={checkoutStartedEvent("calculator")} href={FOUNDING_MEMBER_CHECKOUT_URL}>Start recovering failed payments</TrackedLink></div></div>;
 }
 
 function Result({ highlight = false, label, value }: { highlight?: boolean; label: string; value: number }) {

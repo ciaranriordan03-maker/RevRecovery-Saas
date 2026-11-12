@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { PlausibleProvider } from "./components/analytics/plausible-provider";
 import "./globals.css";
 
 const inter = localFont({
@@ -21,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <PlausibleProvider />
+        {children}
+      </body>
     </html>
   );
 }
