@@ -9,6 +9,9 @@ const termsSource = readSource("../app/terms/page.tsx");
 const cookiesSource = readSource("../app/cookies/page.tsx");
 const dataProcessingSource = readSource("../app/data-processing/page.tsx");
 const legalSource = readSource("../app/lib/legal.ts");
+const marketingSource = readSource(
+  "../app/components/marketing/marketing-page.tsx",
+);
 const loginSource = readSource("../app/login/page.tsx");
 const signupSource = readSource("../app/signup/page.tsx");
 
@@ -51,7 +54,9 @@ describe("public legal pages", () => {
     expect(cookiesSource).toContain("We do not use advertising cookies");
   });
 
-  it("links the legal documents from account entry points", () => {
+  it("links the legal documents from marketing and account entry points", () => {
+    expect(marketingSource).toContain('aria-label="Legal"');
+    expect(marketingSource).toContain("legalLinks.map");
     expect(loginSource).toContain('href="/terms"');
     expect(loginSource).toContain('href="/privacy"');
     expect(signupSource).toContain('href="/terms"');

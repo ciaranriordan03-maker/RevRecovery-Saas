@@ -1,5 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildPasswordRecoveryCallbackPath } from "../app/lib/auth-callback";
+
+const homeSource = readFileSync(
+  new URL("../app/page.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("password recovery callback routing", () => {
   it("forwards PKCE codes from the site root to the cookie-capable callback route", () => {
@@ -21,5 +27,11 @@ describe("password recovery callback routing", () => {
 
   it("does not create an auth callback for an ordinary home-page request", () => {
     expect(buildPasswordRecoveryCallbackPath({})).toBeNull();
+  });
+
+  it("keeps root recovery callbacks while rendering the public homepage", () => {
+    expect(homeSource).toContain("buildPasswordRecoveryCallbackPath");
+    expect(homeSource).toContain("redirect(callbackPath)");
+    expect(homeSource).toContain("<MarketingPage />");
   });
 });
