@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { BotpressWidget } from "./components/marketing/botpress-widget";
 import { MarketingPage } from "./components/marketing/marketing-page";
 import { buildPasswordRecoveryCallbackPath } from "./lib/auth-callback";
 
@@ -25,5 +26,10 @@ export default async function Home({ searchParams }: HomeProps) {
     redirect(callbackPath);
   }
 
-  return <MarketingPage />;
+  return (
+    <>
+      <MarketingPage />
+      <BotpressWidget />
+    </>
+  );
 }
