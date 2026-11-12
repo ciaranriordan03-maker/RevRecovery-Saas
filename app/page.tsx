@@ -1,30 +1,12 @@
-import { redirect } from "next/navigation";
-import { getCurrentUserClaims } from "./lib/auth";
-import { buildPasswordRecoveryCallbackPath } from "./lib/auth-callback";
-import { getOrCreateUserOnboardingProfile } from "./lib/server/onboarding-store";
+import type { Metadata } from "next";
+import { MarketingPage } from "./components/marketing/marketing-page";
 
-type HomeProps = {
-  searchParams?: Promise<{
-    code?: string;
-    token_hash?: string;
-    type?: string;
-  }>;
+export const metadata: Metadata = {
+  title: "RevRecovery | Recover Failed Stripe Payments",
+  description:
+    "Recover revenue from failed subscription payments with automated, carefully timed customer reminders built for Stripe.",
 };
 
-export default async function Home({ searchParams }: HomeProps) {
-  const params = await searchParams;
-  const callbackPath = buildPasswordRecoveryCallbackPath(params ?? {});
-
-  if (callbackPath) {
-    redirect(callbackPath);
-  }
-
-  const claims = await getCurrentUserClaims();
-
-  if (!claims || typeof claims.sub !== "string") {
-    redirect("/login");
-  }
-
-  const profile = await getOrCreateUserOnboardingProfile(claims.sub);
-  redirect(profile.onboardingCompleted ? "/dashboard" : "/onboarding");
+export default function Home() {
+  return <MarketingPage />;
 }
