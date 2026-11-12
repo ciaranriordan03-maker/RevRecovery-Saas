@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AuthMarketingPanel } from "../components/auth/auth-marketing-panel";
 import { AuthStatusPanel } from "../components/auth/auth-status-panel";
 import { sanitizeAppRedirect } from "../lib/safe-redirect";
@@ -49,7 +50,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             </div>
 
             <p className="mx-auto mt-7 max-w-[390px] text-center text-xs leading-5 text-[var(--auth-fine-print)]">
-              By continuing, you agree to our Terms of Service and Privacy Policy.
+              By continuing, you agree to our{" "}
+              <Link className="font-medium underline hover:text-[var(--foreground)]" href="/terms">Terms of Service</Link> and{" "}
+              <Link className="font-medium underline hover:text-[var(--foreground)]" href="/privacy">Privacy Notice</Link>.
             </p>
           </div>
         </section>

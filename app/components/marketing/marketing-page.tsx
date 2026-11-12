@@ -3,6 +3,7 @@ import { TrackedLink } from "../analytics/tracked-link";
 import { BrandMark } from "../brand";
 import { Icon } from "../ui-icon";
 import { checkoutStartedEvent, marketingEventNames, type CheckoutLocation } from "../../lib/analytics/events";
+import { legalLinks } from "../../lib/legal";
 import { FOUNDING_MEMBER_CHECKOUT_URL } from "../../lib/marketing-links";
 import { RecoveryCalculator } from "./recovery-calculator";
 
@@ -43,7 +44,23 @@ export function MarketingPage() {
     <section className="bg-[var(--primary-soft)] px-5 py-20 sm:px-8" id="access"><div className="mx-auto max-w-[820px] text-center"><p className="marketing-eyebrow">Guided founding access</p><h2 className="marketing-title">Set up recovery with a real person beside you.</h2><p className="mt-5 text-4xl font-semibold tracking-[-0.04em]">€79<span className="text-base font-medium tracking-normal text-[var(--muted)]"> / month</span></p><p className="mx-auto mt-5 max-w-[650px] text-base leading-7 text-[var(--muted)]">Join as a founding member, then move through a controlled onboarding flow. Review the Stripe connection, sending identity, recovery sequence, and test results before live activation.</p><div className="mt-8"><Cta location="pricing">Get started with RevRecovery</Cta></div><p className="mt-4 text-xs text-[var(--muted)]">Secure subscription checkout is handled by Stripe.</p></div></section>
     <section className="px-5 py-20 sm:px-8 lg:py-24" id="faq"><div className="mx-auto grid max-w-[1000px] gap-10 lg:grid-cols-[0.65fr_1.35fr]"><div><p className="marketing-eyebrow">FAQ</p><h2 className="marketing-title">Questions, answered plainly.</h2></div><div className="divide-y divide-[var(--marketing-border)] border-y border-[var(--marketing-border)]">{faqs.map(([q,a])=><details className="group py-5" key={q}><summary className="flex list-none items-center justify-between gap-5 font-semibold">{q}<span className="text-xl text-[var(--primary)] group-open:rotate-45">+</span></summary><p className="mt-3 pr-8 text-sm leading-6 text-[var(--muted)]">{a}</p></details>)}</div></div></section>
     <section className="px-5 pb-20 sm:px-8"><div className="mx-auto max-w-[1180px] rounded-[14px] bg-[var(--primary)] px-7 py-12 text-center text-white sm:px-12 sm:py-16"><h2 className="text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">Keep failed payments from becoming lost customers.</h2><p className="mx-auto mt-4 max-w-[610px] text-sm leading-6 text-white/80">Connect Stripe, test the experience, and start recovering revenue with a process you can see and control.</p><TrackedLink className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-[8px] bg-white px-5 text-sm font-semibold text-[var(--primary-text)]" event={checkoutStartedEvent("final_cta")} href={FOUNDING_MEMBER_CHECKOUT_URL}>Start recovering revenue<Icon className="size-4" name="arrow-right"/></TrackedLink></div></section>
-    <footer className="border-t border-[var(--marketing-border)] px-5 py-8 sm:px-8"><div className="mx-auto flex max-w-[1180px] flex-col items-center justify-between gap-5 sm:flex-row"><BrandMark variant="dashboard"/><p className="text-xs text-[var(--muted)]">Failed-payment recovery for subscription businesses.</p><div className="flex gap-5 text-sm font-medium"><TrackedLink event={{name:marketingEventNames.signInClick,props:{location:"footer"}}} href="/login">Sign in</TrackedLink><TrackedLink event={checkoutStartedEvent("footer")} href={FOUNDING_MEMBER_CHECKOUT_URL}>Get started</TrackedLink></div></div></footer>
+    <footer className="border-t border-[var(--marketing-border)] px-5 py-8 sm:px-8">
+      <div className="mx-auto grid max-w-[1180px] gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div>
+          <BrandMark variant="dashboard"/>
+          <p className="mt-3 text-xs text-[var(--muted)]">Failed-payment recovery for subscription businesses.</p>
+        </div>
+        <div className="flex flex-col gap-4 sm:items-end">
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium">
+            <TrackedLink event={{name:marketingEventNames.signInClick,props:{location:"footer"}}} href="/login">Sign in</TrackedLink>
+            <TrackedLink event={checkoutStartedEvent("footer")} href={FOUNDING_MEMBER_CHECKOUT_URL}>Get started</TrackedLink>
+          </div>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[var(--muted)]">
+            {legalLinks.map((link) => <Link className="hover:text-[var(--foreground)]" href={link.href} key={link.href}>{link.label}</Link>)}
+          </nav>
+        </div>
+      </div>
+    </footer>
   </main>;
 }
 
