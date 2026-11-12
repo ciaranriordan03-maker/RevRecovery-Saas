@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AuthMarketingPanel } from "../components/auth/auth-marketing-panel";
 import { AuthStatusPanel } from "../components/auth/auth-status-panel";
 import { sanitizeAppRedirect } from "../lib/safe-redirect";
@@ -52,8 +53,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
             <p className="mt-7 text-center text-xs leading-5 text-[var(--auth-fine-print)]">
               By continuing, you agree to our{" "}
-              <span className="font-medium underline">Terms of Service</span> and{" "}
-              <span className="font-medium underline">Privacy Policy</span>
+              <Link className="font-medium underline hover:text-[var(--foreground)]" href="/terms">Terms of Service</Link> and{" "}
+              <Link className="font-medium underline hover:text-[var(--foreground)]" href="/privacy">Privacy Notice</Link>
             </p>
           </div>
         </section>
