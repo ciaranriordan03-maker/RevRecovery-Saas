@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PurchaseConversion } from "../../components/analytics/purchase-conversion";
+import { TrackedLink } from "../../components/analytics/tracked-link";
+import { marketingEventNames } from "../../lib/analytics/events";
 import { DEFAULT_CUSTOMER_SETUP_URL, buildSignupUrl } from "../../lib/billing/welcome-email";
 import { createStripePlatformClient } from "../../lib/stripe/server";
 
@@ -46,6 +48,7 @@ export default async function PurchaseSuccessPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--auth-background)] px-5 py-12 text-[var(--foreground)]">
+      {purchaseConfirmed ? <PurchaseConversion /> : null}
       <section className="w-full max-w-2xl rounded-[14px] bg-white p-8 sm:p-10">
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">
           Founding member
@@ -61,19 +64,27 @@ export default async function PurchaseSuccessPage({
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           {signupUrl ? (
-            <Link
+            <TrackedLink
               className="inline-flex min-h-11 items-center justify-center rounded-[8px] bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]"
+              event={{
+                name: marketingEventNames.accountCreationStarted,
+                props: { location: "purchase_success" },
+              }}
               href={signupUrl}
             >
               Create your account
-            </Link>
+            </TrackedLink>
           ) : null}
-          <a
+          <TrackedLink
             className="inline-flex min-h-11 items-center justify-center rounded-[8px] border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-2.5 text-sm font-semibold text-[var(--text-subtle)] hover:bg-[var(--surface-muted)]"
+            event={{
+              name: marketingEventNames.bookingClick,
+              props: { booking_type: "guided_setup", location: "purchase_success" },
+            }}
             href={setupUrl}
           >
             Book your setup call
-          </a>
+          </TrackedLink>
         </div>
 
         <p className="mt-7 text-sm leading-6 text-[var(--muted)]">

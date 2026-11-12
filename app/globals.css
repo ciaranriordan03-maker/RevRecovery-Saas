@@ -19,6 +19,7 @@
   --success-soft: #edf8f2;
   --success-badge: #dff3e9;
   --success-badge-text: #277453;
+  --success-border: #b9e4cf;
   --danger: #e7000b;
   --danger-soft: #fef2f2;
   --danger-border: #fecaca;
@@ -69,10 +70,27 @@
   --dashboard-page-padding: 40px;
   --shadow-subtle: 0 1px 2px rgb(16 24 40 / 0.05);
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 4px 12px -8px rgb(16 24 40 / 0.18);
+  --marketing-border: #e8e9f0;
+  --marketing-dark: #20213b;
+  --marketing-green: #6ee7b7;
+  --marketing-result: #f7f6ff;
+  --shadow-marketing: 0 24px 64px -30px rgb(49 46 129 / 0.28), 0 8px 24px -16px rgb(16 24 40 / 0.18);
   --overlay: rgb(32 36 52 / 0.38);
   --motion-page: 180ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+
+.marketing-hero-grid {
+  background-color: var(--surface);
+  background-image: linear-gradient(var(--marketing-border) 1px, transparent 1px), linear-gradient(90deg, var(--marketing-border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center;
+}
+
+.marketing-eyebrow { margin-bottom: 12px; color: var(--primary-text); font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.marketing-title { font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 650; line-height: 1.12; letter-spacing: -0.04em; }
+.marketing-range { accent-color: var(--primary); cursor: pointer; }
+details summary::-webkit-details-marker { display: none; }
 
 @theme inline {
   --color-background: var(--background);

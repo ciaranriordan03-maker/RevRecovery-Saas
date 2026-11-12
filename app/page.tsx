@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getCurrentUserClaims } from "./lib/auth";
+import { MarketingPage } from "./components/marketing/marketing-page";
 import { buildPasswordRecoveryCallbackPath } from "./lib/auth-callback";
-import { getOrCreateUserOnboardingProfile } from "./lib/server/onboarding-store";
+
+export const metadata: Metadata = {
+  title: "RevRecovery | Recover Failed Stripe Payments",
+  description:
+    "Recover revenue from failed subscription payments with automated, carefully timed customer reminders built for Stripe.",
+};
 
 type HomeProps = {
   searchParams?: Promise<{
@@ -19,12 +25,5 @@ export default async function Home({ searchParams }: HomeProps) {
     redirect(callbackPath);
   }
 
-  const claims = await getCurrentUserClaims();
-
-  if (!claims || typeof claims.sub !== "string") {
-    redirect("/login");
-  }
-
-  const profile = await getOrCreateUserOnboardingProfile(claims.sub);
-  redirect(profile.onboardingCompleted ? "/dashboard" : "/onboarding");
+  return <MarketingPage />;
 }
