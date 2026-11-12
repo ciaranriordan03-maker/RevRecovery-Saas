@@ -43,8 +43,18 @@ describe("public legal pages", () => {
     expect(privacySource).toContain("Sentry");
     expect(privacySource).toContain("Plausible Analytics");
     expect(privacySource).toContain("Botpress");
+    expect(privacySource).toContain("HubSpot");
+    expect(privacySource).toContain("Google Workspace");
     expect(dataProcessingSource).toContain("Article 28 GDPR");
     expect(dataProcessingSource).toContain("Standard Contractual Clauses");
+  });
+
+  it("documents business prospect outreach and objection safeguards", () => {
+    expect(privacySource).toContain('title="6. Business prospect outreach"');
+    expect(privacySource).toContain("public source of the address");
+    expect(privacySource).toContain("legitimate interests");
+    expect(privacySource).toContain("object to direct marketing at any time");
+    expect(privacySource).toContain("minimal suppression record");
   });
 
   it("documents essential storage and optional browser technologies", () => {
