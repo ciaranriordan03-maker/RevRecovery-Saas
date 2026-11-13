@@ -1,12 +1,13 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import {
-  getStripeConnectionForAccount,
+  getStripeConnectionWebhookMetadata,
   updateStripeConnectionStatus,
 } from "../../../../lib/server/stripe-connections";
 import {
   ensureRecoverySequenceForFailedPayment,
 } from "../../../../lib/server/recovery-sequences";
+import { recordCancellationSubscriptionEvent } from "../../../../lib/server/cancellation-cases";
 import {
   recordPaymentMethodUpdated,
   recordSubscriptionState,
@@ -163,7 +164,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing connected account." }, { status: 400 });
   }
 
-  const connection = await getStripeConnectionForAccount(stripeAccountId);
+  // Webhook processing only needs ownership and environment metadata. Keeping
+  // encrypted OAuth tokens out of this path lets signed events remain durable
+  // during a controlled token-key rotation or Stripe reconnection.
+  const connection = await getStripeConnectionWebhookMetadata(stripeAccountId);
   const userId = connection?.user_id ?? null;
 
   const insertResult = await insertWebhookEventRecord({
@@ -235,6 +239,16 @@ export async function POST(request: Request) {
           break;
         case "customer.subscription.deleted":
         case "customer.subscription.updated":
+          await recordCancellationSubscriptionEvent({
+            eventCreated: event.created,
+            eventType: event.type,
+            livemode: event.livemode,
+            source: "stripe_webhook",
+            sourceEventId: event.id,
+            stripeAccountId,
+            subscription: event.data.object as Stripe.Subscription,
+            userId,
+          });
           await recordSubscriptionState({
             eventType: event.type,
             livemode: event.livemode,

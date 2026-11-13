@@ -82,6 +82,13 @@ export type WebhookEventRecord = {
   stripe_event_id: string;
 };
 
+export type RetriableWebhookEvent = WebhookEventRecord & {
+  livemode: boolean;
+  payload: Stripe.Event;
+  stripe_account_id: string;
+  user_id: string | null;
+};
+
 type WebhookCompletion = {
   claimToken: string;
   errorCode?: string;
@@ -155,6 +162,29 @@ export async function getWebhookEventRecord(stripeEventId: string) {
   }
 
   return data;
+}
+
+export async function listRetriableCancellationWebhookEvents(limit = 25) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase admin client is not configured.");
+
+  const { data, error } = await supabase
+    .from(STRIPE_WEBHOOK_EVENTS_TABLE)
+    .select("id, stripe_event_id, stripe_account_id, user_id, event_type, livemode, payload, status, processing_attempt_count, next_attempt_at, claim_expires_at")
+    .in("event_type", ["customer.subscription.updated", "customer.subscription.deleted"])
+    .is("dead_lettered_at", null)
+    .in("status", ["received", "failed", "processing"])
+    .lt("processing_attempt_count", 8)
+    .order("created_at", { ascending: true })
+    .limit(Math.min(Math.max(limit, 1), 100));
+  if (error) throw new Error(`Unable to list retryable Stripe webhooks: ${error.message}`);
+  const now = Date.now();
+  return ((data ?? []) as RetriableWebhookEvent[]).filter((event) => {
+    if (event.status === "processing") {
+      return Boolean(event.claim_expires_at && Date.parse(event.claim_expires_at) < now);
+    }
+    return !event.next_attempt_at || Date.parse(event.next_attempt_at) <= now;
+  });
 }
 
 export async function completeWebhookEvent(completion: WebhookCompletion) {
