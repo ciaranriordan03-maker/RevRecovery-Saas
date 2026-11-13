@@ -151,7 +151,13 @@ export async function GET(request: NextRequest) {
     }
 
     const account = await stripe.accounts.retrieve(tokenResponse.stripe_user_id);
-    const syncSummary = await performInitialStripeSync(tokenResponse.stripe_user_id);
+    const syncSummary = await performInitialStripeSync(
+      tokenResponse.stripe_user_id,
+      {
+        livemode: tokenResponse.livemode ?? false,
+        userId: parsedState.userId,
+      },
+    );
     const now = new Date().toISOString();
 
     await upsertStripeConnection({

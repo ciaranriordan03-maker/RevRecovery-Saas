@@ -3,6 +3,10 @@
     {
       "path": "/api/recovery/process",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cancellation-rescue/reconcile",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

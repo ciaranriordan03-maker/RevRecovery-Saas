@@ -1,5 +1,8 @@
 begin;
 
+create extension if not exists pgtap with schema extensions;
+select plan(1);
+
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values (
   '10000000-0000-0000-0000-000000000001',
@@ -379,5 +382,8 @@ begin
   ), 'service role must complete webhook claims';
 end;
 $$;
+
+select pass('phase 0 database foundation safeguards hold');
+select * from finish();
 
 rollback;
