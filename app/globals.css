@@ -75,6 +75,7 @@
   --marketing-green: #6ee7b7;
   --marketing-result: #f7f6ff;
   --shadow-marketing: 0 24px 64px -30px rgb(49 46 129 / 0.28), 0 8px 24px -16px rgb(16 24 40 / 0.18);
+  --shadow-nav: 0 12px 32px -24px rgb(16 24 40 / 0.38);
   --overlay: rgb(32 36 52 / 0.38);
   --motion-page: 180ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -85,6 +86,16 @@
   background-image: linear-gradient(var(--marketing-border) 1px, transparent 1px), linear-gradient(90deg, var(--marketing-border) 1px, transparent 1px);
   background-size: 48px 48px;
   background-position: center;
+}
+
+.marketing-pricing-halo {
+  background-color: var(--primary-soft);
+  background-image: radial-gradient(circle at 50% 20%, var(--surface) 0, transparent 58%);
+}
+
+html {
+  scroll-padding-top: 88px;
+  scroll-behavior: smooth;
 }
 
 .marketing-eyebrow { margin-bottom: 12px; color: var(--primary-text); font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
@@ -129,6 +140,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .dashboard-page-enter {
     animation: none;
   }
