@@ -22,7 +22,13 @@ function extractSingleEnvValue(value: string) {
 }
 
 function getBrowserEnvValue(key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" | "NEXT_PUBLIC_SUPABASE_URL") {
-  const rawValue = process.env[key];
+  // Next.js only inlines public environment variables in client bundles when
+  // they are referenced statically. A computed `process.env[key]` lookup is
+  // undefined in the browser.
+  const rawValue =
+    key === "NEXT_PUBLIC_SUPABASE_URL"
+      ? process.env.NEXT_PUBLIC_SUPABASE_URL
+      : process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const value = rawValue ? extractSingleEnvValue(rawValue) : "";
 
   if (!value) {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AuthMarketingPanel } from "../components/auth/auth-marketing-panel";
 import { Button } from "../components/button";
 import { Icon } from "../components/ui-icon";
+import { RecoverySessionBootstrap } from "./recovery-session-bootstrap";
 
 export const metadata: Metadata = {
   title: "Choose New Password | RevRecovery",
@@ -23,59 +24,59 @@ export default function ResetPasswordPage() {
               Choose a secure password to finish resetting your account.
             </p>
 
-            <form
-              action="/api/auth/update-password"
-              className="mt-8"
-              method="post"
-            >
-              <label className="block">
-                <span className="mb-2.5 block text-sm font-medium text-[var(--auth-label)]">
-                  New password
-                </span>
-                <span className="relative block">
-                  <Icon
-                    className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--auth-icon)]"
-                    name="lock"
-                  />
-                  <input
-                    className="h-[46px] w-full rounded-[14px] border border-[var(--auth-input-border)] bg-white px-12 text-sm text-[var(--auth-heading)] outline-none transition placeholder:text-[var(--auth-placeholder)] focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
-                    minLength={8}
-                    name="password"
-                    placeholder="Create a password"
-                    required
-                    type="password"
-                  />
-                </span>
-              </label>
+            <div className="mt-8">
+              <RecoverySessionBootstrap>
+                <form action="/api/auth/update-password" method="post">
+                  <label className="block">
+                    <span className="mb-2.5 block text-sm font-medium text-[var(--auth-label)]">
+                      New password
+                    </span>
+                    <span className="relative block">
+                      <Icon
+                        className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--auth-icon)]"
+                        name="lock"
+                      />
+                      <input
+                        className="h-[46px] w-full rounded-[14px] border border-[var(--auth-input-border)] bg-white px-12 text-sm text-[var(--auth-heading)] outline-none transition placeholder:text-[var(--auth-placeholder)] focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
+                        minLength={8}
+                        name="password"
+                        placeholder="Create a password"
+                        required
+                        type="password"
+                      />
+                    </span>
+                  </label>
 
-              <label className="mt-5 block">
-                <span className="mb-2.5 block text-sm font-medium text-[var(--auth-label)]">
-                  Confirm password
-                </span>
-                <span className="relative block">
-                  <Icon
-                    className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--auth-icon)]"
-                    name="lock"
-                  />
-                  <input
-                    className="h-[46px] w-full rounded-[14px] border border-[var(--auth-input-border)] bg-white px-12 text-sm text-[var(--auth-heading)] outline-none transition placeholder:text-[var(--auth-placeholder)] focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
-                    minLength={8}
-                    name="confirm_password"
-                    placeholder="Confirm your password"
-                    required
-                    type="password"
-                  />
-                </span>
-              </label>
+                  <label className="mt-5 block">
+                    <span className="mb-2.5 block text-sm font-medium text-[var(--auth-label)]">
+                      Confirm password
+                    </span>
+                    <span className="relative block">
+                      <Icon
+                        className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--auth-icon)]"
+                        name="lock"
+                      />
+                      <input
+                        className="h-[46px] w-full rounded-[14px] border border-[var(--auth-input-border)] bg-white px-12 text-sm text-[var(--auth-heading)] outline-none transition placeholder:text-[var(--auth-placeholder)] focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]"
+                        minLength={8}
+                        name="confirm_password"
+                        placeholder="Confirm your password"
+                        required
+                        type="password"
+                      />
+                    </span>
+                  </label>
 
-              <Button
-                className="mt-5 h-[46px] w-full gap-2 rounded-[14px] text-sm font-semibold shadow-sm"
-                type="submit"
-              >
-                Update password
-                <Icon className="size-4" name="arrow-right" />
-              </Button>
-            </form>
+                  <Button
+                    className="mt-5 h-[46px] w-full gap-2 rounded-[14px] text-sm font-semibold shadow-sm"
+                    type="submit"
+                  >
+                    Update password
+                    <Icon className="size-4" name="arrow-right" />
+                  </Button>
+                </form>
+              </RecoverySessionBootstrap>
+            </div>
           </div>
         </section>
       </div>

@@ -16,6 +16,6 @@ describe("Supabase auth callback", () => {
     );
     expect(routeSource).toContain("response.cookies.set(name, value, options)");
     expect(routeSource).toContain("response.headers.set(name, value)");
-    expect(routeSource.match(/return successResponse/g)).toHaveLength(2);
+    expect(routeSource.match(/return successResponse/g)).toHaveLength(3);
   });
 });
