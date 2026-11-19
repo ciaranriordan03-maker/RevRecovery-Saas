@@ -46,6 +46,14 @@ export async function GET(request: NextRequest) {
   const successResponse = NextResponse.redirect(redirectTo);
   const supabase = createAuthCallbackClient(request, successResponse);
 
+  // Supabase can deliver recovery sessions in the URL fragment when the
+  // project uses the implicit email-link flow. Fragments never reach the
+  // server, but the browser preserves them across this redirect. Let the
+  // reset page bootstrap that temporary session client-side.
+  if (!code && !tokenHash && next === "/reset-password") {
+    return successResponse;
+  }
+
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 

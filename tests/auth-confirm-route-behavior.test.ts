@@ -108,4 +108,18 @@ describe("Supabase auth callback route behavior", () => {
     expect(response.headers.get("location")).toContain("/login?");
     expect(response.cookies.getAll()).toEqual([]);
   });
+
+  it("preserves a fragment-based recovery session for the client reset page", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://preview.example/auth/confirm?next=/reset-password",
+      ),
+    );
+
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(verifyOtp).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe(
+      "https://preview.example/reset-password",
+    );
+  });
 });
