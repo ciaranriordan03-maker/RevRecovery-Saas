@@ -1,5 +1,5 @@
 export const DEFAULT_CUSTOMER_SETUP_URL =
-  "https://calendly.com/ciaran-revrecovery/customer-setup";
+  "https://cal.com/ciaran-riordan-revrecovery/customer-setup";
 
 function escapeHtml(value: string) {
   return value

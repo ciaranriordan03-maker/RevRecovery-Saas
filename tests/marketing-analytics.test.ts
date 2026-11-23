@@ -54,8 +54,8 @@ describe("marketing analytics", () => {
     expect(sanitizeAnalyticsUrl("https://revrecovery.io/purchase/success?session_id=secret#done")).toBe(
       "https://revrecovery.io/purchase/success",
     );
-    expect(sanitizeAnalyticsUrl("https://calendly.com/setup?email=private@example.com")).toBe(
-      "https://calendly.com/setup",
+    expect(sanitizeAnalyticsUrl("https://cal.com/setup?email=private@example.com")).toBe(
+      "https://cal.com/setup",
     );
   });
 
@@ -70,6 +70,8 @@ describe("marketing analytics", () => {
   });
 
   it("uses the approved demo booking destination", () => {
-    expect(DEMO_BOOKING_URL).toBe("https://calendly.com/ciaran-revrecovery/30min");
+    expect(DEMO_BOOKING_URL).toBe(
+      "https://cal.com/ciaran-riordan-revrecovery/revrecovery-demo",
+    );
   });
 });
