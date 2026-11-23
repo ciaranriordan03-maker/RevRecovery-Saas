@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   checkoutStartedEvent,
+  demoBookingEvent,
   isAnalyticsEnabled,
   marketingEventNames,
   sanitizeAnalyticsUrl,
   shouldTrackCompletedPurchase,
 } from "../app/lib/analytics/events";
-import { FOUNDING_MEMBER_CHECKOUT_URL } from "../app/lib/marketing-links";
+import { DEMO_BOOKING_URL, FOUNDING_MEMBER_CHECKOUT_URL } from "../app/lib/marketing-links";
 
 describe("marketing analytics", () => {
   it("uses stable event names", () => {
@@ -29,6 +30,16 @@ describe("marketing analytics", () => {
         displayed_price: "79_eur",
         location: "hero",
         plan: "founding_member",
+      },
+    });
+  });
+
+  it("distinguishes product demo clicks by location", () => {
+    expect(demoBookingEvent("hero")).toEqual({
+      name: "Booking Click",
+      props: {
+        booking_type: "product_demo",
+        location: "hero",
       },
     });
   });
@@ -56,5 +67,9 @@ describe("marketing analytics", () => {
 
   it("does not change the verified Stripe checkout destination", () => {
     expect(FOUNDING_MEMBER_CHECKOUT_URL).toBe("https://buy.stripe.com/6oU14peeOdn7dFUcNjcEw00");
+  });
+
+  it("uses the approved demo booking destination", () => {
+    expect(DEMO_BOOKING_URL).toBe("https://calendly.com/ciaran-revrecovery/30min");
   });
 });

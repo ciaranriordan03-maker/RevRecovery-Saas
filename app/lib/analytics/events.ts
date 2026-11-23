@@ -16,11 +16,18 @@ export type CheckoutLocation =
   | "hero"
   | "pricing";
 
+export type DemoLocation = "footer" | "header" | "hero" | "pricing";
+
 export type MarketingEvent =
   | { name: typeof marketingEventNames.navigationClick; props: { destination: "calculator" | "faq" | "features" | "how_it_works" | "pricing"; location: "footer" | "header" } }
   | { name: typeof marketingEventNames.checkoutStarted; props: { billing_period: "monthly"; displayed_price: "79_eur"; location: CheckoutLocation; plan: "founding_member" } }
   | { name: typeof marketingEventNames.checkoutCompleted; props: { plan: "founding_member" } }
-  | { name: typeof marketingEventNames.bookingClick; props: { booking_type: "guided_setup"; location: "onboarding" | "other" | "pricing" | "purchase_success" } }
+  | {
+      name: typeof marketingEventNames.bookingClick;
+      props:
+        | { booking_type: "guided_setup"; location: "onboarding" | "purchase_success" }
+        | { booking_type: "product_demo"; location: DemoLocation };
+    }
   | { name: typeof marketingEventNames.signInClick; props: { location: "footer" | "header" } }
   | { name: typeof marketingEventNames.accountCreationStarted; props: { location: "other" | "purchase_success" | "welcome_flow" } }
   | { name: typeof marketingEventNames.calculatorUsed; props: { interaction: "adjusted" } };
@@ -33,6 +40,16 @@ export function checkoutStartedEvent(location: CheckoutLocation): MarketingEvent
       displayed_price: "79_eur",
       location,
       plan: "founding_member",
+    },
+  };
+}
+
+export function demoBookingEvent(location: DemoLocation): MarketingEvent {
+  return {
+    name: marketingEventNames.bookingClick,
+    props: {
+      booking_type: "product_demo",
+      location,
     },
   };
 }
