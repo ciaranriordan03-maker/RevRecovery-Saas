@@ -13,14 +13,14 @@ describe("founding member welcome", () => {
   it("includes the account and customer setup links in both email formats", () => {
     const email = buildWelcomeEmail({
       customerName: "Ada Founder",
-      setupUrl: "https://calendly.com/ciaran-revrecovery/customer-setup",
+      setupUrl: "https://cal.com/ciaran-riordan-revrecovery/customer-setup",
       signupUrl: "https://app.example.com/signup",
     });
 
     expect(email.subject).toContain("Welcome to RevRecovery");
     expect(email.text).toContain("https://app.example.com/signup");
     expect(email.text).toContain(
-      "https://calendly.com/ciaran-revrecovery/customer-setup",
+      "https://cal.com/ciaran-riordan-revrecovery/customer-setup",
     );
     expect(email.html).toContain("Create your RevRecovery account");
     expect(email.html).toContain("Book your customer setup call");
