@@ -1,6 +1,6 @@
 export const BOTPRESS_PROMPT_DELAY_MS = 10_000;
 export const BOTPRESS_PROMPT_STORAGE_KEY =
-  "revrecovery:botpress-invitation-seen:v1";
+  "revrecovery:botpress-invitation-seen:session:v1";
 
 type PromptStorage = Pick<Storage, "getItem" | "setItem">;
 

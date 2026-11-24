@@ -30,7 +30,7 @@ describe("Botpress webchat configuration", () => {
     expect(parseBotpressConfigUrl(value)).toBeNull();
   });
 
-  it("shows the proactive invitation once after a short delay", () => {
+  it("shows the proactive invitation once per browser session after ten seconds", () => {
     const values = new Map<string, string>();
     const storage = {
       getItem: (key: string) => values.get(key) ?? null,
@@ -38,6 +38,9 @@ describe("Botpress webchat configuration", () => {
     };
 
     expect(BOTPRESS_PROMPT_DELAY_MS).toBe(10_000);
+    expect(BOTPRESS_PROMPT_STORAGE_KEY).toBe(
+      "revrecovery:botpress-invitation-seen:session:v1",
+    );
     expect(shouldShowBotpressPrompt(storage)).toBe(true);
 
     markBotpressPromptSeen(storage);
