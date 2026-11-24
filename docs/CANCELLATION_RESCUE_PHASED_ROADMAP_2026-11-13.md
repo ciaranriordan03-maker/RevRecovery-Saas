@@ -199,11 +199,27 @@ a later delivery event arrives. No raw webhook body or diagnostic is returned.
 This slice does not register a webhook or persist results. It does not route
 cancellation evidence into failed-payment messages, reporting, or suppressions.
 
-Before exercising delivery, review 4B, make event deduplication and message
-binding durable in isolated storage, and prove that behavior locally. A
-Development-only database or provider setup, independently approved inbox, and
-one real send each require a separate approval. The cancellation delivery
-controls remain off.
+**Durable evidence follow-up — local only:** a separate service-only ledger
+records verified, sanitized delivery facts. A provider message can bind to only
+one authorization, whether the signed event or HTTP receipt arrives first.
+PostgreSQL deduplicates provider event IDs and rejects conflicting facts
+atomically. The read-only projection preserves bounce/complaint evidence without
+overwriting the original transport result. Neither a receipt nor a webhook
+reopens an attempt, changes a subscription, or writes to failed-payment recovery.
+
+Validated on a disposable, network-disabled PostgreSQL 17.6 instance with all 38
+repository migrations. The upgrade carried forward a synthetic pre-existing
+provider receipt. A synthetic signed event passed through the server verifier
+into PostgreSQL; a tampered body never reached storage and replay added no row.
+With two simultaneous sessions reusing one event ID, only one recorded it and
+only its binding remained. The SQL fixture also verified sender, recipient, time
+window, privilege, and sticky complaint safeguards. The switches stayed off.
+
+Before exercising delivery, review the two local slices and prove the isolated
+cancellation suppression guard prevents a fresh test authorization from
+sending again to a suppressed inbox. There is still no webhook route or provider
+configuration. Development migration, provider setup, an independently approved
+test inbox, and one real send each require separate approval.
 
 **Objective:** send cancellation-specific emails only to approved test recipients.
 

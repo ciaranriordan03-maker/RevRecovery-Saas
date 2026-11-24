@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Webhook } from "svix";
 import { CANCELLATION_TEST_EMAIL_FIXTURE } from "../app/lib/cancellation-rescue/test-email-policy";
 import {
+  recordCancellationResendTestEvidence,
   reviewCancellationResendTestEvidence,
   type CancellationTestEmailEvidence,
 } from "../app/lib/server/cancellation-rescue-resend-evidence";
@@ -53,6 +54,49 @@ const transportWith = (request: typeof fetch) =>
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network disabled in mocked test")));
+});
+
+describe("durable signed cancellation test evidence boundary", () => {
+  it("does not call storage for tampered or non-cancellation events", async () => {
+    const event = sign("msg_storage", "email.delivered");
+    const record = (input: ReturnType<typeof sign>) =>
+      recordCancellationResendTestEvidence({ ...input, db: { rpc }, signingSecret });
+    await expect(record({ ...event, payload: event.payload + " " })).resolves.toBe("invalid");
+    await expect(record(sign("msg_storage", "email.delivered", { tags: null }))).resolves.toBe("unmatched");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("passes only validated envelope facts and respects durable conflict and replay results", async () => {
+    const event = sign("msg_bounce_storage", "email.bounced", {
+      bounce: { type: "Permanent", message: "private diagnostics" },
+    });
+    rpc.mockResolvedValueOnce({ data: "recorded" }).mockResolvedValueOnce({ data: "duplicate" })
+      .mockResolvedValueOnce({ data: "conflict" });
+    const record = () => recordCancellationResendTestEvidence({ ...event, db: { rpc }, signingSecret });
+    await expect(record()).resolves.toBe("recorded");
+    await expect(record()).resolves.toBe("duplicate");
+    await expect(record()).resolves.toBe("conflict");
+    expect(rpc).toHaveBeenNthCalledWith(1, "record_cancellation_test_email_evidence", {
+      requested_authorization_id: authorizationId,
+      requested_event_id: "msg_bounce_storage",
+      requested_provider_message_id: providerMessageId,
+      requested_recipient: recipient,
+      requested_sending_domain: sendingDomain,
+      requested_provider_created_at: "2099-12-01T09:55:02.000Z",
+      requested_occurred_at: "2099-12-01T10:01:00.000Z",
+      requested_event_kind: "bounced",
+      requested_suppression_reason: "bounced",
+    });
+  });
+
+  it("surfaces a sanitized storage error and never falls back to sending", async () => {
+    rpc.mockRejectedValue(new Error("sensitive database error"));
+    await expect(recordCancellationResendTestEvidence({
+      ...sign("msg_storage", "email.sent"), db: { rpc }, signingSecret,
+    })).rejects.toThrow("Cancellation test evidence storage is unavailable.");
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });
 afterEach(() => {
   vi.unstubAllGlobals();
