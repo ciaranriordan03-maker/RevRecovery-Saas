@@ -1,7 +1,7 @@
 # Cancellation Rescue Phased Roadmap
 
-Date: 2026-11-13
-Status: Phases 0–2 implemented locally; database migrations not yet applied
+Date: 2026-11-13 (status updated 2026-11-24)
+Status: Phases 0–3A implemented and shadow-verified in Development; Phase 3B implemented but not applied or exercised
 
 ## Product boundary
 
@@ -109,6 +109,15 @@ Phase 1 records subscription-item list price only when every item has a finite i
 **Deferred:** provider delivery, token generation, Stripe writes, and UI.
 
 ## Phase 3 — One-time rescue token and Stripe reversal in test mode
+
+**Implementation status (2026-11-24):** Phase 3B is implemented on an isolated
+branch as disabled-by-default test-mode infrastructure. It adds hashed one-time
+tokens, service-only atomic reservation and audit RPCs, same-origin JSON POST
+preview/confirmation routes, durable rate limiting, a platform-and-account
+double kill switch, a test-secret-only Stripe adapter, and reconciliation for
+ambiguous outcomes. No issuer route, customer page, email integration, or live
+mode exists. The migration has not been applied, the controls have not been
+enabled, no raw token has been issued, and no Stripe mutation has been run.
 
 **Objective:** let an explicitly consenting test customer reverse a scheduled cancellation safely.
 
