@@ -1,7 +1,7 @@
 # Cancellation Rescue Phased Roadmap
 
 Date: 2026-11-13 (status updated 2026-11-24)
-Status: Phases 0–3A implemented and shadow-verified in Development; Phase 3B applied to Development with controls disabled and no action exercised
+Status: Phases 0–3B implemented and controlled-test verified in Development; all action controls are disabled
 
 ## Product boundary
 
@@ -117,9 +117,25 @@ preview/confirmation routes, durable rate limiting, a platform-and-account
 double kill switch, a test-secret-only Stripe adapter, and reconciliation for
 ambiguous outcomes. No issuer route, customer page, email integration, or live
 mode exists. The migration was applied to Development on 2026-11-24 and the
-rate-limit secret was saved for Preview, Development, and staging only. The
-platform control remains false, zero accounts are enabled, no token or attempt
-record exists, and no Stripe mutation has been run.
+rate-limit secret was saved for Preview, Development, and staging only.
+
+**Controlled Development evidence (2026-11-24):** one explicitly approved
+Stripe test-mode subscription (`sub_1UbIuuId8BdDViAdXU89lJZb`) was prepared
+under one Development account and one short-lived token. The neutral preview
+recorded `issued` and `previewed` without a Stripe attempt. The separately
+approved confirmation re-fetched the subscription and changed
+`cancel_at_period_end` from `true` to `false` under Stripe request
+`req_8oHm3jm6Xwn2sr`. Stripe webhook
+`evt_1UfNVFId8BdDViAdGA6R8PMo` was processed without error, the cancellation
+case moved to `reversed`, the attempt reached `confirmed`, both projection jobs
+completed, and the draft sequence and all three draft messages were canceled.
+The complete token evidence order is `issued`, `previewed`, `reserved`,
+`stripe_accepted`, `confirmed`. A preliminary token was revoked fail-closed
+after a request omitted the required same-origin browser header; it created no
+attempt and made no Stripe call. After the successful test, the platform and
+test-action controls were returned to false, the account returned to `shadow`,
+and zero accounts remained action-enabled. No email/provider call, live-mode
+operation, Production deployment, or Production data change occurred.
 
 **Objective:** let an explicitly consenting test customer reverse a scheduled cancellation safely.
 
