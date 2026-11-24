@@ -21,6 +21,9 @@ variable, no Botpress code or network request is added to the page.
 
 The shared Botpress loader is deferred until the browser is idle. The
 Botpress-specific configuration is loaded only after that loader is ready.
+The custom invitation appears 10 seconds after the webchat is ready and is
+remembered in `sessionStorage`, so it appears once per browser session rather
+than only once forever or again on every reload.
 
 ## Agent boundaries
 

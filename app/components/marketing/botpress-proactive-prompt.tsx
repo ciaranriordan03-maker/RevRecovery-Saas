@@ -12,6 +12,14 @@ type BotpressProactivePromptProps = {
   onOpen: () => void;
 };
 
+function getPromptSessionStorage() {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 export function BotpressProactivePrompt({
   isReady,
   onOpen,
@@ -19,10 +27,12 @@ export function BotpressProactivePrompt({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (!isReady || !shouldShowBotpressPrompt(window.localStorage)) return;
+    const storage = getPromptSessionStorage();
+
+    if (!isReady || !shouldShowBotpressPrompt(storage)) return;
 
     const timer = window.setTimeout(() => {
-      markBotpressPromptSeen(window.localStorage);
+      markBotpressPromptSeen(storage);
       setIsVisible(true);
     }, BOTPRESS_PROMPT_DELAY_MS);
 
