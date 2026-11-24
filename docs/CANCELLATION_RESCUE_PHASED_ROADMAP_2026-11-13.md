@@ -215,11 +215,20 @@ With two simultaneous sessions reusing one event ID, only one recorded it and
 only its binding remained. The SQL fixture also verified sender, recipient, time
 window, privilege, and sticky complaint safeguards. The switches stayed off.
 
-Before exercising delivery, review the two local slices and prove the isolated
-cancellation suppression guard prevents a fresh test authorization from
-sending again to a suppressed inbox. There is still no webhook route or provider
-configuration. Development migration, provider setup, an independently approved
-test inbox, and one real send each require separate approval.
+**Cancellation test suppression — local only:** recorded hard bounces,
+complaints, and provider suppressions block the exact normalized inbox across
+cancellation test accounts. The shared guard is checked at request, approval,
+and reservation. Transient bounces alone do not block fresh authorizations,
+later delivery does not clear a block, and ordinary failed-payment suppression
+is unchanged. The evidence-backed block lasts while its audit record is retained;
+it does not recall a message already in flight.
+
+All 39 migrations, the new suppression fixture, and the evidence regression
+fixture passed on disposable, network-disabled PostgreSQL 17.6. Synthetic hard
+bounce and complaint records blocked fresh requests with all switches disabled.
+There is still no webhook route or provider configuration. Review the local
+changes before any Development migration or provider setup. An independently
+approved test inbox and one real send require separate approval.
 
 **Objective:** send cancellation-specific emails only to approved test recipients.
 
