@@ -159,6 +159,33 @@ operation, Production deployment, or Production data change occurred.
 
 ## Phase 4 — Controlled test delivery and reconciliation
 
+**Phase 4A — local, dormant infrastructure:** one operator requests and a different
+operator reviews a single test email for a scheduled Development cancellation.
+The request binds the test account, episode, exact recipient, verified sender,
+scheduled end, and fixed synthetic copy version for up to 15 minutes. Dispatch
+also requires a dedicated allowlisted inbox, an explicit server flag, and
+separate disabled-by-default platform/account test-email controls. The database
+checks the current case, verified sender, and suppression before atomically
+reserving one attempt. Disabling or revoking stops unreserved work; a provider
+request already in flight cannot be recalled. A reserved or unknown attempt
+cannot be retried. Provider acceptance would not prove delivery.
+
+There is no provider transport, live recipient lookup, email job, public route,
+webhook integration, Stripe write, or usable rescue link in 4A.
+
+**Local SQL validation (2026-11-24):** all 37 repository migrations applied in a
+disposable, network-disabled PostgreSQL 17.6 container using the Supabase database
+image and synthetic Auth users. The Phase 3A and 4A pgTAP fixtures passed. Two
+concurrent service-role reservations against the same authorization produced
+one claim and one rejection. Subsequent replay and duplicate completion were
+blocked; only the winning claim could finalize synthetic acceptance. The
+migration remains unapplied in Development and Production. No provider was
+contacted.
+
+Before exercising delivery, add a narrow test transport, independently approve
+the exact test mailbox, and agree how to reconcile an ambiguous send and signed
+bounce/complaint evidence without a resend.
+
 **Objective:** send cancellation-specific emails only to approved test recipients.
 
 **Files and systems:** dedicated delivery adapter, Resend metadata/webhooks, suppression checks, sending-domain readiness, controlled test authorization.
