@@ -36,6 +36,11 @@ function getCustomerLabel(item: RecoveryCaseListItem) {
   return item.customerEmail ?? item.customerId ?? "Customer details unavailable";
 }
 
+function getCustomerInitial(item: RecoveryCaseListItem) {
+  const label = getCustomerLabel(item).trim();
+  return label.charAt(0).toUpperCase() || "?";
+}
+
 function getEnvironmentLabel(livemode: boolean | null) {
   if (livemode === null) return "Unknown environment";
   return livemode ? "Live" : "Test";
@@ -134,17 +139,66 @@ function RecoveryActivity({ item }: { item: RecoveryCaseListItem }) {
     : formatLabel(item.recoveryStage);
 
   return (
-    <div className="space-y-1">
-      <p className="text-[13px] font-semibold text-[var(--foreground)]">{stage}</p>
-      <p className="text-xs leading-4 text-[var(--muted)]">
-        {item.attemptCount} payment {item.attemptCount === 1 ? "attempt" : "attempts"}
-      </p>
-      <p className="text-xs leading-4 text-[var(--muted)]">
-        Stripe retry: {formatDate(item.nextPaymentAttemptAt)}
-      </p>
-      <p className="text-xs leading-4 text-[var(--muted)]">
-        Next email: {formatDate(item.nextEmailAt)}
-      </p>
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-[var(--primary-soft)] text-[var(--primary-text)]">
+          <Icon className="size-3.5" name="flow" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-semibold text-[var(--foreground)]">{stage}</p>
+          <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+            {item.attemptCount} payment {item.attemptCount === 1 ? "attempt" : "attempts"}
+          </p>
+        </div>
+      </div>
+
+      <div className="relative ml-3.5 mt-3 space-y-2.5 border-l border-[var(--border-strong)] pl-4">
+        <div className="relative">
+          <span aria-hidden className="absolute -left-[19px] top-1 size-1.5 rounded-full bg-[var(--primary)] ring-2 ring-[var(--surface)]" />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--muted)]">Stripe retry</p>
+          <p className="mt-0.5 text-[11px] leading-4 text-[var(--muted-strong)]">
+            {formatDate(item.nextPaymentAttemptAt)}
+          </p>
+        </div>
+        <div className="relative">
+          <span aria-hidden className="absolute -left-[19px] top-1 size-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] ring-2 ring-[var(--surface)]" />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--muted)]">Next email</p>
+          <p className="mt-0.5 text-[11px] leading-4 text-[var(--muted-strong)]">
+            {formatDate(item.nextEmailAt)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PaymentIssue({ item }: { item: RecoveryCaseListItem }) {
+  const hasAttention = item.attentionFlags.length > 0;
+
+  return (
+    <div>
+      <div className="flex items-start gap-2.5">
+        <span
+          className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-[7px] ${
+            hasAttention
+              ? "bg-[var(--warning-soft)] text-[var(--warning-text)]"
+              : "bg-[var(--surface-muted)] text-[var(--muted-strong)]"
+          }`}
+        >
+          <Icon className="size-3.5" name={hasAttention ? "alert" : "card"} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold leading-[18px] text-[var(--foreground)]">
+            {item.failureTitle}
+          </p>
+          <p className="mt-1 max-w-[250px] text-[11px] leading-[17px] text-[var(--muted)]">
+            {item.failureExplanation}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 pl-[38px]">
+        <AttentionSummary item={item} />
+      </div>
     </div>
   );
 }
@@ -158,70 +212,77 @@ function DesktopCases({
 }) {
   return (
     <div className="hidden overflow-x-auto lg:block">
-      <table className="w-full min-w-[900px] border-collapse text-left">
+      <table className="w-full min-w-[980px] border-collapse text-left">
         <thead>
-          <tr className="border-y border-[var(--border)] bg-[var(--surface-muted)] text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">
-            <th className="w-[25%] px-5 py-3" scope="col">Customer / amount</th>
-            <th className="w-[25%] px-4 py-3" scope="col">Payment issue</th>
-            <th className="w-[22%] px-4 py-3" scope="col">Recovery activity</th>
-            <th className="w-[18%] px-4 py-3" scope="col">Status</th>
-            <th className="w-[10%] px-5 py-3 text-right" scope="col">Action</th>
+          <tr className="border-y border-[var(--border)] bg-[var(--surface-muted)] text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+            <th className="w-[25%] px-5 py-3.5" scope="col">Customer / amount</th>
+            <th className="w-[26%] px-4 py-3.5" scope="col">Payment issue</th>
+            <th className="w-[23%] px-4 py-3.5" scope="col">Recovery activity</th>
+            <th className="w-[17%] px-4 py-3.5" scope="col">Status</th>
+            <th className="w-[9%] px-5 py-3.5 text-right" scope="col">Action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--border)]">
           {cases.map((item) => (
-            <tr className="motion-safe:transition-colors motion-safe:duration-150 hover:bg-[var(--surface-muted)]" key={item.id}>
-              <td className="px-5 py-5 align-top">
-                <Link
-                  className="block max-w-[230px] truncate text-[13px] font-semibold text-[var(--foreground)] hover:text-[var(--primary)]"
-                  href={`/dashboard/cases/${item.id}`}
-                >
-                  {getCustomerLabel(item)}
-                </Link>
-                <p className="mt-1 max-w-[230px] truncate text-xs text-[var(--muted)]">
-                  {item.invoiceId}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <p className="text-base font-semibold text-[var(--foreground)]">
+            <tr className="group motion-safe:transition-colors motion-safe:duration-150 hover:bg-[var(--surface-muted)]" key={item.id}>
+              <td className="px-5 py-[18px] align-top">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[8px] border border-[var(--primary-border)] bg-[var(--primary-soft)] text-xs font-bold text-[var(--primary-text)]">
+                    {getCustomerInitial(item)}
+                  </span>
+                  <div className="min-w-0">
+                    <Link
+                      className="block max-w-[200px] truncate rounded-sm text-[13px] font-semibold text-[var(--foreground)] hover:text-[var(--primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+                      href={`/dashboard/cases/${item.id}`}
+                    >
+                      {getCustomerLabel(item)}
+                    </Link>
+                    <p className="mt-1 max-w-[200px] truncate text-[11px] text-[var(--muted)]">
+                      {item.invoiceId}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3.5 flex flex-wrap items-center gap-2 pl-11">
+                  <p className="text-[17px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
                     {formatCurrency(item)}
                   </p>
                   <EnvironmentBadge livemode={item.livemode} />
                 </div>
-                {highValueActive ? (
-                  <span className="mt-2 inline-flex rounded-[5px] bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--primary-text)]">
-                    Meets threshold
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11">
+                  {highValueActive ? (
+                    <span className="inline-flex rounded-[5px] bg-[var(--primary-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--primary-text)]">
+                      Meets threshold
+                    </span>
+                  ) : null}
+                  <span className="text-[11px] text-[var(--muted)]">
+                    {formatLabel(item.audienceSegment)}
                   </span>
-                ) : null}
-                <p className="mt-2 text-xs text-[var(--muted)]">
-                  {formatLabel(item.audienceSegment)}
-                </p>
-              </td>
-              <td className="px-4 py-5 align-top">
-                <p className="text-[13px] font-semibold text-[var(--foreground)]">
-                  {item.failureTitle}
-                </p>
-                <p className="mt-1.5 max-w-[260px] text-xs leading-[18px] text-[var(--muted)]">
-                  {item.failureExplanation}
-                </p>
-                <div className="mt-3">
-                  <AttentionSummary item={item} />
                 </div>
               </td>
-              <td className="px-4 py-5 align-top">
+              <td className="px-4 py-[18px] align-top">
+                <PaymentIssue item={item} />
+              </td>
+              <td className="px-4 py-[18px] align-top">
                 <RecoveryActivity item={item} />
               </td>
-              <td className="px-4 py-5 align-top">
+              <td className="px-4 py-[18px] align-top">
                 <StatusBadge status={item.caseStatus} />
-                <p className="mt-2 text-xs leading-4 text-[var(--muted)]">
-                  Stripe invoice: {formatLabel(item.invoiceStatus)}
-                </p>
-                <p className="mt-1 text-xs leading-4 text-[var(--muted)]">
-                  Updated {formatDate(item.updatedAt)}
-                </p>
+                <div className="mt-3 border-l-2 border-[var(--border)] pl-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--muted)]">
+                    Stripe invoice
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-[var(--muted-strong)]">
+                    {formatLabel(item.invoiceStatus)}
+                  </p>
+                  <p className="mt-2 text-[10px] leading-4 text-[var(--muted)]">
+                    Updated {formatDate(item.updatedAt)}
+                  </p>
+                </div>
               </td>
-              <td className="px-5 py-5 text-right align-top">
+              <td className="px-5 py-[18px] text-right align-top">
                 <Link
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)] motion-safe:transition-colors motion-safe:duration-150 hover:border-[var(--border-strong)]"
+                  aria-label={`Review case for ${getCustomerLabel(item)}`}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--muted-strong)] shadow-[var(--shadow-subtle)] motion-safe:transition-all motion-safe:duration-150 hover:border-[var(--primary-border)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] group-hover:border-[var(--border-strong)]"
                   href={`/dashboard/cases/${item.id}`}
                 >
                   Review
