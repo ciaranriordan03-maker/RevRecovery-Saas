@@ -15,6 +15,8 @@ export const CANCELLATION_TEST_EMAIL_FLOW = "cancellation_test";
 export const CANCELLATION_TEST_EMAIL_UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 export const CANCELLATION_TEST_EMAIL_PROVIDER_ID = /^[a-zA-Z0-9_-]{1,128}$/;
 export const CANCELLATION_TEST_EMAIL_TIMEOUT_MS = 10_000;
+export const CANCELLATION_TEST_EMAIL_WEBHOOK_PATH = "/api/cancellation-rescue/test/email-webhook";
+export const CANCELLATION_TEST_EMAIL_WEBHOOK_MAX_BYTES = 32_768;
 
 // One plain mailbox only. No display name, address list, or header syntax.
 const SINGLE_MAILBOX = /^[a-z0-9][a-z0-9._+'-]*@[a-z0-9]+(?:[.-][a-z0-9]+)*\.[a-z0-9]+$/;

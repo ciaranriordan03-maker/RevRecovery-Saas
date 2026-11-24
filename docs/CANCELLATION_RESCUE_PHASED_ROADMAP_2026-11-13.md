@@ -226,9 +226,21 @@ it does not recall a message already in flight.
 All 39 migrations, the new suppression fixture, and the evidence regression
 fixture passed on disposable, network-disabled PostgreSQL 17.6. Synthetic hard
 bounce and complaint records blocked fresh requests with all switches disabled.
-There is still no webhook route or provider configuration. Review the local
-changes before any Development migration or provider setup. An independently
-approved test inbox and one real send require separate approval.
+**Development verification ([PR #16](https://github.com/ciaranriordan03-maker/RevRecovery-Saas/pull/16#issuecomment-7146087411)):**
+Development alone applied migrations `20261124000200` through
+`20261124000400`. All 39 migration versions matched, with nothing pending.
+The test-email switches and earlier cancellation controls remained off, and no
+test-email authorization, provider binding, or delivery event existed.
+
+**Receive-only webhook — local only:** `POST /api/cancellation-rescue/test/email-webhook`
+is off unless `CANCELLATION_TEST_EMAIL_WEBHOOK_ENABLED` is explicitly enabled,
+the Development project and runtime checks pass, and a dedicated
+`CANCELLATION_TEST_EMAIL_WEBHOOK_SECRET` is available. It verifies the raw,
+size-limited payload before accessing evidence storage and does not use a
+browser session, issue links, send email, or call Stripe. It does not replace
+the existing failed-payment webhook. Signed synthetic route tests use mocked
+storage and no network. Resend setup, an approved test inbox, and a real send
+remain separate approval steps.
 
 **Objective:** send cancellation-specific emails only to approved test recipients.
 
