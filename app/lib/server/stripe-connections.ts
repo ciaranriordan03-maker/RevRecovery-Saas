@@ -56,6 +56,11 @@ export type StripeConnectionSummary = {
   syncSummary: StripeSyncSummary | null;
 };
 
+export type StripeConnectionWebhookMetadata = Pick<
+  StripeConnectionRecord,
+  "id" | "livemode" | "status" | "stripe_account_id" | "user_id"
+>;
+
 export function normalizeStripeSyncSummary(
   summary: StripeSyncSummary | null,
 ): StripeSyncSummary | null {
@@ -188,6 +193,71 @@ export async function getStripeConnectionForAccount(stripeAccountId: string) {
 
   await encryptLegacyConnectionTokens(data);
   return decryptConnectionTokens(data);
+}
+
+export async function getStripeConnectionWebhookMetadata(
+  stripeAccountId: string,
+) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(STRIPE_CONNECTIONS_TABLE)
+    .select("id, user_id, stripe_account_id, status, livemode")
+    .eq("stripe_account_id", stripeAccountId)
+    .maybeSingle<StripeConnectionWebhookMetadata>();
+
+  if (error) {
+    return null;
+  }
+
+  return data;
+}
+
+export async function listConnectedStripeAccountsForReconciliation(limit = 25) {
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) throw new Error("Supabase admin client is not configured.");
+
+  const { data: control, error: controlError } = await supabase
+    .from("cancellation_platform_controls")
+    .select("enabled")
+    .eq("control_key", "shadow_processing")
+    .single<{ enabled: boolean }>();
+  if (controlError) throw new Error(`Unable to load cancellation platform control: ${controlError.message}`);
+  if (!control.enabled) return [];
+
+  const { data: settings, error: settingsError } = await supabase
+    .from("cancellation_rescue_settings")
+    .select("user_id, stripe_account_id, livemode")
+    .eq("shadow_processing_enabled", true)
+    .order("last_reconciled_at", { ascending: true, nullsFirst: true })
+    .limit(Math.min(Math.max(limit, 1), 100));
+  if (settingsError) throw new Error(`Unable to list cancellation settings: ${settingsError.message}`);
+  if (!settings?.length) return [];
+
+  const accountIds = settings.map((setting) => setting.stripe_account_id);
+  const { data, error } = await supabase
+    .from(STRIPE_CONNECTIONS_TABLE)
+    .select("id, user_id, stripe_account_id, status, livemode")
+    .in("stripe_account_id", accountIds)
+    .eq("status", "connected");
+  if (error) throw new Error(`Unable to list Stripe accounts: ${error.message}`);
+
+  const connections = new Map(
+    ((data ?? []) as StripeConnectionWebhookMetadata[]).map((connection) => [
+      `${connection.user_id}:${connection.stripe_account_id}:${connection.livemode}`,
+      connection,
+    ]),
+  );
+  return settings.flatMap((setting) => {
+    const connection = connections.get(
+      `${setting.user_id}:${setting.stripe_account_id}:${setting.livemode}`,
+    );
+    return connection ? [connection] : [];
+  });
 }
 
 export async function upsertStripeConnection(connection: StripeConnectionUpsert) {
