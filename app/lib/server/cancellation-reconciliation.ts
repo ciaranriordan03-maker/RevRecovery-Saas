@@ -8,6 +8,7 @@ import { reconcileScheduledCancellationSubscriptions } from "./cancellation-case
 import { processCancellationProjectionOutbox } from "./cancellation-projections";
 import { listConnectedStripeAccountsForReconciliation } from "./stripe-connections";
 import { retryCancellationWebhookEvents } from "./cancellation-webhook-retries";
+import { maintainCancellationTestRescueActions } from "./cancellation-rescue-test-actions";
 
 type ReconciliationRun = {
   cursor: string | null;
@@ -172,15 +173,18 @@ export async function processCancellationReconciliation(options: {
     throw new Error(`Unable to load cancellation platform control: ${controlError.message}`);
   }
   if (!platformControl.enabled) {
+    const rescueActions = await maintainCancellationTestRescueActions(100);
     console.info("cancellation_rescue.reconciliation_batch", {
       disabled: true,
       reason: "platform_kill_switch",
+      rescueActions,
     });
     return {
       accounts: 0,
       disabled: true,
       expired: 0,
       projections: { claimed: 0, completed: 0, failed: 0 },
+      rescueActions,
       results: [],
       webhookRetries: { candidates: 0, completed: 0, failed: 0 },
     };
@@ -203,12 +207,21 @@ export async function processCancellationReconciliation(options: {
   });
   const projections = await processCancellationProjectionOutbox(50);
   const webhookRetries = await retryCancellationWebhookEvents(25);
+  const rescueActions = await maintainCancellationTestRescueActions(100);
   console.info("cancellation_rescue.reconciliation_batch", {
     accounts: connections.length,
     expired: Number(expired ?? 0),
     projections,
+    rescueActions,
     webhookRetries,
     runs: results.length,
   });
-  return { accounts: connections.length, expired: Number(expired ?? 0), projections, results, webhookRetries };
+  return {
+    accounts: connections.length,
+    expired: Number(expired ?? 0),
+    projections,
+    rescueActions,
+    results,
+    webhookRetries,
+  };
 }

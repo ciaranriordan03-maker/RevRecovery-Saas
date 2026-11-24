@@ -1,4 +1,5 @@
 export type OperationalAlertCode =
+  | "cancellation_test_rescue_failed"
   | "notification_reconciliation_required"
   | "notification_test_delivery_outcome_unknown"
   | "recovery_cron_failed"
@@ -19,7 +20,7 @@ export type OperationalAlertStage =
   | "reconciliation";
 
 type OperationalAlertPolicy = {
-  area: "cron" | "delivery" | "reconciliation" | "webhook";
+  area: "cancellation_rescue" | "cron" | "delivery" | "reconciliation" | "webhook";
   code: OperationalAlertCode;
   level: "error" | "warning";
   operatorAction: string;
@@ -29,6 +30,16 @@ type OperationalAlertPolicy = {
 };
 
 export const OPERATIONAL_ALERT_POLICIES = {
+  cancellation_test_rescue_failed: {
+    area: "cancellation_rescue",
+    code: "cancellation_test_rescue_failed",
+    level: "error",
+    operatorAction:
+      "Disable test rescue actions, reconcile Stripe and case evidence, and do not issue a replacement token until the outcome is known.",
+    route: "operator_and_engineering",
+    thresholdCount: 1,
+    thresholdWindowMinutes: 5,
+  },
   notification_reconciliation_required: {
     area: "reconciliation",
     code: "notification_reconciliation_required",
