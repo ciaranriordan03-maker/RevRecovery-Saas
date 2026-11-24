@@ -182,9 +182,53 @@ blocked; only the winning claim could finalize synthetic acceptance. The
 migration remains unapplied in Development and Production. No provider was
 contacted.
 
-Before exercising delivery, add a narrow test transport, independently approve
-the exact test mailbox, and agree how to reconcile an ambiguous send and signed
-bounce/complaint evidence without a resend.
+**Phase 4B — provider contract, mocked only:** a dedicated Resend adapter takes
+its HTTP client and credential explicitly. It has no default network client or
+environment credential lookup, and nothing in the app calls it. It allows only
+the fixed test email and the exact approved inbox, passes one stable idempotency
+key, rejects redirects, and never retries. Successful HTTP acceptance is not
+delivery. A timeout leaves the attempt nonretryable.
+
+The separate evidence reviewer verifies the raw Svix signature and binds each
+event to the test authorization tag, fixed subject, sender, single recipient,
+send window, and any known provider message ID. Verified evidence may help
+resolve an unknown transport result without resending. Unmatched or conflicting
+events do not alter the result. Duplicate events are detected against supplied
+history; permanent bounces, complaints, and suppression remain visible even if
+a later delivery event arrives. No raw webhook body or diagnostic is returned.
+This slice does not register a webhook or persist results. It does not route
+cancellation evidence into failed-payment messages, reporting, or suppressions.
+
+**Durable evidence follow-up — local only:** a separate service-only ledger
+records verified, sanitized delivery facts. A provider message can bind to only
+one authorization, whether the signed event or HTTP receipt arrives first.
+PostgreSQL deduplicates provider event IDs and rejects conflicting facts
+atomically. The read-only projection preserves bounce/complaint evidence without
+overwriting the original transport result. Neither a receipt nor a webhook
+reopens an attempt, changes a subscription, or writes to failed-payment recovery.
+
+Validated on a disposable, network-disabled PostgreSQL 17.6 instance with all 38
+repository migrations. The upgrade carried forward a synthetic pre-existing
+provider receipt. A synthetic signed event passed through the server verifier
+into PostgreSQL; a tampered body never reached storage and replay added no row.
+With two simultaneous sessions reusing one event ID, only one recorded it and
+only its binding remained. The SQL fixture also verified sender, recipient, time
+window, privilege, and sticky complaint safeguards. The switches stayed off.
+
+**Cancellation test suppression — local only:** recorded hard bounces,
+complaints, and provider suppressions block the exact normalized inbox across
+cancellation test accounts. The shared guard is checked at request, approval,
+and reservation. Transient bounces alone do not block fresh authorizations,
+later delivery does not clear a block, and ordinary failed-payment suppression
+is unchanged. The evidence-backed block lasts while its audit record is retained;
+it does not recall a message already in flight.
+
+All 39 migrations, the new suppression fixture, and the evidence regression
+fixture passed on disposable, network-disabled PostgreSQL 17.6. Synthetic hard
+bounce and complaint records blocked fresh requests with all switches disabled.
+There is still no webhook route or provider configuration. Review the local
+changes before any Development migration or provider setup. An independently
+approved test inbox and one real send require separate approval.
 
 **Objective:** send cancellation-specific emails only to approved test recipients.
 

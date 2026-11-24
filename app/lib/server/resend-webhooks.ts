@@ -118,7 +118,7 @@ export function normalizeResendWebhookEvent(
   };
 }
 
-export function verifyAndNormalizeResendWebhook({
+export function verifyResendWebhookPayload({
   headers,
   payload,
   secret,
@@ -152,5 +152,10 @@ export function verifyAndNormalizeResendWebhook({
     throw new ResendWebhookValidationError();
   }
 
+  return { providerEventId, verifiedEvent };
+}
+
+export function verifyAndNormalizeResendWebhook(input: Parameters<typeof verifyResendWebhookPayload>[0]) {
+  const { providerEventId, verifiedEvent } = verifyResendWebhookPayload(input);
   return normalizeResendWebhookEvent(providerEventId, verifiedEvent);
 }
