@@ -3,6 +3,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   CANCELLATION_TEST_EMAIL_FIXTURE,
+  CANCELLATION_TEST_EMAIL_KEY_PREFIX,
+  CANCELLATION_TEST_EMAIL_PROVIDER_ID,
+  CANCELLATION_TEST_EMAIL_UUID,
   isCancellationTestEmailDevelopment,
   normalizeCancellationTestEmailRecipient,
 } from "../cancellation-rescue/test-email-policy";
@@ -18,9 +21,9 @@ type TestEmailEnvelope = {
   to: readonly [string];
 };
 
-// No real transport is supplied or registered in Phase 4A. Implementations must
-// make a single request, pass through the stable key, and never retry.
-type TestEmailTransport = (envelope: TestEmailEnvelope) => Promise<{ providerMessageId: string }>;
+// No production caller is registered. A transport must make a single request,
+// pass through the stable key, and never retry.
+export type TestEmailTransport = (envelope: TestEmailEnvelope) => Promise<{ providerMessageId: string }>;
 
 type TestEmailResult =
   | { outcome: "blocked" }
@@ -32,9 +35,6 @@ type Reservation = {
   recipient_email: string;
   sending_domain: string;
 };
-
-const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const PROVIDER_MESSAGE_ID = /^[a-zA-Z0-9_-]{1,128}$/;
 
 /**
  * Operator-only boundary. No route, cron, webhook, or UI invokes this helper.
@@ -49,7 +49,7 @@ export async function executeCancellationRescueTestEmail({
 }): Promise<TestEmailResult> {
   if (
     process.env.CANCELLATION_TEST_EMAIL_ENABLED !== "true" ||
-    !UUID.test(authorizationId) ||
+    !CANCELLATION_TEST_EMAIL_UUID.test(authorizationId.toLowerCase()) ||
     !transport
   ) return { outcome: "blocked" };
 
@@ -99,12 +99,15 @@ export async function executeCancellationRescueTestEmail({
     try {
       const result = await transport({
         from: `RevRecovery Test <cancellation-test@${reservation.sending_domain}>`,
-        idempotencyKey: `cancellation-test-email/${authorizationId.toLowerCase()}`,
+        idempotencyKey: `${CANCELLATION_TEST_EMAIL_KEY_PREFIX}${authorizationId.toLowerCase()}`,
         subject: CANCELLATION_TEST_EMAIL_FIXTURE.subject,
         text: CANCELLATION_TEST_EMAIL_FIXTURE.text,
         to: [allowedRecipient],
       });
-      if (typeof result?.providerMessageId === "string" && PROVIDER_MESSAGE_ID.test(result.providerMessageId)) {
+      if (
+        typeof result?.providerMessageId === "string" &&
+        CANCELLATION_TEST_EMAIL_PROVIDER_ID.test(result.providerMessageId)
+      ) {
         providerMessageId = result.providerMessageId;
       }
     } catch {

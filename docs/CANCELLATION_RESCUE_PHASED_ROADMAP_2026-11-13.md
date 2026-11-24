@@ -182,9 +182,28 @@ blocked; only the winning claim could finalize synthetic acceptance. The
 migration remains unapplied in Development and Production. No provider was
 contacted.
 
-Before exercising delivery, add a narrow test transport, independently approve
-the exact test mailbox, and agree how to reconcile an ambiguous send and signed
-bounce/complaint evidence without a resend.
+**Phase 4B — provider contract, mocked only:** a dedicated Resend adapter takes
+its HTTP client and credential explicitly. It has no default network client or
+environment credential lookup, and nothing in the app calls it. It allows only
+the fixed test email and the exact approved inbox, passes one stable idempotency
+key, rejects redirects, and never retries. Successful HTTP acceptance is not
+delivery. A timeout leaves the attempt nonretryable.
+
+The separate evidence reviewer verifies the raw Svix signature and binds each
+event to the test authorization tag, fixed subject, sender, single recipient,
+send window, and any known provider message ID. Verified evidence may help
+resolve an unknown transport result without resending. Unmatched or conflicting
+events do not alter the result. Duplicate events are detected against supplied
+history; permanent bounces, complaints, and suppression remain visible even if
+a later delivery event arrives. No raw webhook body or diagnostic is returned.
+This slice does not register a webhook or persist results. It does not route
+cancellation evidence into failed-payment messages, reporting, or suppressions.
+
+Before exercising delivery, review 4B, make event deduplication and message
+binding durable in isolated storage, and prove that behavior locally. A
+Development-only database or provider setup, independently approved inbox, and
+one real send each require a separate approval. The cancellation delivery
+controls remain off.
 
 **Objective:** send cancellation-specific emails only to approved test recipients.
 
