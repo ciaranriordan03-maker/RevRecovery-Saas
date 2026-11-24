@@ -1,7 +1,7 @@
 # Cancellation Rescue Phased Roadmap
 
 Date: 2026-11-13 (status updated 2026-11-24)
-Status: Phases 0–3A implemented and shadow-verified in Development; Phase 3B implemented but not applied or exercised
+Status: Phases 0–3A implemented and shadow-verified in Development; Phase 3B applied to Development with controls disabled and no action exercised
 
 ## Product boundary
 
@@ -116,8 +116,10 @@ tokens, service-only atomic reservation and audit RPCs, same-origin JSON POST
 preview/confirmation routes, durable rate limiting, a platform-and-account
 double kill switch, a test-secret-only Stripe adapter, and reconciliation for
 ambiguous outcomes. No issuer route, customer page, email integration, or live
-mode exists. The migration has not been applied, the controls have not been
-enabled, no raw token has been issued, and no Stripe mutation has been run.
+mode exists. The migration was applied to Development on 2026-11-24 and the
+rate-limit secret was saved for Preview, Development, and staging only. The
+platform control remains false, zero accounts are enabled, no token or attempt
+record exists, and no Stripe mutation has been run.
 
 **Objective:** let an explicitly consenting test customer reverse a scheduled cancellation safely.
 
