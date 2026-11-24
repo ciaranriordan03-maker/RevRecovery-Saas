@@ -3,7 +3,7 @@ import { Icon } from "./ui-icon";
 export function BrandMark({
   variant = "default",
 }: {
-  variant?: "dashboard" | "default" | "mobile";
+  variant?: "dashboard" | "default" | "inverse" | "mobile";
 }) {
   if (variant === "mobile") {
     return (
@@ -17,11 +17,16 @@ export function BrandMark({
   }
 
   const dashboard = variant === "dashboard";
+  const inverse = variant === "inverse";
 
   return (
     <div className={`flex items-center ${dashboard ? "gap-2.5" : "gap-3"}`}>
       <span
-        className={`flex items-center justify-center bg-[var(--primary)] text-white ${
+        className={`flex items-center justify-center ${
+          inverse
+            ? "bg-white text-[var(--primary)] shadow-sm"
+            : "bg-[var(--primary)] text-white"
+        } ${
           dashboard
             ? "size-[30px] rounded-[8px]"
             : "size-10 rounded-[14px]"
@@ -32,7 +37,7 @@ export function BrandMark({
       <span
         className={`${
           dashboard ? "text-[17px]" : "text-xl tracking-[-0.02em]"
-        } font-semibold text-[var(--foreground)]`}
+        } font-semibold ${inverse ? "text-white" : "text-[var(--foreground)]"}`}
       >
         RevRecovery
       </span>

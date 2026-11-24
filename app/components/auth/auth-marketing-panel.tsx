@@ -1,87 +1,76 @@
+import { BrandMark } from "../brand";
 import { Icon } from "../ui-icon";
 
-type AuthMarketingVariant = "signin" | "signup";
+const reassuranceItems = [
+  "Start safely in Stripe test mode",
+  "Customize messages and timing",
+  "Pause recovery at any time",
+] as const;
 
-const variantContent = {
-  signin: {
-    brand: "RevRecovery",
-    copy:
-      "Reduce failed-payment churn automatically. Connect Stripe. Recover revenue. Stay focused on growth.",
-    highlights: [
-      "Automated recovery sequences",
-      "Automatic Stripe integration",
-      "Recovery performance dashboard",
-    ],
-    metricLabel: "Email sequence",
-    metricValue: "3 steps",
-    trust: "Built for subscription businesses",
-  },
-  signup: {
-    brand: "RevRecovery",
-    copy:
-      "Connect Stripe to identify failed payments, automate customer reminders, and track recovery results.",
-    highlights: [
-      "Failed-payment monitoring",
-      "Automated recovery workflows",
-      "Account-specific revenue insights",
-    ],
-    metricLabel: "Email sequence",
-    metricValue: "3 steps",
-    trust: "Designed for recurring-revenue teams",
-  },
-} as const;
-
-export function AuthMarketingPanel({
-  variant = "signin",
-}: {
-  variant?: AuthMarketingVariant;
-}) {
-  const content = variantContent[variant];
-
+export function AuthMarketingPanel() {
   return (
-    <section className="relative hidden min-h-screen overflow-hidden bg-[linear-gradient(135deg,var(--auth-gradient-start)_0%,var(--auth-gradient-mid)_56%,var(--auth-gradient-end)_100%)] px-12 py-8 text-white lg:flex lg:flex-col">
+    <section
+      aria-labelledby="auth-marketing-heading"
+      className="relative hidden min-h-screen overflow-hidden bg-[linear-gradient(135deg,var(--auth-gradient-start)_0%,var(--auth-gradient-mid)_56%,var(--auth-gradient-end)_100%)] px-10 py-8 text-white lg:flex lg:flex-col xl:px-14 xl:py-10"
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_8%,rgb(255_255_255_/_0.15),transparent_24%),radial-gradient(circle_at_78%_72%,rgb(255_255_255_/_0.08),transparent_28%)]" />
 
-      <div className="relative z-10 flex items-center gap-3">
-        <span className="size-10 rounded-[12px] bg-white/90 shadow-sm" />
-        <span className="text-lg font-semibold">{content.brand}</span>
+      <div className="relative z-10">
+        <BrandMark variant="inverse" />
       </div>
 
-      <div className="relative z-10 my-auto max-w-[460px] py-8">
-        <h1 className="text-[38px] font-semibold leading-[1.12] tracking-[-0.03em] xl:text-[42px]">
-          Recover Revenue You&apos;re Already Losing
-        </h1>
-        <p className="mt-4 max-w-[430px] text-base leading-7 text-white/90 xl:text-lg xl:leading-8">
-          {content.copy}
+      <div className="relative z-10 my-auto max-w-[520px] py-8">
+        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-white/90">
+          <Icon className="size-4" name="refresh" />
+          Stripe-first recovery
+        </p>
+        <h2
+          className="text-[40px] font-semibold leading-[1.08] tracking-[-0.04em] xl:text-[48px]"
+          id="auth-marketing-heading"
+        >
+          Recover revenue without losing control.
+        </h2>
+        <p className="mt-5 max-w-[480px] text-base leading-7 text-white/85 xl:text-lg xl:leading-8">
+          Connect Stripe safely, test your recovery flow, and choose when to go live.
         </p>
 
-        <div className="mt-8 grid max-w-[450px] grid-cols-2 gap-4">
+        <div className="mt-7 grid max-w-[480px] grid-cols-2 gap-3">
           <MetricCard
-            icon="trend-up"
-            label={content.metricLabel}
-            value={content.metricValue}
+            icon="flow"
+            label="Clear recovery sequence"
+            value="3 steps"
             variant="green"
           />
-          <MetricCard icon="card" label="Stripe connection" value="Secure" variant="blue" />
+          <MetricCard
+            icon="shield-check"
+            label="Go live when ready"
+            value="Test first"
+            variant="blue"
+          />
         </div>
 
-        <div className="mt-7 space-y-3.5">
-          {content.highlights.map((item) => (
+        <div className="mt-7 space-y-3">
+          {reassuranceItems.map((item) => (
             <div className="flex items-center gap-3" key={item}>
-              <span className="size-5 shrink-0 rounded-full bg-white" />
-              <p className="text-base text-white/95">{item}</p>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-white">
+                <Icon className="size-3.5" name="check" />
+              </span>
+              <p className="text-[15px] text-white/90">{item}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="absolute bottom-8 left-12 z-10 flex items-center gap-3">
-        <div className="flex -space-x-2">
-          <span className="size-7 rounded-full border border-[var(--auth-avatar-border)] bg-[var(--auth-avatar-one)]" />
-          <span className="size-7 rounded-full border border-[var(--auth-avatar-border)] bg-[var(--auth-avatar-two)]" />
-          <span className="size-7 rounded-full border border-[var(--auth-avatar-border)] bg-[var(--auth-avatar-three)]" />
+      <div className="relative z-10 flex max-w-[480px] items-center gap-3 rounded-[12px] border border-white/15 bg-white/10 px-4 py-3.5">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-white/15 text-white">
+          <Icon className="size-5" name="shield-check" />
         </div>
-        <p className="text-sm text-white/90">{content.trust}</p>
+        <div>
+          <p className="text-sm font-semibold text-white">Recovery stays on your terms</p>
+          <p className="mt-0.5 text-xs leading-5 text-white/75">
+            Nothing sends until you choose to go live.
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -106,13 +95,13 @@ function MetricCard({
   return (
     <div className={`relative overflow-hidden rounded-[12px] p-4 ${cardClass}`}>
       <span className="absolute -right-8 -top-8 size-20 rounded-full bg-white/15" />
-      <div className="relative mb-6 flex size-9 items-center justify-center rounded-[10px] bg-white/16">
-        <Icon name={icon} className="size-5 text-white" />
+      <div className="relative mb-5 flex size-9 items-center justify-center rounded-[10px] bg-white/15">
+        <Icon className="size-5 text-white" name={icon} />
       </div>
-      <p className="relative text-[31px] font-semibold leading-none tracking-[-0.04em] xl:text-[34px]">
+      <p className="relative text-2xl font-semibold leading-none tracking-[-0.035em] xl:text-[28px]">
         {value}
       </p>
-      <p className="relative mt-3 text-sm text-white/85">{label}</p>
+      <p className="relative mt-2.5 text-sm text-white/85">{label}</p>
     </div>
   );
 }

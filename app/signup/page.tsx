@@ -29,7 +29,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   return (
     <main className="min-h-screen bg-[var(--auth-background)] text-[var(--foreground)]">
       <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.16fr)_minmax(440px,1fr)]">
-        <AuthMarketingPanel variant="signup" />
+        <AuthMarketingPanel />
 
         <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
           <div className="w-full max-w-[448px]">
