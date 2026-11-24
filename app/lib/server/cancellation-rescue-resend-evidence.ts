@@ -6,12 +6,12 @@ import {
   CANCELLATION_TEST_EMAIL_PROVIDER_ID,
   CANCELLATION_TEST_EMAIL_TIMEOUT_MS,
   CANCELLATION_TEST_EMAIL_UUID,
+  CANCELLATION_TEST_EMAIL_WEBHOOK_MAX_BYTES,
   normalizeCancellationTestEmailRecipient,
 } from "../cancellation-rescue/test-email-policy";
 import { getSendingDomainValidationError, normalizeSendingDomain } from "../email/sending-domain";
 import { normalizeResendWebhookEvent, verifyResendWebhookPayload } from "./resend-webhooks";
 
-const MAX_WEBHOOK_BYTES = 32_768;
 const eventPriority = {
   sent: 0,
   delivery_delayed: 1,
@@ -78,7 +78,7 @@ type VerifiedFacts =
   };
 
 function verifyCancellationResendEvidence({ headers, payload, signingSecret }: SignedPayload): VerifiedFacts {
-  if (Buffer.byteLength(payload, "utf8") > MAX_WEBHOOK_BYTES) return { outcome: "invalid" };
+  if (Buffer.byteLength(payload, "utf8") > CANCELLATION_TEST_EMAIL_WEBHOOK_MAX_BYTES) return { outcome: "invalid" };
 
   try {
     const { providerEventId, verifiedEvent } = verifyResendWebhookPayload({
@@ -200,7 +200,7 @@ type RecordEvidenceInputs = {
 };
 
 /**
- * Dormant server integration. No route invokes it or supplies a client/secret.
+ * Receive-only server integration. It cannot dispatch or retry email.
  * Do not pass a shared failed-payment webhook secret to this function.
  */
 export async function recordCancellationResendTestEvidence({
